@@ -576,3 +576,172 @@ Waffen in Inpinity City sind:
   - Resonance
   - Provenance
   - Borderline-/Faction-Specials
+
+
+  # WEAPON SYSTEM SPEC
+
+## Ziel
+`CityWeapons` bildet das ERC721-Waffensystem für Inpinity City.
+
+Jede Waffe ist als individuelle Instanz gedacht und verbindet:
+- Definition
+- Onchain-Kampfdaten
+- Seed
+- Provenance Hash
+- Herkunft
+- Slots
+- spätere Erweiterbarkeit
+
+---
+
+## Struktur
+
+### WeaponDefinition
+Definiert den Basistyp einer Waffe.
+
+Wichtige Felder:
+- `id`
+- `name`
+- `class`
+- `damageType`
+- `techTier`
+- `requiredLevel`
+- `requiredTechTier`
+- `minDamage`
+- `maxDamage`
+- `attackSpeed`
+- `critChanceBps`
+- `critMultiplierBps`
+- `accuracyBps`
+- `range`
+- `maxDurability`
+- `armorPenBps`
+- `blockChanceBps`
+- `lifeStealBps`
+- `energyCost`
+- `heatGeneration`
+- `stability`
+- `cooldownMs`
+- `projectileSpeed`
+- `aoeRadius`
+- `enchantmentSlots`
+- `materiaSlots`
+- `visualVariant`
+- `maxUpgradeLevel`
+- `familySetId`
+- `enabled`
+
+### WeaponInstance
+Die individuelle ERC721-Waffe.
+
+Wichtige Felder:
+- `tokenId`
+- `weaponDefinitionId`
+- `rarityTier`
+- `frameTier`
+- `durability`
+- `upgradeLevel`
+- `metadataRevision`
+- `originPlotId`
+- `originFaction`
+- `originDistrictKind`
+- `craftedAt`
+- `visualVariant`
+- `resonanceType`
+- `craftSeed`
+- `provenanceHash`
+- `genesisEra`
+- `usedAether`
+
+### WeaponBonuses
+Lokale, direkt an der Waffe gespeicherte Bonuswerte.
+
+### CombatProfile
+Die abgeleitete Ansicht für Kampfwerte.
+
+---
+
+## Kampfwerte
+Aktuell unterstützt das Profil:
+
+- minDamage
+- maxDamage
+- attackSpeed
+- baseDps
+- critChanceBps
+- critMultiplierBps
+- accuracyBps
+- range
+- durability
+- maxDurability
+- armorPenBps
+- blockChanceBps
+- lifeStealBps
+- energyCost
+- heatGeneration
+- stability
+- cooldownMs
+- projectileSpeed
+- aoeRadius
+- enchantmentSlots
+- materiaSlots
+- upgradeLevel
+- maxUpgradeLevel
+
+---
+
+## Effektive Kampfwerte
+`getEffectiveCombatProfile()` kombiniert:
+- WeaponDefinition
+- WeaponBonuses
+- Socket-Boni aus `CityWeaponSockets`
+
+Dadurch kann eine Waffe durch:
+- Enchantments
+- Materia
+- direkte Bonusfelder
+verstärkt oder verändert werden.
+
+---
+
+## URI / Metadata
+`CityWeapons` nutzt:
+- `baseTokenURI`
+- `tokenURI(tokenId)`
+
+Die URI ist owner-änderbar:
+- `setBaseURI(...)`
+
+Dadurch kann die Offchain-Metadata später geändert oder migriert werden, ohne den Contract neu deployen zu müssen.
+
+---
+
+## Seeds und Provenance
+
+### Craft Seed
+Wird aus Craft-Parametern berechnet und dient als deterministische Grundlage.
+
+### Provenance Hash
+Verdichtet zentrale Eigenschaften der Waffeninstanz.
+
+Ziel:
+- Nachvollziehbarkeit
+- Herkunft
+- Integrität
+- spätere Memory-/History-Mechaniken
+
+---
+
+## Pause-Funktion
+`weaponsPaused`
+
+Wenn aktiv:
+- kein Mint
+- keine Weapon-Modifikation durch die entsprechenden Setter
+
+---
+
+## Erste geplante Waffen
+- Iron Sword
+- Crystal Bow
+- Plasma Rifle

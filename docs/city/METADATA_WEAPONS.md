@@ -1,97 +1,63 @@
 # METADATA WEAPONS
 
-## Ziel
+## Base URI
+Aktuell ist für `CityWeapons` gesetzt:
 
-Dieses Dokument definiert die Offchain-Metadatenstruktur für Waffen aus Inpinity City.
+`https://assets.inpinity.online/city/metadata/weapons/`
 
-Die Waffen selbst sind als **ERC721** auf der Chain modelliert.  
-Die JSON-Dateien dienen der Darstellung in:
-- Wallets
-- Frontends
-- NFT-Marktplätzen
-- Explorer-Ansichten
-- Inpinity City UI
-- spätere UE5-/3D-/Render-Ansichten
+Die finale Token-URI ergibt sich aus:
 
-Die JSON-Dateien sind **nicht** die Quelle der Wahrheit für spielrelevante Werte.  
-Die Quelle der Wahrheit für Kampf- und Identitätswerte bleibt **onchain**.
-
----
-
-## Grundsatz
-
-### Onchain
-Onchain liegen:
-- weaponDefinitionId
-- rarityTier
-- frameTier
-- techTier
-- minDamage
-- maxDamage
-- attackSpeed
-- critChanceBps
-- critMultiplierBps
-- accuracyBps
-- range
-- durability
-- maxDurability
-- armorPenBps
-- lifeStealBps
-- energyCost
-- heatGeneration
-- stability
-- cooldownMs
-- projectileSpeed
-- aoeRadius
-- enchantmentSlots
-- materiaSlots
-- visualVariant
-- upgradeLevel
-- maxUpgradeLevel
-- resonanceType
-- familySetId
-- originPlotId
-- originFaction
-- originDistrictKind
-- craftedAt
-- craftSeed
-- provenanceHash
-- metadataRevision
-- genesisEra
-- usedAether
-
-### Offchain
-Offchain liegen:
-- Name
-- Beschreibung
-- Bild
-- optionale Animation
-- externe Links
-- optische Attribute
-- Lore
-- UI-Attribute
-- Frame-Darstellung
-- Darstellungsvarianten
-
----
-
-## Prinzipien für Weapon Metadata
-
-1. **Die Onchain-Daten sind die Wahrheit.**
-2. **Die JSON-Datei darf Darstellung verbessern, aber keine echten Werte verfälschen.**
-3. **Die JSON-Datei soll mit dem Onchain-Status konsistent bleiben.**
-4. **Revisions / Reveal / Bildupdates sollen möglich sein.**
-5. **Das Schema muss skalieren für hunderte oder tausende Waffen.**
-
----
-
-## Token URI Konzept
-
-Der Weapon Contract soll `tokenURI(tokenId)` bereitstellen.
-
-Diese URI zeigt auf eine JSON-Datei.
+`baseTokenURI + tokenId + ".json"`
 
 Beispiel:
+`https://assets.inpinity.online/city/metadata/weapons/1.json`
 
-```text
-https://cdn.inpinity.online/weapons/metadata/123.json
+---
+
+## Rolle der Offchain-Metadata
+Onchain bleibt die Quelle für:
+- Besitz
+- Definition
+- Combat-Werte
+- Seed
+- Provenance Hash
+- Upgrade Level
+- Herkunft
+
+Offchain dient für:
+- Name / Beschreibung
+- Bild
+- UI-Attribute
+- Visual Variant Darstellung
+- zusätzliche Explorer-/Frontend-Infos
+
+---
+
+## Spätere Struktur
+Empfohlen ist eine Trennung von:
+- Weapon Definitions
+- Weapon Instances
+- Component Metadata
+- Blueprint Metadata
+- Enchantment Item Metadata
+- Materia Item Metadata
+
+---
+
+## Änderbarkeit
+Die URI ist owner-änderbar.
+
+Das ist bewusst so gewählt, damit:
+- CDN-Wechsel möglich ist
+- Asset-Repo später ergänzt werden kann
+- Metadaten-Struktur verbessert werden kann
+- kein kompletter Redeploy nötig wird
+
+---
+
+## Nächster Asset-Schritt
+Nach Stabilisierung der Contracts:
+- Metadata-Repo / Asset-Repo pflegen
+- JSON-Schema definieren
+- erste Weapon JSONs anlegen
+- erste Bilder / Platzhalter vorbereiten

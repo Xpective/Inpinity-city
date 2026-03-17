@@ -2,3 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { CityMateriaSystem } from './CityMateriaSystem.js';
+export type { CityMateriaSystem2 } from './CityMateriaSystem2.js';

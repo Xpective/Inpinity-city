@@ -33,11 +33,28 @@
     "buildingGoldCost": 10,
     "initialFeeBps": 250
   },
-  "updatedAt": "2026-03-17T19:43:01.921Z",
+  "updatedAt": "2026-03-17T20:37:49.828Z",
   "cityRegistry": "0x5d3269813Fea0C0F487A21cBf9992b95008558BF",
   "cityLand": "0x0547a35c2Ff215004A2EBfe2Be5f3A8EeE6A5323",
   "cityDistricts": "0xB3cFaeDA09FB5ee84C3c26F276980773197af113",
   "cityStatus": "0x28AfE371044e9AcD4C99Bef3F5FbBe2431cF04C0",
   "cityHistory": "0x6C83aC3E4C58c493e3116E31cF7e32935497Af3c",
-  "cityValidation": "0x77BBd6850C2780055c4C20008145E9E5dEC20332"
+  "cityValidation": "0x77BBd6850C2780055c4C20008145E9E5dEC20332",
+  "cityComponents": "0xae6fd8664Ba6E147bfb7bb1Ed4354F60Fc86854e",
+  "cityBlueprints": "0x9F6453783A8935f57D9E15560012C1e9cb3Ae684",
+  "cityEnchantments": "0xEC99851ff472a90bA0f75727FC4a274F8FB19380",
+  "cityEnchantmentItems": "0x23D0A8E95f2cFf7ae59f033d0B46eAa22CE80d56",
+  "cityMateria": "0xC3f75ce5539C888cdDE0Aa2E58bC33Be758a37a1",
+  "cityMateriaItems": "0xd3258b6b0bAED28f7D90A808d3Cb39d8fF9eD080",
+  "cityWeapons": "0x6b3cDe1DdACDFB5dC060f10A94Ea52b237E5131F",
+  "cityWeaponSockets": "0xE75d804B4452bfEAC7CCa4997a80e18757b48f16",
+  "cityCrafting": "0x5cC5e3a0455b83620759D2eD6712A5aFc45F9eCF",
+  "cityEnchanting": "0x5F839E335124053b6F315233E7Fa5Ae31E37BcA2",
+  "cityMateriaSystem": "0x852488bBD8C9a3B185665374b96ee6cF06bbD720",
+  "craftingBaseUris": {
+    "components": "https://assets.inpinity.online/city/metadata/components/",
+    "blueprints": "https://assets.inpinity.online/city/metadata/blueprints/",
+    "enchantmentItems": "https://assets.inpinity.online/city/metadata/enchantment-items/",
+    "materiaItems": "https://assets.inpinity.online/city/metadata/materia-items/"
+  }
 }

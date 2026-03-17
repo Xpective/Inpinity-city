@@ -1,42 +1,40 @@
-# Roadmap
+# ROADMAP
 
-## Phase 0 - Planning
-- Finalize architecture
-- Finalize plot logic
-- Finalize faction logic
-- Finalize inactivity / layer mechanics
-- Finalize community building reservation model
+## Erreicht
+- Core deployt
+- Core verdrahtet
+- Crafting-Stack deployt
+- Crafting-Stack verdrahtet
+- Verify erfolgreich
+- Base URIs gesetzt
+- Authorizations gesetzt
 
-## Phase 1 - Foundation
-- CityConfig
-- CityRegistry
-- CityLand
-- CityDistricts
-- CityStatus
-- CityHistory
-- CityValidation
+---
 
-## Phase 2 - Buildings
-- CityBuildings
-- PersonalBuildings
-- CommunityBuildings
-- BorderlineBuildings
+## Nächste Phase: Content Seeding
 
-## Phase 3 - Economy
-- CityCrowdfunding
-- CityPoints
-- CityMaintenance
-- CityMarketplace
+### Phase A
+- erste Weapon Definitions
+- erste Component Definitions
+- erste Blueprint Definitions
 
-## Phase 4 - Data / Frontend
-- City subgraph
-- /city frontend
-- Rankings
-- History display
-- Community progress UI
+### Phase B
+- erste Enchantment Definitions
+- erste Materia Definitions
+- erste Enchantment Item Definitions
+- erste Materia Item Definitions
 
-## Phase 5 - Crafting / Endgame
-- CityCrafting
-- CityComponents
-- CityBlueprints
-- CityWeapons
+### Phase C
+- erste Crafting Recipes
+- erster Test-Craft
+- erster Test von Enchanting / Materia
+
+---
+
+## Danach
+- Marketplace / Trading-Plan
+- Building-Integrationen
+- Subgraph-Erweiterung
+- Frontend-Ansichten für Crafting
+- Asset-/Metadata-Repo
+- erste visuelle JSONs / Bilder

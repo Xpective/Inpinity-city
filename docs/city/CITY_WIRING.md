@@ -1,53 +1,88 @@
-# City Wiring
+# CITY WIRING
 
-## Core contract relationships
+Dieses Dokument beschreibt die aktuelle Live-Verdrahtung zwischen den City-Contracts.
+
+## Core Wiring
 
 ### CityRegistry
-- optional hook to `CityHistory`
-- optional hook to `CityDistricts`
-
-### CityLand
-- optional hook to `CityStatus`
-- optional hook to `CityHistory`
-
-### CityStatus
-- authorized callers can touch activity and record maintenance
+- `cityHistory` gesetzt auf `CityHistory`
 
 ### CityHistory
-- authorized callers can initialize and update plot provenance
+- `authorizedCallers[CityRegistry] = true`
+
+### CityStatus
+- `authorizedCallers[CityLand] = true`
 
 ### CityDistricts
-- authorized callers can assign or auto-assign districts
+- `authorizedCallers[CityRegistry] = true`
+
+### CityLand
+- `cityStatus` gesetzt
+- `cityHistory` gesetzt
 
 ---
 
-## Recommended wiring order after deployment
+## Crafting Wiring
 
-1. Deploy `CityConfig`
-2. Deploy `CityRegistry`
-3. Deploy `CityHistory`
-4. Deploy `CityStatus`
-5. Deploy `CityLand`
-6. Deploy `CityDistricts`
-7. Deploy `CityValidation`
+### CityWeapons
+- `cityWeaponSockets` gesetzt auf `CityWeaponSockets`
+- `baseTokenURI` gesetzt auf:
+  - `https://assets.inpinity.online/city/metadata/weapons/`
+- `authorizedMinters[CityCrafting] = true`
+
+### CityComponents
+- `authorizedMinters[CityCrafting] = true`
+- `baseMetadataURI` gesetzt auf:
+  - `https://assets.inpinity.online/city/metadata/components/`
+
+### CityBlueprints
+- `authorizedMinters[CityCrafting] = true`
+- `baseMetadataURI` gesetzt auf:
+  - `https://assets.inpinity.online/city/metadata/blueprints/`
+
+### CityCrafting
+- `cityWeapons` gesetzt
+- `cityComponents` gesetzt
+- `cityBlueprints` gesetzt
+
+### CityWeaponSockets
+- `authorizedCallers[CityEnchanting] = true`
+- `authorizedCallers[CityMateriaSystem] = true`
+
+### CityEnchantmentItems
+- `baseMetadataURI` gesetzt auf:
+  - `https://assets.inpinity.online/city/metadata/enchantment-items/`
+- `authorizedConsumers[CityEnchanting] = true`
+
+### CityMateriaItems
+- `baseMetadataURI` gesetzt auf:
+  - `https://assets.inpinity.online/city/metadata/materia-items/`
+- `authorizedConsumers[CityMateriaSystem] = true`
 
 ---
 
-## Owner setup actions
+## Pause Status
+Aktuell:
+- `CityWeapons.weaponsPaused = false`
+- `CityCrafting.craftingPaused = false`
 
-### Registry
-- `setCityHistory(historyAddress)`
-- `setCityDistricts(districtsAddress)`
+---
 
-### Land
-- `setHooks(statusAddress, historyAddress)`
+## Design Intention
+Das System ist so verdrahtet, dass:
 
-### History
-- `setAuthorizedCaller(registryAddress, true)`
-- `setAuthorizedCaller(landAddress, true)`
+- `CityCrafting` Waffen, Komponenten und Blueprints minten darf
+- `CityEnchanting` Enchantment-Items verbrennen und Sockel belegen darf
+- `CityMateriaSystem` Materia-Items verbrennen und Sockel belegen darf
+- `CityWeaponSockets` die aggregierten Bonuswerte für `CityWeapons` bereitstellt
 
-### Status
-- `setAuthorizedCaller(landAddress, true)`
+---
 
-### Districts
-- `setAuthorizedCaller(registryAddress, true)`
+## Upgrade Path
+Diese Verdrahtung ist bewusst modular aufgebaut. Spätere Erweiterungen sollen möglichst ohne Komplett-Neudeploy des gesamten Systems möglich sein.
+
+Beispiele:
+- neue Definitions-Sets
+- neue Rezepte
+- neue Materia- und Enchantment-Items
+- neue Frontend-/Metadata-Layer
