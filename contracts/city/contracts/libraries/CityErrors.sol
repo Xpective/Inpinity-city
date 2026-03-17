@@ -13,4 +13,5 @@ library CityErrors {
     error PlotSlotOccupied();
     error MaxPersonalPlotsReached();
     error InvalidConfig();
+    error NotAuthorized();
 }

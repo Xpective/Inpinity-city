@@ -40,6 +40,11 @@ import type { NonPayableOverrides } from "../../common.js"
   },
   {
     "inputs": [],
+    "name": "NotAuthorized",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NotPlotOwner",
     "type": "error"
   },
@@ -65,7 +70,7 @@ import type { NonPayableOverrides } from "../../common.js"
   }
 ] as const;
 
-  const _bytecode = "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220b0779639ec6e17ef06a646aacdf4a0258abe7b463e4ec0b46886cbabf639218764736f6c63430008180033";
+  const _bytecode = "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212202c544441175a91bb20e413b198eed6f24ad4f512d1e2a65ca64d7de1a8460d3764736f6c63430008180033";
 
   
       type CityErrorsConstructorParams = [signer?: Signer] | ConstructorParameters<typeof ContractFactory>;
