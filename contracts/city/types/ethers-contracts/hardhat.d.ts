@@ -11,10 +11,13 @@ import * as Contracts from "./index.js";
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
   getContractFactory(name: 'CityConfig', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityConfig__factory>
+getContractFactory(name: 'CityDistricts', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityDistricts__factory>
 getContractFactory(name: 'CityHistory', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityHistory__factory>
 getContractFactory(name: 'CityLand', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityLand__factory>
 getContractFactory(name: 'CityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityRegistry__factory>
 getContractFactory(name: 'CityStatus', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityStatus__factory>
+getContractFactory(name: 'CityValidation', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityValidation__factory>
+getContractFactory(name: 'ICityDistricts', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityDistricts__factory>
 getContractFactory(name: 'ICityHistory', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityHistory__factory>
 getContractFactory(name: 'ICityStatus', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityStatus__factory>
 getContractFactory(name: 'IFarmingV6', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IFarmingV6__factory>
@@ -29,10 +32,13 @@ getContractFactory(name: 'CityErrors', signerOrOptions?: ethers.Signer | Factory
 getContractFactory(name: 'CityEvents', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityEvents__factory>
 
   getContractAt(name: 'CityConfig', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityConfig>
+getContractAt(name: 'CityDistricts', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityDistricts>
 getContractAt(name: 'CityHistory', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityHistory>
 getContractAt(name: 'CityLand', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityLand>
 getContractAt(name: 'CityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityRegistry>
 getContractAt(name: 'CityStatus', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityStatus>
+getContractAt(name: 'CityValidation', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityValidation>
+getContractAt(name: 'ICityDistricts', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityDistricts>
 getContractAt(name: 'ICityHistory', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityHistory>
 getContractAt(name: 'ICityStatus', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityStatus>
 getContractAt(name: 'IFarmingV6', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IFarmingV6>
@@ -47,10 +53,13 @@ getContractAt(name: 'CityErrors', address: string | ethers.Addressable, signer?:
 getContractAt(name: 'CityEvents', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityEvents>
 
   deployContract(name: 'CityConfig', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityConfig>
+deployContract(name: 'CityDistricts', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityDistricts>
 deployContract(name: 'CityHistory', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityHistory>
 deployContract(name: 'CityLand', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityLand>
 deployContract(name: 'CityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityRegistry>
 deployContract(name: 'CityStatus', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityStatus>
+deployContract(name: 'CityValidation', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityValidation>
+deployContract(name: 'ICityDistricts', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityDistricts>
 deployContract(name: 'ICityHistory', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityHistory>
 deployContract(name: 'ICityStatus', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityStatus>
 deployContract(name: 'IFarmingV6', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFarmingV6>
@@ -65,10 +74,13 @@ deployContract(name: 'CityErrors', signerOrOptions?: ethers.Signer | DeployContr
 deployContract(name: 'CityEvents', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityEvents>
 
   deployContract(name: 'CityConfig', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityConfig>
+deployContract(name: 'CityDistricts', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityDistricts>
 deployContract(name: 'CityHistory', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityHistory>
 deployContract(name: 'CityLand', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityLand>
 deployContract(name: 'CityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityRegistry>
 deployContract(name: 'CityStatus', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityStatus>
+deployContract(name: 'CityValidation', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityValidation>
+deployContract(name: 'ICityDistricts', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityDistricts>
 deployContract(name: 'ICityHistory', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityHistory>
 deployContract(name: 'ICityStatus', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityStatus>
 deployContract(name: 'IFarmingV6', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFarmingV6>

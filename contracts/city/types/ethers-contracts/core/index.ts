@@ -2,7 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { CityConfig } from './CityConfig.js';
+export type { CityDistricts } from './CityDistricts.js';
 export type { CityHistory } from './CityHistory.js';
 export type { CityLand } from './CityLand.js';
 export type { CityRegistry } from './CityRegistry.js';
 export type { CityStatus } from './CityStatus.js';
+export type { CityValidation } from './CityValidation.js';

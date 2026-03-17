@@ -2,7 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export { CityConfig__factory } from './CityConfig__factory.js';
+export { CityDistricts__factory } from './CityDistricts__factory.js';
 export { CityHistory__factory } from './CityHistory__factory.js';
 export { CityLand__factory } from './CityLand__factory.js';
 export { CityRegistry__factory } from './CityRegistry__factory.js';
 export { CityStatus__factory } from './CityStatus__factory.js';
+export { CityValidation__factory } from './CityValidation__factory.js';

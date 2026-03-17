@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/IInpinityNFT.sol";
 import "../interfaces/ICityHistory.sol";
+import "../interfaces/ICityDistricts.sol";
 import "../libraries/CityTypes.sol";
 import "../libraries/CityErrors.sol";
 import "../libraries/CityEvents.sol";
@@ -12,6 +13,7 @@ import "./CityConfig.sol";
 contract CityRegistry is Ownable {
     CityConfig public immutable cityConfig;
     ICityHistory public cityHistory;
+    ICityDistricts public cityDistricts;
 
     uint256 public nextPlotId = 1;
 
@@ -35,6 +37,11 @@ contract CityRegistry is Ownable {
     function setCityHistory(address cityHistoryAddress) external onlyOwner {
         if (cityHistoryAddress == address(0)) revert CityErrors.ZeroAddress();
         cityHistory = ICityHistory(cityHistoryAddress);
+    }
+
+    function setCityDistricts(address cityDistrictsAddress) external onlyOwner {
+        if (cityDistrictsAddress == address(0)) revert CityErrors.ZeroAddress();
+        cityDistricts = ICityDistricts(cityDistrictsAddress);
     }
 
     function setCityKeyToken(uint256 tokenId) external {
@@ -112,6 +119,10 @@ contract CityRegistry is Ownable {
         if (address(cityHistory) != address(0)) {
             cityHistory.initializePlotHistory(plotId, msg.sender, faction, true);
         }
+
+        if (address(cityDistricts) != address(0)) {
+            cityDistricts.assignDistrictAuto(plotId);
+        }
     }
 
     function reserveCommunityPlot(CityTypes.CommunityBuildingKind buildingKind)
@@ -146,6 +157,10 @@ contract CityRegistry is Ownable {
                 CityTypes.Faction.Neutral,
                 true
             );
+        }
+
+        if (address(cityDistricts) != address(0)) {
+            cityDistricts.assignDistrictAuto(plotId);
         }
     }
 

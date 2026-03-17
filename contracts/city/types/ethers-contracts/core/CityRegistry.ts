@@ -13,13 +13,14 @@ export declare namespace CityTypes {
     }
 
   export interface CityRegistryInterface extends Interface {
-    getFunction(nameOrSignature: "chooseFaction" | "chosenFactionOf" | "cityConfig" | "cityHistory" | "cityKeyTokenOf" | "factionPlotCount" | "getPersonalPlot" | "getPlotCore" | "hasCityKeyOf" | "nextPlotId" | "owner" | "personalPlotCountOf" | "personalPlotSlotsOf" | "plotCoreOf" | "renounceOwnership" | "reserveCommunityPlot" | "reserveNextPersonalPlot" | "setCityHistory" | "setCityKeyToken" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "chooseFaction" | "chosenFactionOf" | "cityConfig" | "cityDistricts" | "cityHistory" | "cityKeyTokenOf" | "factionPlotCount" | "getPersonalPlot" | "getPlotCore" | "hasCityKeyOf" | "nextPlotId" | "owner" | "personalPlotCountOf" | "personalPlotSlotsOf" | "plotCoreOf" | "renounceOwnership" | "reserveCommunityPlot" | "reserveNextPersonalPlot" | "setCityDistricts" | "setCityHistory" | "setCityKeyToken" | "transferOwnership"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "CityKeyTokenSet" | "CommunityPlotReserved" | "FactionChosen" | "OwnershipTransferred" | "PersonalPlotReserved"): EventFragment;
 
     encodeFunctionData(functionFragment: 'chooseFaction', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'chosenFactionOf', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'cityConfig', values?: undefined): string;
+encodeFunctionData(functionFragment: 'cityDistricts', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityHistory', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityKeyTokenOf', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'factionPlotCount', values: [BigNumberish]): string;
@@ -34,6 +35,7 @@ encodeFunctionData(functionFragment: 'plotCoreOf', values: [BigNumberish]): stri
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'reserveCommunityPlot', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'reserveNextPersonalPlot', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'setCityDistricts', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setCityHistory', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setCityKeyToken', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
@@ -41,6 +43,7 @@ encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike])
     decodeFunctionResult(functionFragment: 'chooseFaction', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'chosenFactionOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityConfig', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'cityDistricts', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityHistory', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityKeyTokenOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'factionPlotCount', data: BytesLike): Result;
@@ -55,6 +58,7 @@ decodeFunctionResult(functionFragment: 'plotCoreOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'reserveCommunityPlot', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'reserveNextPersonalPlot', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setCityDistricts', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setCityHistory', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setCityKeyToken', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
@@ -179,6 +183,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    cityDistricts: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     cityHistory: TypedContractMethod<
       [],
       [string],
@@ -291,6 +303,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    setCityDistricts: TypedContractMethod<
+      [cityDistrictsAddress: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     setCityHistory: TypedContractMethod<
       [cityHistoryAddress: AddressLike, ],
       [void],
@@ -328,6 +348,11 @@ getFunction(nameOrSignature: 'chosenFactionOf'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'cityConfig'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'cityDistricts'): TypedContractMethod<
       [],
       [string],
       'view'
@@ -400,6 +425,11 @@ getFunction(nameOrSignature: 'reserveCommunityPlot'): TypedContractMethod<
 getFunction(nameOrSignature: 'reserveNextPersonalPlot'): TypedContractMethod<
       [slotIndex: BigNumberish, ],
       [bigint],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'setCityDistricts'): TypedContractMethod<
+      [cityDistrictsAddress: AddressLike, ],
+      [void],
       'nonpayable'
     >;
 getFunction(nameOrSignature: 'setCityHistory'): TypedContractMethod<
