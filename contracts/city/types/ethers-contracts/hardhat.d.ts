@@ -22,16 +22,27 @@ getContractFactory(name: 'CityLand', signerOrOptions?: ethers.Signer | FactoryOp
 getContractFactory(name: 'CityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityRegistry__factory>
 getContractFactory(name: 'CityStatus', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityStatus__factory>
 getContractFactory(name: 'CityValidation', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityValidation__factory>
+getContractFactory(name: 'CityBlueprints', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityBlueprints__factory>
+getContractFactory(name: 'CityComponents', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityComponents__factory>
+getContractFactory(name: 'CityCrafting', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityCrafting__factory>
+getContractFactory(name: 'CityEnchantments', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityEnchantments__factory>
+getContractFactory(name: 'CityMateria', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityMateria__factory>
+getContractFactory(name: 'CityWeaponSockets', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityWeaponSockets__factory>
+getContractFactory(name: 'CityWeapons', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityWeapons__factory>
 getContractFactory(name: 'CityCrowdfunding', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityCrowdfunding__factory>
 getContractFactory(name: 'CityMaintenance', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityMaintenance__factory>
 getContractFactory(name: 'CityMarketplace', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityMarketplace__factory>
 getContractFactory(name: 'CityPoints', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityPoints__factory>
+getContractFactory(name: 'ICityBlueprints', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityBlueprints__factory>
+getContractFactory(name: 'ICityComponents', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityComponents__factory>
 getContractFactory(name: 'ICityConfig', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityConfig__factory>
 getContractFactory(name: 'ICityCrowdfunding', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityCrowdfunding__factory>
 getContractFactory(name: 'ICityDistricts', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityDistricts__factory>
 getContractFactory(name: 'ICityHistory', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityHistory__factory>
 getContractFactory(name: 'ICityLand', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityLand__factory>
 getContractFactory(name: 'ICityStatus', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityStatus__factory>
+getContractFactory(name: 'ICityWeaponSockets', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityWeaponSockets__factory>
+getContractFactory(name: 'ICityWeapons', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityWeapons__factory>
 getContractFactory(name: 'IFarmingV6', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IFarmingV6__factory>
 getContractFactory(name: 'IINPI', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IINPI__factory>
 getContractFactory(name: 'IInpinityNFT', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IInpinityNFT__factory>
@@ -56,16 +67,27 @@ getContractAt(name: 'CityLand', address: string | ethers.Addressable, signer?: e
 getContractAt(name: 'CityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityRegistry>
 getContractAt(name: 'CityStatus', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityStatus>
 getContractAt(name: 'CityValidation', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityValidation>
+getContractAt(name: 'CityBlueprints', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityBlueprints>
+getContractAt(name: 'CityComponents', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityComponents>
+getContractAt(name: 'CityCrafting', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityCrafting>
+getContractAt(name: 'CityEnchantments', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityEnchantments>
+getContractAt(name: 'CityMateria', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityMateria>
+getContractAt(name: 'CityWeaponSockets', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityWeaponSockets>
+getContractAt(name: 'CityWeapons', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityWeapons>
 getContractAt(name: 'CityCrowdfunding', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityCrowdfunding>
 getContractAt(name: 'CityMaintenance', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityMaintenance>
 getContractAt(name: 'CityMarketplace', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityMarketplace>
 getContractAt(name: 'CityPoints', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityPoints>
+getContractAt(name: 'ICityBlueprints', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityBlueprints>
+getContractAt(name: 'ICityComponents', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityComponents>
 getContractAt(name: 'ICityConfig', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityConfig>
 getContractAt(name: 'ICityCrowdfunding', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityCrowdfunding>
 getContractAt(name: 'ICityDistricts', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityDistricts>
 getContractAt(name: 'ICityHistory', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityHistory>
 getContractAt(name: 'ICityLand', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityLand>
 getContractAt(name: 'ICityStatus', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityStatus>
+getContractAt(name: 'ICityWeaponSockets', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityWeaponSockets>
+getContractAt(name: 'ICityWeapons', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityWeapons>
 getContractAt(name: 'IFarmingV6', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IFarmingV6>
 getContractAt(name: 'IINPI', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IINPI>
 getContractAt(name: 'IInpinityNFT', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IInpinityNFT>
@@ -90,16 +112,27 @@ deployContract(name: 'CityLand', signerOrOptions?: ethers.Signer | DeployContrac
 deployContract(name: 'CityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityRegistry>
 deployContract(name: 'CityStatus', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityStatus>
 deployContract(name: 'CityValidation', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityValidation>
+deployContract(name: 'CityBlueprints', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityBlueprints>
+deployContract(name: 'CityComponents', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityComponents>
+deployContract(name: 'CityCrafting', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityCrafting>
+deployContract(name: 'CityEnchantments', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityEnchantments>
+deployContract(name: 'CityMateria', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityMateria>
+deployContract(name: 'CityWeaponSockets', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityWeaponSockets>
+deployContract(name: 'CityWeapons', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityWeapons>
 deployContract(name: 'CityCrowdfunding', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityCrowdfunding>
 deployContract(name: 'CityMaintenance', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityMaintenance>
 deployContract(name: 'CityMarketplace', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityMarketplace>
 deployContract(name: 'CityPoints', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityPoints>
+deployContract(name: 'ICityBlueprints', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityBlueprints>
+deployContract(name: 'ICityComponents', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityComponents>
 deployContract(name: 'ICityConfig', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityConfig>
 deployContract(name: 'ICityCrowdfunding', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityCrowdfunding>
 deployContract(name: 'ICityDistricts', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityDistricts>
 deployContract(name: 'ICityHistory', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityHistory>
 deployContract(name: 'ICityLand', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityLand>
 deployContract(name: 'ICityStatus', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityStatus>
+deployContract(name: 'ICityWeaponSockets', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityWeaponSockets>
+deployContract(name: 'ICityWeapons', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityWeapons>
 deployContract(name: 'IFarmingV6', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFarmingV6>
 deployContract(name: 'IINPI', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IINPI>
 deployContract(name: 'IInpinityNFT', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IInpinityNFT>
@@ -124,16 +157,27 @@ deployContract(name: 'CityLand', args: any[], signerOrOptions?: ethers.Signer | 
 deployContract(name: 'CityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityRegistry>
 deployContract(name: 'CityStatus', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityStatus>
 deployContract(name: 'CityValidation', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityValidation>
+deployContract(name: 'CityBlueprints', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityBlueprints>
+deployContract(name: 'CityComponents', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityComponents>
+deployContract(name: 'CityCrafting', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityCrafting>
+deployContract(name: 'CityEnchantments', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityEnchantments>
+deployContract(name: 'CityMateria', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityMateria>
+deployContract(name: 'CityWeaponSockets', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityWeaponSockets>
+deployContract(name: 'CityWeapons', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityWeapons>
 deployContract(name: 'CityCrowdfunding', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityCrowdfunding>
 deployContract(name: 'CityMaintenance', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityMaintenance>
 deployContract(name: 'CityMarketplace', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityMarketplace>
 deployContract(name: 'CityPoints', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityPoints>
+deployContract(name: 'ICityBlueprints', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityBlueprints>
+deployContract(name: 'ICityComponents', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityComponents>
 deployContract(name: 'ICityConfig', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityConfig>
 deployContract(name: 'ICityCrowdfunding', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityCrowdfunding>
 deployContract(name: 'ICityDistricts', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityDistricts>
 deployContract(name: 'ICityHistory', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityHistory>
 deployContract(name: 'ICityLand', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityLand>
 deployContract(name: 'ICityStatus', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityStatus>
+deployContract(name: 'ICityWeaponSockets', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityWeaponSockets>
+deployContract(name: 'ICityWeapons', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityWeapons>
 deployContract(name: 'IFarmingV6', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFarmingV6>
 deployContract(name: 'IINPI', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IINPI>
 deployContract(name: 'IInpinityNFT', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IInpinityNFT>

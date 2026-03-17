@@ -1,119 +1,135 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libraries/CityErrors.sol";
 
-contract CityComponents is Ownable {
-    enum ComponentCategory {
-        None,
-        Core,
-        Barrel,
-        Blade,
-        Grip,
-        Scope,
-        EnergyCell,
-        Frame,
-        Catalyst,
-        MateriaSocket
-    }
-
-    enum ElementType {
-        None,
-        Fire,
-        Water,
-        Ice,
-        Lightning,
-        Earth,
-        Crystal,
-        Shadow,
-        Light,
-        Aether
-    }
-
+contract CityComponents is ERC1155, Ownable {
     struct ComponentDefinition {
         uint256 id;
         string name;
-        ComponentCategory category;
-        ElementType element;
+        uint256 category;
         uint256 rarityTier;
         uint256 techTier;
-        uint256 familyId;
-        uint256 powerScore;
         bool enabled;
     }
 
-    mapping(uint256 => ComponentDefinition) public componentOf;
-    mapping(address => bool) public authorizedCallers;
+    string public baseMetadataURI;
 
-    event AuthorizedCallerSet(address indexed caller, bool allowed);
+    mapping(uint256 => ComponentDefinition) public componentDefinitionOf;
+    mapping(address => bool) public authorizedMinters;
 
-    event ComponentSet(
+    event AuthorizedMinterSet(address indexed minter, bool allowed);
+    event BaseMetadataURISet(string newBaseMetadataURI);
+
+    event ComponentDefinitionSet(
         uint256 indexed componentId,
         string name,
-        ComponentCategory category,
-        ElementType element,
+        uint256 category,
         uint256 rarityTier,
         uint256 techTier,
         bool enabled
     );
 
-    constructor(address initialOwner) Ownable(initialOwner) {
+    event ComponentMinted(
+        address indexed to,
+        uint256 indexed componentId,
+        uint256 amount
+    );
+
+    constructor(address initialOwner, string memory initialURI)
+        ERC1155(initialURI)
+        Ownable(initialOwner)
+    {
         if (initialOwner == address(0)) revert CityErrors.ZeroAddress();
+        baseMetadataURI = initialURI;
     }
 
-    modifier onlyAuthorized() {
-        if (!(msg.sender == owner() || authorizedCallers[msg.sender])) {
+    modifier onlyAuthorizedMinter() {
+        if (!(msg.sender == owner() || authorizedMinters[msg.sender])) {
             revert CityErrors.NotAuthorized();
         }
         _;
     }
 
-    function setAuthorizedCaller(address caller, bool allowed) external onlyOwner {
-        if (caller == address(0)) revert CityErrors.ZeroAddress();
-        authorizedCallers[caller] = allowed;
-        emit AuthorizedCallerSet(caller, allowed);
+    function setAuthorizedMinter(address minter, bool allowed) external onlyOwner {
+        if (minter == address(0)) revert CityErrors.ZeroAddress();
+        authorizedMinters[minter] = allowed;
+        emit AuthorizedMinterSet(minter, allowed);
     }
 
-    function setComponent(
+    function setBaseMetadataURI(string calldata newBaseMetadataURI) external onlyOwner {
+        baseMetadataURI = newBaseMetadataURI;
+        emit BaseMetadataURISet(newBaseMetadataURI);
+    }
+
+    function uri(uint256 componentId) public view override returns (string memory) {
+        return string(abi.encodePacked(baseMetadataURI, _toString(componentId), ".json"));
+    }
+
+    function setComponentDefinition(
         uint256 componentId,
         string calldata name,
-        ComponentCategory category,
-        ElementType element,
+        uint256 category,
         uint256 rarityTier,
         uint256 techTier,
-        uint256 familyId,
-        uint256 powerScore,
         bool enabled
-    ) external onlyAuthorized {
+    ) external onlyOwner {
         if (componentId == 0) revert CityErrors.InvalidValue();
         if (bytes(name).length == 0) revert CityErrors.InvalidValue();
-        if (category == ComponentCategory.None) revert CityErrors.InvalidValue();
 
-        componentOf[componentId] = ComponentDefinition({
+        componentDefinitionOf[componentId] = ComponentDefinition({
             id: componentId,
             name: name,
             category: category,
-            element: element,
             rarityTier: rarityTier,
             techTier: techTier,
-            familyId: familyId,
-            powerScore: powerScore,
             enabled: enabled
         });
 
-        emit ComponentSet(
+        emit ComponentDefinitionSet(
             componentId,
             name,
             category,
-            element,
             rarityTier,
             techTier,
             enabled
         );
     }
 
-    function getComponent(uint256 componentId) external view returns (ComponentDefinition memory) {
-        return componentOf[componentId];
+    function mintComponent(
+        address to,
+        uint256 componentId,
+        uint256 amount
+    ) external onlyAuthorizedMinter {
+        if (to == address(0)) revert CityErrors.ZeroAddress();
+        if (amount == 0) revert CityErrors.InvalidValue();
+
+        ComponentDefinition memory def = componentDefinitionOf[componentId];
+        if (def.id == 0 || !def.enabled) revert CityErrors.InvalidValue();
+
+        _mint(to, componentId, amount, "");
+        emit ComponentMinted(to, componentId, amount);
+    }
+
+    function _toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) return "0";
+
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+
+        return string(buffer);
     }
 }

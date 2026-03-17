@@ -70,7 +70,7 @@ import type { NonPayableOverrides } from "../../common.js"
   }
 ] as const;
 
-  const _bytecode = "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212202c544441175a91bb20e413b198eed6f24ad4f512d1e2a65ca64d7de1a8460d3764736f6c63430008180033";
+  const _bytecode = "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220921360f3ccea40707e8d15baa77ca0a5062394cd88583a16811e86c0c7b4750164736f6c63430008180033";
 
   
       type CityErrorsConstructorParams = [signer?: Signer] | ConstructorParameters<typeof ContractFactory>;

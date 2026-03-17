@@ -4,6 +4,7 @@
 export * as access from './access/index.js';
 export * as buildings from './buildings/index.js';
 export * as core from './core/index.js';
+export * as crafting from './crafting/index.js';
 export * as economy from './economy/index.js';
 export * as interfaces from './interfaces/index.js';
 export * as libraries from './libraries/index.js';

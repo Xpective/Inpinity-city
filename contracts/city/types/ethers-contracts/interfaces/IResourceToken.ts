@@ -6,14 +6,16 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface IResourceTokenInterface extends Interface {
-    getFunction(nameOrSignature: "balanceOf" | "safeTransferFrom"): FunctionFragment;
+    getFunction(nameOrSignature: "balanceOf" | "isApprovedForAll" | "safeTransferFrom"): FunctionFragment;
 
     
 
     encodeFunctionData(functionFragment: 'balanceOf', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'isApprovedForAll', values: [AddressLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'safeTransferFrom', values: [AddressLike, AddressLike, BigNumberish, BigNumberish, BytesLike]): string;
 
     decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'isApprovedForAll', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'safeTransferFrom', data: BytesLike): Result;
   }
 
@@ -61,6 +63,14 @@ decodeFunctionResult(functionFragment: 'safeTransferFrom', data: BytesLike): Res
     
 
     
+    isApprovedForAll: TypedContractMethod<
+      [account: AddressLike, operator: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     safeTransferFrom: TypedContractMethod<
       [from: AddressLike, to: AddressLike, id: BigNumberish, value: BigNumberish, data: BytesLike, ],
       [void],
@@ -74,6 +84,11 @@ decodeFunctionResult(functionFragment: 'safeTransferFrom', data: BytesLike): Res
     getFunction(nameOrSignature: 'balanceOf'): TypedContractMethod<
       [account: AddressLike, id: BigNumberish, ],
       [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'isApprovedForAll'): TypedContractMethod<
+      [account: AddressLike, operator: AddressLike, ],
+      [boolean],
       'view'
     >;
 getFunction(nameOrSignature: 'safeTransferFrom'): TypedContractMethod<
