@@ -33,9 +33,9 @@ const config = {
     },
   },
 
-  etherscan: {
-    apiKey: {
-      base: process.env.BASESCAN_API_KEY || "",
+  verify: {
+    etherscan: {
+      apiKey: process.env.BASESCAN_API_KEY || "",
     },
   },
 
@@ -56,8 +56,6 @@ if (process.env.BASE_SEPOLIA_RPC_URL) {
       ? [process.env.BASE_SEPOLIA_PRIVATE_KEY]
       : [],
   };
-
-  config.etherscan.apiKey.baseSepolia = process.env.BASESCAN_API_KEY || "";
 }
 
 export default defineConfig(config);
