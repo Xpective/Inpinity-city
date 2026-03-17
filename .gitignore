@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+artifacts/
+cache/
+coverage/
+typechain/
+dist/
+build/
+.generated/
+.DS_Store
+.vscode/settings.json
