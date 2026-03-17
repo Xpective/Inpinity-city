@@ -30,9 +30,6 @@ contract CityConfig is Ownable {
     bytes32 public constant KEY_QUBIQ_LEMONS_COST = keccak256("QUBIQ_LEMONS_COST");
     bytes32 public constant KEY_QUBIQ_IRON_COST = keccak256("QUBIQ_IRON_COST");
 
-    bytes32 public constant KEY_DORMANT_THRESHOLD_DAYS = keccak256("DORMANT_THRESHOLD_DAYS");
-    bytes32 public constant KEY_DECAYED_THRESHOLD_DAYS = keccak256("DECAYED_THRESHOLD_DAYS");
-    bytes32 public constant KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS = keccak256("LAYER_ELIGIBLE_THRESHOLD_DAYS");
 
     bytes32 public constant KEY_BUILDING_OIL_COST = keccak256("BUILDING_OIL_COST");
     bytes32 public constant KEY_BUILDING_LEMONS_COST = keccak256("BUILDING_LEMONS_COST");
@@ -40,7 +37,10 @@ contract CityConfig is Ownable {
     bytes32 public constant KEY_BUILDING_GOLD_COST = keccak256("BUILDING_GOLD_COST");
 
     bytes32 public constant KEY_INITIAL_FEE_BPS = keccak256("INITIAL_FEE_BPS");
-
+    bytes32 public constant KEY_DORMANT_THRESHOLD_DAYS = keccak256("DORMANT_THRESHOLD_DAYS");
+    bytes32 public constant KEY_DECAYED_THRESHOLD_DAYS = keccak256("DECAYED_THRESHOLD_DAYS");
+    bytes32 public constant KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS = keccak256("LAYER_ELIGIBLE_THRESHOLD_DAYS");
+    
     constructor(address initialOwner) Ownable(initialOwner) {
         if (initialOwner == address(0)) revert CityErrors.ZeroAddress();
         emit CityEvents.ConfigInitialized(initialOwner);
