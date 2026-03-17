@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "../interfaces/IResourceToken.sol";
 import "../interfaces/ICityStatus.sol";
 import "../interfaces/ICityHistory.sol";
@@ -11,7 +12,7 @@ import "../libraries/CityEvents.sol";
 import "./CityConfig.sol";
 import "./CityRegistry.sol";
 
-contract CityLand is Ownable {
+contract CityLand is Ownable, ERC1155Holder {
     uint256 public constant RESOURCE_OIL = 0;
     uint256 public constant RESOURCE_LEMONS = 1;
     uint256 public constant RESOURCE_IRON = 2;
@@ -95,51 +96,29 @@ contract CityLand is Ownable {
         uint256 lemonsCost = cityConfig.getUintConfig(cityConfig.KEY_QUBIQ_LEMONS_COST());
         uint256 ironCost = cityConfig.getUintConfig(cityConfig.KEY_QUBIQ_IRON_COST());
 
-        uint256 oilNeeded = oilCost > q.oilDeposited ? oilCost - q.oilDeposited : 0;
-        uint256 lemonsNeeded = lemonsCost > q.lemonsDeposited ? lemonsCost - q.lemonsDeposited : 0;
-        uint256 ironNeeded = ironCost > q.ironDeposited ? ironCost - q.ironDeposited : 0;
+        (uint256 oilNeeded, uint256 lemonsNeeded, uint256 ironNeeded) =
+            _calculateNeeded(q, oilCost, lemonsCost, ironCost);
 
         if (oilNeeded == 0 && lemonsNeeded == 0 && ironNeeded == 0) {
             revert CityErrors.InvalidValue();
         }
 
-        if (oilAmount > oilNeeded) oilAmount = oilNeeded;
-        if (lemonsAmount > lemonsNeeded) lemonsAmount = lemonsNeeded;
-        if (ironAmount > ironNeeded) ironAmount = ironNeeded;
+        oilAmount = _min(oilAmount, oilNeeded);
+        lemonsAmount = _min(lemonsAmount, lemonsNeeded);
+        ironAmount = _min(ironAmount, ironNeeded);
 
         if (oilAmount == 0 && lemonsAmount == 0 && ironAmount == 0) {
             revert CityErrors.InvalidValue();
         }
 
-        address resourceTokenAddr = cityConfig.getAddressConfig(cityConfig.KEY_RESOURCE_TOKEN());
-        if (resourceTokenAddr == address(0)) revert CityErrors.InvalidConfig();
-
-        IResourceToken resourceToken = IResourceToken(resourceTokenAddr);
-
-        if (oilAmount > 0) {
-            resourceToken.safeTransferFrom(msg.sender, address(this), RESOURCE_OIL, oilAmount, "");
-        }
-        if (lemonsAmount > 0) {
-            resourceToken.safeTransferFrom(msg.sender, address(this), RESOURCE_LEMONS, lemonsAmount, "");
-        }
-        if (ironAmount > 0) {
-            resourceToken.safeTransferFrom(msg.sender, address(this), RESOURCE_IRON, ironAmount, "");
-        }
+        _transferResources(oilAmount, lemonsAmount, ironAmount);
 
         q.oilDeposited += oilAmount;
         q.lemonsDeposited += lemonsAmount;
         q.ironDeposited += ironAmount;
         q.lastContributor = msg.sender;
 
-        emit CityEvents.QubiqContributed(
-            plotId,
-            x,
-            y,
-            msg.sender,
-            oilAmount,
-            lemonsAmount,
-            ironAmount
-        );
+        emit CityEvents.QubiqContributed(plotId, x, y, msg.sender, oilAmount, lemonsAmount, ironAmount);
 
         _tryCompleteQubiq(plotId, x, y, q);
 
@@ -195,7 +174,7 @@ contract CityLand is Ownable {
         }
     }
 
-    function isPlotFullyCompleted(uint256 plotId) external view returns (bool) {
+    function isPlotFullyCompleted(uint256 plotId) public view returns (bool) {
         CityTypes.PlotCore memory plot = cityRegistry.getPlotCore(plotId);
         uint256 totalQubiqs = uint256(plot.width) * uint256(plot.height);
         return completedQubiqCountOf[plotId] >= totalQubiqs;
@@ -206,6 +185,38 @@ contract CityLand is Ownable {
         uint256 totalQubiqs = uint256(plot.width) * uint256(plot.height);
         if (totalQubiqs == 0) return 0;
         return (completedQubiqCountOf[plotId] * 10_000) / totalQubiqs;
+    }
+
+    function _calculateNeeded(
+        QubiqProgress storage q,
+        uint256 oilCost,
+        uint256 lemonsCost,
+        uint256 ironCost
+    ) internal view returns (uint256 oilNeeded, uint256 lemonsNeeded, uint256 ironNeeded) {
+        oilNeeded = oilCost > q.oilDeposited ? oilCost - q.oilDeposited : 0;
+        lemonsNeeded = lemonsCost > q.lemonsDeposited ? lemonsCost - q.lemonsDeposited : 0;
+        ironNeeded = ironCost > q.ironDeposited ? ironCost - q.ironDeposited : 0;
+    }
+
+    function _transferResources(
+        uint256 oilAmount,
+        uint256 lemonsAmount,
+        uint256 ironAmount
+    ) internal {
+        address resourceTokenAddr = cityConfig.getAddressConfig(cityConfig.KEY_RESOURCE_TOKEN());
+        if (resourceTokenAddr == address(0)) revert CityErrors.InvalidConfig();
+
+        IResourceToken resourceToken = IResourceToken(resourceTokenAddr);
+
+        if (oilAmount > 0) {
+            resourceToken.safeTransferFrom(msg.sender, address(this), RESOURCE_OIL, oilAmount, "");
+        }
+        if (lemonsAmount > 0) {
+            resourceToken.safeTransferFrom(msg.sender, address(this), RESOURCE_LEMONS, lemonsAmount, "");
+        }
+        if (ironAmount > 0) {
+            resourceToken.safeTransferFrom(msg.sender, address(this), RESOURCE_IRON, ironAmount, "");
+        }
     }
 
     function _tryCompleteQubiq(
@@ -228,6 +239,10 @@ contract CityLand is Ownable {
             completedQubiqCountOf[plotId] += 1;
 
             emit CityEvents.QubiqCompleted(plotId, x, y, q.usedAether);
+
+            if (isPlotFullyCompleted(plotId)) {
+                emit CityEvents.PlotCompleted(plotId);
+            }
         }
     }
 
@@ -238,5 +253,9 @@ contract CityLand is Ownable {
     ) internal pure {
         if (!plot.exists) revert CityErrors.PlotNotFound();
         if (x >= plot.width || y >= plot.height) revert CityErrors.InvalidValue();
+    }
+
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 }

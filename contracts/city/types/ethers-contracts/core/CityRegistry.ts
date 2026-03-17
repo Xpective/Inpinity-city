@@ -13,17 +13,19 @@ export declare namespace CityTypes {
     }
 
   export interface CityRegistryInterface extends Interface {
-    getFunction(nameOrSignature: "chooseFaction" | "chosenFactionOf" | "cityConfig" | "cityKeyTokenOf" | "factionPlotCount" | "getPersonalPlot" | "getPlotCore" | "nextPlotId" | "owner" | "personalPlotCountOf" | "personalPlotSlotsOf" | "plotCoreOf" | "renounceOwnership" | "reserveCommunityPlot" | "reserveNextPersonalPlot" | "setCityKeyToken" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "chooseFaction" | "chosenFactionOf" | "cityConfig" | "cityHistory" | "cityKeyTokenOf" | "factionPlotCount" | "getPersonalPlot" | "getPlotCore" | "hasCityKeyOf" | "nextPlotId" | "owner" | "personalPlotCountOf" | "personalPlotSlotsOf" | "plotCoreOf" | "renounceOwnership" | "reserveCommunityPlot" | "reserveNextPersonalPlot" | "setCityHistory" | "setCityKeyToken" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "CommunityPlotReserved" | "OwnershipTransferred" | "PersonalPlotReserved"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "CityKeyTokenSet" | "CommunityPlotReserved" | "FactionChosen" | "OwnershipTransferred" | "PersonalPlotReserved"): EventFragment;
 
     encodeFunctionData(functionFragment: 'chooseFaction', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'chosenFactionOf', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'cityConfig', values?: undefined): string;
+encodeFunctionData(functionFragment: 'cityHistory', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityKeyTokenOf', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'factionPlotCount', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getPersonalPlot', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getPlotCore', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'hasCityKeyOf', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'nextPlotId', values?: undefined): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'personalPlotCountOf', values: [AddressLike]): string;
@@ -32,16 +34,19 @@ encodeFunctionData(functionFragment: 'plotCoreOf', values: [BigNumberish]): stri
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'reserveCommunityPlot', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'reserveNextPersonalPlot', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'setCityHistory', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setCityKeyToken', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
     decodeFunctionResult(functionFragment: 'chooseFaction', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'chosenFactionOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityConfig', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'cityHistory', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityKeyTokenOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'factionPlotCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getPersonalPlot', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getPlotCore', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'hasCityKeyOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'nextPlotId', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'personalPlotCountOf', data: BytesLike): Result;
@@ -50,15 +55,40 @@ decodeFunctionResult(functionFragment: 'plotCoreOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'reserveCommunityPlot', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'reserveNextPersonalPlot', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setCityHistory', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setCityKeyToken', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
   
+    export namespace CityKeyTokenSetEvent {
+      export type InputTuple = [user: AddressLike, tokenId: BigNumberish];
+      export type OutputTuple = [user: string, tokenId: bigint];
+      export interface OutputObject {user: string, tokenId: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace CommunityPlotReservedEvent {
       export type InputTuple = [plotId: BigNumberish, buildingKind: BigNumberish];
       export type OutputTuple = [plotId: bigint, buildingKind: bigint];
       export interface OutputObject {plotId: bigint, buildingKind: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace FactionChosenEvent {
+      export type InputTuple = [user: AddressLike, faction: BigNumberish];
+      export type OutputTuple = [user: string, faction: bigint];
+      export interface OutputObject {user: string, faction: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -149,6 +179,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    cityHistory: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     cityKeyTokenOf: TypedContractMethod<
       [arg0: AddressLike, ],
       [bigint],
@@ -176,6 +214,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     getPlotCore: TypedContractMethod<
       [plotId: BigNumberish, ],
       [CityTypes.PlotCoreStructOutput],
+      'view'
+    >
+    
+
+    
+    hasCityKeyOf: TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
       'view'
     >
     
@@ -245,6 +291,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    setCityHistory: TypedContractMethod<
+      [cityHistoryAddress: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     setCityKeyToken: TypedContractMethod<
       [tokenId: BigNumberish, ],
       [void],
@@ -278,6 +332,11 @@ getFunction(nameOrSignature: 'cityConfig'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'cityHistory'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
 getFunction(nameOrSignature: 'cityKeyTokenOf'): TypedContractMethod<
       [arg0: AddressLike, ],
       [bigint],
@@ -296,6 +355,11 @@ getFunction(nameOrSignature: 'getPersonalPlot'): TypedContractMethod<
 getFunction(nameOrSignature: 'getPlotCore'): TypedContractMethod<
       [plotId: BigNumberish, ],
       [CityTypes.PlotCoreStructOutput],
+      'view'
+    >;
+getFunction(nameOrSignature: 'hasCityKeyOf'): TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
       'view'
     >;
 getFunction(nameOrSignature: 'nextPlotId'): TypedContractMethod<
@@ -338,6 +402,11 @@ getFunction(nameOrSignature: 'reserveNextPersonalPlot'): TypedContractMethod<
       [bigint],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setCityHistory'): TypedContractMethod<
+      [cityHistoryAddress: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'setCityKeyToken'): TypedContractMethod<
       [tokenId: BigNumberish, ],
       [void],
@@ -349,14 +418,24 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       'nonpayable'
     >;
 
-    getEvent(key: 'CommunityPlotReserved'): TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
+    getEvent(key: 'CityKeyTokenSet'): TypedContractEvent<CityKeyTokenSetEvent.InputTuple, CityKeyTokenSetEvent.OutputTuple, CityKeyTokenSetEvent.OutputObject>;
+getEvent(key: 'CommunityPlotReserved'): TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
+getEvent(key: 'FactionChosen'): TypedContractEvent<FactionChosenEvent.InputTuple, FactionChosenEvent.OutputTuple, FactionChosenEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 getEvent(key: 'PersonalPlotReserved'): TypedContractEvent<PersonalPlotReservedEvent.InputTuple, PersonalPlotReservedEvent.OutputTuple, PersonalPlotReservedEvent.OutputObject>;
 
     filters: {
       
+      'CityKeyTokenSet(address,uint256)': TypedContractEvent<CityKeyTokenSetEvent.InputTuple, CityKeyTokenSetEvent.OutputTuple, CityKeyTokenSetEvent.OutputObject>;
+      CityKeyTokenSet: TypedContractEvent<CityKeyTokenSetEvent.InputTuple, CityKeyTokenSetEvent.OutputTuple, CityKeyTokenSetEvent.OutputObject>;
+    
+
       'CommunityPlotReserved(uint256,uint8)': TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
       CommunityPlotReserved: TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
+    
+
+      'FactionChosen(address,uint8)': TypedContractEvent<FactionChosenEvent.InputTuple, FactionChosenEvent.OutputTuple, FactionChosenEvent.OutputObject>;
+      FactionChosen: TypedContractEvent<FactionChosenEvent.InputTuple, FactionChosenEvent.OutputTuple, FactionChosenEvent.OutputObject>;
     
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;

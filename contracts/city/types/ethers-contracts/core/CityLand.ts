@@ -13,9 +13,9 @@ export declare namespace CityLand {
     }
 
   export interface CityLandInterface extends Interface {
-    getFunction(nameOrSignature: "RESOURCE_AETHER" | "RESOURCE_IRON" | "RESOURCE_LEMONS" | "RESOURCE_OIL" | "aetherUsesOf" | "cityConfig" | "cityRegistry" | "completedQubiqCountOf" | "contributeQubiq" | "getPlotCompletionBps" | "getQubiq" | "isPlotFullyCompleted" | "owner" | "renounceOwnership" | "transferOwnership" | "useAetherOnQubiq"): FunctionFragment;
+    getFunction(nameOrSignature: "RESOURCE_AETHER" | "RESOURCE_IRON" | "RESOURCE_LEMONS" | "RESOURCE_OIL" | "aetherUsesOf" | "cityConfig" | "cityHistory" | "cityRegistry" | "cityStatus" | "completedQubiqCountOf" | "contributeQubiq" | "getPlotCompletionBps" | "getQubiq" | "isPlotFullyCompleted" | "onERC1155BatchReceived" | "onERC1155Received" | "owner" | "renounceOwnership" | "setHooks" | "supportsInterface" | "transferOwnership" | "useAetherOnQubiq"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "OwnershipTransferred" | "PlotStatusUpdated"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AetherUsed" | "OwnershipTransferred" | "PlotCompleted" | "QubiqCompleted" | "QubiqContributed"): EventFragment;
 
     encodeFunctionData(functionFragment: 'RESOURCE_AETHER', values?: undefined): string;
 encodeFunctionData(functionFragment: 'RESOURCE_IRON', values?: undefined): string;
@@ -23,14 +23,20 @@ encodeFunctionData(functionFragment: 'RESOURCE_LEMONS', values?: undefined): str
 encodeFunctionData(functionFragment: 'RESOURCE_OIL', values?: undefined): string;
 encodeFunctionData(functionFragment: 'aetherUsesOf', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'cityConfig', values?: undefined): string;
+encodeFunctionData(functionFragment: 'cityHistory', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityRegistry', values?: undefined): string;
+encodeFunctionData(functionFragment: 'cityStatus', values?: undefined): string;
 encodeFunctionData(functionFragment: 'completedQubiqCountOf', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'contributeQubiq', values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getPlotCompletionBps', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getQubiq', values: [BigNumberish, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isPlotFullyCompleted', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'onERC1155BatchReceived', values: [AddressLike, AddressLike, BigNumberish[], BigNumberish[], BytesLike]): string;
+encodeFunctionData(functionFragment: 'onERC1155Received', values: [AddressLike, AddressLike, BigNumberish, BigNumberish, BytesLike]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
+encodeFunctionData(functionFragment: 'setHooks', values: [AddressLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'supportsInterface', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'useAetherOnQubiq', values: [BigNumberish, BigNumberish, BigNumberish]): string;
 
@@ -40,19 +46,37 @@ decodeFunctionResult(functionFragment: 'RESOURCE_LEMONS', data: BytesLike): Resu
 decodeFunctionResult(functionFragment: 'RESOURCE_OIL', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'aetherUsesOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityConfig', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'cityHistory', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityRegistry', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'cityStatus', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'completedQubiqCountOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'contributeQubiq', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getPlotCompletionBps', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getQubiq', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isPlotFullyCompleted', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'onERC1155BatchReceived', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'onERC1155Received', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setHooks', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'supportsInterface', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'useAetherOnQubiq', data: BytesLike): Result;
   }
 
   
+    export namespace AetherUsedEvent {
+      export type InputTuple = [plotId: BigNumberish, x: BigNumberish, y: BigNumberish, user: AddressLike];
+      export type OutputTuple = [plotId: bigint, x: bigint, y: bigint, user: string];
+      export interface OutputObject {plotId: bigint, x: bigint, y: bigint, user: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace OwnershipTransferredEvent {
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
       export type OutputTuple = [previousOwner: string, newOwner: string];
@@ -65,10 +89,34 @@ decodeFunctionResult(functionFragment: 'useAetherOnQubiq', data: BytesLike): Res
 
   
 
-    export namespace PlotStatusUpdatedEvent {
-      export type InputTuple = [plotId: BigNumberish, oldStatus: BigNumberish, newStatus: BigNumberish];
-      export type OutputTuple = [plotId: bigint, oldStatus: bigint, newStatus: bigint];
-      export interface OutputObject {plotId: bigint, oldStatus: bigint, newStatus: bigint };
+    export namespace PlotCompletedEvent {
+      export type InputTuple = [plotId: BigNumberish];
+      export type OutputTuple = [plotId: bigint];
+      export interface OutputObject {plotId: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace QubiqCompletedEvent {
+      export type InputTuple = [plotId: BigNumberish, x: BigNumberish, y: BigNumberish, usedAether: boolean];
+      export type OutputTuple = [plotId: bigint, x: bigint, y: bigint, usedAether: boolean];
+      export interface OutputObject {plotId: bigint, x: bigint, y: bigint, usedAether: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace QubiqContributedEvent {
+      export type InputTuple = [plotId: BigNumberish, x: BigNumberish, y: BigNumberish, contributor: AddressLike, oil: BigNumberish, lemons: BigNumberish, iron: BigNumberish];
+      export type OutputTuple = [plotId: bigint, x: bigint, y: bigint, contributor: string, oil: bigint, lemons: bigint, iron: bigint];
+      export interface OutputObject {plotId: bigint, x: bigint, y: bigint, contributor: string, oil: bigint, lemons: bigint, iron: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -159,7 +207,23 @@ decodeFunctionResult(functionFragment: 'useAetherOnQubiq', data: BytesLike): Res
     
 
     
+    cityHistory: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     cityRegistry: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    cityStatus: TypedContractMethod<
       [],
       [string],
       'view'
@@ -207,6 +271,22 @@ decodeFunctionResult(functionFragment: 'useAetherOnQubiq', data: BytesLike): Res
     
 
     
+    onERC1155BatchReceived: TypedContractMethod<
+      [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish[], arg3: BigNumberish[], arg4: BytesLike, ],
+      [string],
+      'nonpayable'
+    >
+    
+
+    
+    onERC1155Received: TypedContractMethod<
+      [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BigNumberish, arg4: BytesLike, ],
+      [string],
+      'nonpayable'
+    >
+    
+
+    
     owner: TypedContractMethod<
       [],
       [string],
@@ -219,6 +299,22 @@ decodeFunctionResult(functionFragment: 'useAetherOnQubiq', data: BytesLike): Res
       [],
       [void],
       'nonpayable'
+    >
+    
+
+    
+    setHooks: TypedContractMethod<
+      [cityStatusAddress: AddressLike, cityHistoryAddress: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    supportsInterface: TypedContractMethod<
+      [interfaceId: BytesLike, ],
+      [boolean],
+      'view'
     >
     
 
@@ -271,7 +367,17 @@ getFunction(nameOrSignature: 'cityConfig'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'cityHistory'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
 getFunction(nameOrSignature: 'cityRegistry'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'cityStatus'): TypedContractMethod<
       [],
       [string],
       'view'
@@ -301,6 +407,16 @@ getFunction(nameOrSignature: 'isPlotFullyCompleted'): TypedContractMethod<
       [boolean],
       'view'
     >;
+getFunction(nameOrSignature: 'onERC1155BatchReceived'): TypedContractMethod<
+      [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish[], arg3: BigNumberish[], arg4: BytesLike, ],
+      [string],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'onERC1155Received'): TypedContractMethod<
+      [arg0: AddressLike, arg1: AddressLike, arg2: BigNumberish, arg3: BigNumberish, arg4: BytesLike, ],
+      [string],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'owner'): TypedContractMethod<
       [],
       [string],
@@ -310,6 +426,16 @@ getFunction(nameOrSignature: 'renounceOwnership'): TypedContractMethod<
       [],
       [void],
       'nonpayable'
+    >;
+getFunction(nameOrSignature: 'setHooks'): TypedContractMethod<
+      [cityStatusAddress: AddressLike, cityHistoryAddress: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'supportsInterface'): TypedContractMethod<
+      [interfaceId: BytesLike, ],
+      [boolean],
+      'view'
     >;
 getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [newOwner: AddressLike, ],
@@ -322,17 +448,32 @@ getFunction(nameOrSignature: 'useAetherOnQubiq'): TypedContractMethod<
       'nonpayable'
     >;
 
-    getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
-getEvent(key: 'PlotStatusUpdated'): TypedContractEvent<PlotStatusUpdatedEvent.InputTuple, PlotStatusUpdatedEvent.OutputTuple, PlotStatusUpdatedEvent.OutputObject>;
+    getEvent(key: 'AetherUsed'): TypedContractEvent<AetherUsedEvent.InputTuple, AetherUsedEvent.OutputTuple, AetherUsedEvent.OutputObject>;
+getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+getEvent(key: 'PlotCompleted'): TypedContractEvent<PlotCompletedEvent.InputTuple, PlotCompletedEvent.OutputTuple, PlotCompletedEvent.OutputObject>;
+getEvent(key: 'QubiqCompleted'): TypedContractEvent<QubiqCompletedEvent.InputTuple, QubiqCompletedEvent.OutputTuple, QubiqCompletedEvent.OutputObject>;
+getEvent(key: 'QubiqContributed'): TypedContractEvent<QubiqContributedEvent.InputTuple, QubiqContributedEvent.OutputTuple, QubiqContributedEvent.OutputObject>;
 
     filters: {
       
+      'AetherUsed(uint256,uint32,uint32,address)': TypedContractEvent<AetherUsedEvent.InputTuple, AetherUsedEvent.OutputTuple, AetherUsedEvent.OutputObject>;
+      AetherUsed: TypedContractEvent<AetherUsedEvent.InputTuple, AetherUsedEvent.OutputTuple, AetherUsedEvent.OutputObject>;
+    
+
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
     
 
-      'PlotStatusUpdated(uint256,uint8,uint8)': TypedContractEvent<PlotStatusUpdatedEvent.InputTuple, PlotStatusUpdatedEvent.OutputTuple, PlotStatusUpdatedEvent.OutputObject>;
-      PlotStatusUpdated: TypedContractEvent<PlotStatusUpdatedEvent.InputTuple, PlotStatusUpdatedEvent.OutputTuple, PlotStatusUpdatedEvent.OutputObject>;
+      'PlotCompleted(uint256)': TypedContractEvent<PlotCompletedEvent.InputTuple, PlotCompletedEvent.OutputTuple, PlotCompletedEvent.OutputObject>;
+      PlotCompleted: TypedContractEvent<PlotCompletedEvent.InputTuple, PlotCompletedEvent.OutputTuple, PlotCompletedEvent.OutputObject>;
+    
+
+      'QubiqCompleted(uint256,uint32,uint32,bool)': TypedContractEvent<QubiqCompletedEvent.InputTuple, QubiqCompletedEvent.OutputTuple, QubiqCompletedEvent.OutputObject>;
+      QubiqCompleted: TypedContractEvent<QubiqCompletedEvent.InputTuple, QubiqCompletedEvent.OutputTuple, QubiqCompletedEvent.OutputObject>;
+    
+
+      'QubiqContributed(uint256,uint32,uint32,address,uint256,uint256,uint256)': TypedContractEvent<QubiqContributedEvent.InputTuple, QubiqContributedEvent.OutputTuple, QubiqContributedEvent.OutputObject>;
+      QubiqContributed: TypedContractEvent<QubiqContributedEvent.InputTuple, QubiqContributedEvent.OutputTuple, QubiqContributedEvent.OutputObject>;
     
     };
   }

@@ -8,7 +8,7 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   export interface CityEventsInterface extends Interface {
     
 
-    getEvent(nameOrSignatureOrTopic: "CommunityPlotReserved" | "ConfigInitialized" | "CoreAddressSet" | "PersonalPlotReserved" | "PlotOwnerTransferred" | "PlotStatusUpdated" | "UintConfigSet"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AetherUseRecorded" | "AetherUsed" | "CityKeyTokenSet" | "CommunityPlotReserved" | "ConfigInitialized" | "CoreAddressSet" | "FactionChosen" | "LayerAdded" | "ManualStatusCleared" | "OwnershipTransferRecorded" | "PersonalPlotReserved" | "PlotCompleted" | "PlotHistoryInitialized" | "PlotOwnerTransferred" | "PlotStatusUpdated" | "QubiqCompleted" | "QubiqContributed" | "UintConfigSet"): EventFragment;
 
     
 
@@ -16,6 +16,42 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   }
 
   
+    export namespace AetherUseRecordedEvent {
+      export type InputTuple = [plotId: BigNumberish, totalAetherUses: BigNumberish];
+      export type OutputTuple = [plotId: bigint, totalAetherUses: bigint];
+      export interface OutputObject {plotId: bigint, totalAetherUses: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace AetherUsedEvent {
+      export type InputTuple = [plotId: BigNumberish, x: BigNumberish, y: BigNumberish, user: AddressLike];
+      export type OutputTuple = [plotId: bigint, x: bigint, y: bigint, user: string];
+      export interface OutputObject {plotId: bigint, x: bigint, y: bigint, user: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace CityKeyTokenSetEvent {
+      export type InputTuple = [user: AddressLike, tokenId: BigNumberish];
+      export type OutputTuple = [user: string, tokenId: bigint];
+      export interface OutputObject {user: string, tokenId: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace CommunityPlotReservedEvent {
       export type InputTuple = [plotId: BigNumberish, buildingKind: BigNumberish];
       export type OutputTuple = [plotId: bigint, buildingKind: bigint];
@@ -52,10 +88,82 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
 
   
 
+    export namespace FactionChosenEvent {
+      export type InputTuple = [user: AddressLike, faction: BigNumberish];
+      export type OutputTuple = [user: string, faction: bigint];
+      export interface OutputObject {user: string, faction: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace LayerAddedEvent {
+      export type InputTuple = [plotId: BigNumberish, newLayerCount: BigNumberish];
+      export type OutputTuple = [plotId: bigint, newLayerCount: bigint];
+      export interface OutputObject {plotId: bigint, newLayerCount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace ManualStatusClearedEvent {
+      export type InputTuple = [plotId: BigNumberish];
+      export type OutputTuple = [plotId: bigint];
+      export interface OutputObject {plotId: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace OwnershipTransferRecordedEvent {
+      export type InputTuple = [plotId: BigNumberish, transferCount: BigNumberish];
+      export type OutputTuple = [plotId: bigint, transferCount: bigint];
+      export interface OutputObject {plotId: bigint, transferCount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace PersonalPlotReservedEvent {
       export type InputTuple = [owner: AddressLike, plotId: BigNumberish, slotIndex: BigNumberish, faction: BigNumberish];
       export type OutputTuple = [owner: string, plotId: bigint, slotIndex: bigint, faction: bigint];
       export interface OutputObject {owner: string, plotId: bigint, slotIndex: bigint, faction: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace PlotCompletedEvent {
+      export type InputTuple = [plotId: BigNumberish];
+      export type OutputTuple = [plotId: bigint];
+      export interface OutputObject {plotId: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace PlotHistoryInitializedEvent {
+      export type InputTuple = [plotId: BigNumberish, firstBuilder: AddressLike, faction: BigNumberish, genesisEra: boolean];
+      export type OutputTuple = [plotId: bigint, firstBuilder: string, faction: bigint, genesisEra: boolean];
+      export interface OutputObject {plotId: bigint, firstBuilder: string, faction: bigint, genesisEra: boolean };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -80,6 +188,30 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
       export type InputTuple = [plotId: BigNumberish, oldStatus: BigNumberish, newStatus: BigNumberish];
       export type OutputTuple = [plotId: bigint, oldStatus: bigint, newStatus: bigint];
       export interface OutputObject {plotId: bigint, oldStatus: bigint, newStatus: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace QubiqCompletedEvent {
+      export type InputTuple = [plotId: BigNumberish, x: BigNumberish, y: BigNumberish, usedAether: boolean];
+      export type OutputTuple = [plotId: bigint, x: bigint, y: bigint, usedAether: boolean];
+      export interface OutputObject {plotId: bigint, x: bigint, y: bigint, usedAether: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace QubiqContributedEvent {
+      export type InputTuple = [plotId: BigNumberish, x: BigNumberish, y: BigNumberish, contributor: AddressLike, oil: BigNumberish, lemons: BigNumberish, iron: BigNumberish];
+      export type OutputTuple = [plotId: bigint, x: bigint, y: bigint, contributor: string, oil: bigint, lemons: bigint, iron: bigint];
+      export interface OutputObject {plotId: bigint, x: bigint, y: bigint, contributor: string, oil: bigint, lemons: bigint, iron: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -139,16 +271,39 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
 
     
 
-    getEvent(key: 'CommunityPlotReserved'): TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
+    getEvent(key: 'AetherUseRecorded'): TypedContractEvent<AetherUseRecordedEvent.InputTuple, AetherUseRecordedEvent.OutputTuple, AetherUseRecordedEvent.OutputObject>;
+getEvent(key: 'AetherUsed'): TypedContractEvent<AetherUsedEvent.InputTuple, AetherUsedEvent.OutputTuple, AetherUsedEvent.OutputObject>;
+getEvent(key: 'CityKeyTokenSet'): TypedContractEvent<CityKeyTokenSetEvent.InputTuple, CityKeyTokenSetEvent.OutputTuple, CityKeyTokenSetEvent.OutputObject>;
+getEvent(key: 'CommunityPlotReserved'): TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
 getEvent(key: 'ConfigInitialized'): TypedContractEvent<ConfigInitializedEvent.InputTuple, ConfigInitializedEvent.OutputTuple, ConfigInitializedEvent.OutputObject>;
 getEvent(key: 'CoreAddressSet'): TypedContractEvent<CoreAddressSetEvent.InputTuple, CoreAddressSetEvent.OutputTuple, CoreAddressSetEvent.OutputObject>;
+getEvent(key: 'FactionChosen'): TypedContractEvent<FactionChosenEvent.InputTuple, FactionChosenEvent.OutputTuple, FactionChosenEvent.OutputObject>;
+getEvent(key: 'LayerAdded'): TypedContractEvent<LayerAddedEvent.InputTuple, LayerAddedEvent.OutputTuple, LayerAddedEvent.OutputObject>;
+getEvent(key: 'ManualStatusCleared'): TypedContractEvent<ManualStatusClearedEvent.InputTuple, ManualStatusClearedEvent.OutputTuple, ManualStatusClearedEvent.OutputObject>;
+getEvent(key: 'OwnershipTransferRecorded'): TypedContractEvent<OwnershipTransferRecordedEvent.InputTuple, OwnershipTransferRecordedEvent.OutputTuple, OwnershipTransferRecordedEvent.OutputObject>;
 getEvent(key: 'PersonalPlotReserved'): TypedContractEvent<PersonalPlotReservedEvent.InputTuple, PersonalPlotReservedEvent.OutputTuple, PersonalPlotReservedEvent.OutputObject>;
+getEvent(key: 'PlotCompleted'): TypedContractEvent<PlotCompletedEvent.InputTuple, PlotCompletedEvent.OutputTuple, PlotCompletedEvent.OutputObject>;
+getEvent(key: 'PlotHistoryInitialized'): TypedContractEvent<PlotHistoryInitializedEvent.InputTuple, PlotHistoryInitializedEvent.OutputTuple, PlotHistoryInitializedEvent.OutputObject>;
 getEvent(key: 'PlotOwnerTransferred'): TypedContractEvent<PlotOwnerTransferredEvent.InputTuple, PlotOwnerTransferredEvent.OutputTuple, PlotOwnerTransferredEvent.OutputObject>;
 getEvent(key: 'PlotStatusUpdated'): TypedContractEvent<PlotStatusUpdatedEvent.InputTuple, PlotStatusUpdatedEvent.OutputTuple, PlotStatusUpdatedEvent.OutputObject>;
+getEvent(key: 'QubiqCompleted'): TypedContractEvent<QubiqCompletedEvent.InputTuple, QubiqCompletedEvent.OutputTuple, QubiqCompletedEvent.OutputObject>;
+getEvent(key: 'QubiqContributed'): TypedContractEvent<QubiqContributedEvent.InputTuple, QubiqContributedEvent.OutputTuple, QubiqContributedEvent.OutputObject>;
 getEvent(key: 'UintConfigSet'): TypedContractEvent<UintConfigSetEvent.InputTuple, UintConfigSetEvent.OutputTuple, UintConfigSetEvent.OutputObject>;
 
     filters: {
       
+      'AetherUseRecorded(uint256,uint32)': TypedContractEvent<AetherUseRecordedEvent.InputTuple, AetherUseRecordedEvent.OutputTuple, AetherUseRecordedEvent.OutputObject>;
+      AetherUseRecorded: TypedContractEvent<AetherUseRecordedEvent.InputTuple, AetherUseRecordedEvent.OutputTuple, AetherUseRecordedEvent.OutputObject>;
+    
+
+      'AetherUsed(uint256,uint32,uint32,address)': TypedContractEvent<AetherUsedEvent.InputTuple, AetherUsedEvent.OutputTuple, AetherUsedEvent.OutputObject>;
+      AetherUsed: TypedContractEvent<AetherUsedEvent.InputTuple, AetherUsedEvent.OutputTuple, AetherUsedEvent.OutputObject>;
+    
+
+      'CityKeyTokenSet(address,uint256)': TypedContractEvent<CityKeyTokenSetEvent.InputTuple, CityKeyTokenSetEvent.OutputTuple, CityKeyTokenSetEvent.OutputObject>;
+      CityKeyTokenSet: TypedContractEvent<CityKeyTokenSetEvent.InputTuple, CityKeyTokenSetEvent.OutputTuple, CityKeyTokenSetEvent.OutputObject>;
+    
+
       'CommunityPlotReserved(uint256,uint8)': TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
       CommunityPlotReserved: TypedContractEvent<CommunityPlotReservedEvent.InputTuple, CommunityPlotReservedEvent.OutputTuple, CommunityPlotReservedEvent.OutputObject>;
     
@@ -161,8 +316,32 @@ getEvent(key: 'UintConfigSet'): TypedContractEvent<UintConfigSetEvent.InputTuple
       CoreAddressSet: TypedContractEvent<CoreAddressSetEvent.InputTuple, CoreAddressSetEvent.OutputTuple, CoreAddressSetEvent.OutputObject>;
     
 
+      'FactionChosen(address,uint8)': TypedContractEvent<FactionChosenEvent.InputTuple, FactionChosenEvent.OutputTuple, FactionChosenEvent.OutputObject>;
+      FactionChosen: TypedContractEvent<FactionChosenEvent.InputTuple, FactionChosenEvent.OutputTuple, FactionChosenEvent.OutputObject>;
+    
+
+      'LayerAdded(uint256,uint32)': TypedContractEvent<LayerAddedEvent.InputTuple, LayerAddedEvent.OutputTuple, LayerAddedEvent.OutputObject>;
+      LayerAdded: TypedContractEvent<LayerAddedEvent.InputTuple, LayerAddedEvent.OutputTuple, LayerAddedEvent.OutputObject>;
+    
+
+      'ManualStatusCleared(uint256)': TypedContractEvent<ManualStatusClearedEvent.InputTuple, ManualStatusClearedEvent.OutputTuple, ManualStatusClearedEvent.OutputObject>;
+      ManualStatusCleared: TypedContractEvent<ManualStatusClearedEvent.InputTuple, ManualStatusClearedEvent.OutputTuple, ManualStatusClearedEvent.OutputObject>;
+    
+
+      'OwnershipTransferRecorded(uint256,uint32)': TypedContractEvent<OwnershipTransferRecordedEvent.InputTuple, OwnershipTransferRecordedEvent.OutputTuple, OwnershipTransferRecordedEvent.OutputObject>;
+      OwnershipTransferRecorded: TypedContractEvent<OwnershipTransferRecordedEvent.InputTuple, OwnershipTransferRecordedEvent.OutputTuple, OwnershipTransferRecordedEvent.OutputObject>;
+    
+
       'PersonalPlotReserved(address,uint256,uint8,uint8)': TypedContractEvent<PersonalPlotReservedEvent.InputTuple, PersonalPlotReservedEvent.OutputTuple, PersonalPlotReservedEvent.OutputObject>;
       PersonalPlotReserved: TypedContractEvent<PersonalPlotReservedEvent.InputTuple, PersonalPlotReservedEvent.OutputTuple, PersonalPlotReservedEvent.OutputObject>;
+    
+
+      'PlotCompleted(uint256)': TypedContractEvent<PlotCompletedEvent.InputTuple, PlotCompletedEvent.OutputTuple, PlotCompletedEvent.OutputObject>;
+      PlotCompleted: TypedContractEvent<PlotCompletedEvent.InputTuple, PlotCompletedEvent.OutputTuple, PlotCompletedEvent.OutputObject>;
+    
+
+      'PlotHistoryInitialized(uint256,address,uint8,bool)': TypedContractEvent<PlotHistoryInitializedEvent.InputTuple, PlotHistoryInitializedEvent.OutputTuple, PlotHistoryInitializedEvent.OutputObject>;
+      PlotHistoryInitialized: TypedContractEvent<PlotHistoryInitializedEvent.InputTuple, PlotHistoryInitializedEvent.OutputTuple, PlotHistoryInitializedEvent.OutputObject>;
     
 
       'PlotOwnerTransferred(uint256,address,address)': TypedContractEvent<PlotOwnerTransferredEvent.InputTuple, PlotOwnerTransferredEvent.OutputTuple, PlotOwnerTransferredEvent.OutputObject>;
@@ -171,6 +350,14 @@ getEvent(key: 'UintConfigSet'): TypedContractEvent<UintConfigSetEvent.InputTuple
 
       'PlotStatusUpdated(uint256,uint8,uint8)': TypedContractEvent<PlotStatusUpdatedEvent.InputTuple, PlotStatusUpdatedEvent.OutputTuple, PlotStatusUpdatedEvent.OutputObject>;
       PlotStatusUpdated: TypedContractEvent<PlotStatusUpdatedEvent.InputTuple, PlotStatusUpdatedEvent.OutputTuple, PlotStatusUpdatedEvent.OutputObject>;
+    
+
+      'QubiqCompleted(uint256,uint32,uint32,bool)': TypedContractEvent<QubiqCompletedEvent.InputTuple, QubiqCompletedEvent.OutputTuple, QubiqCompletedEvent.OutputObject>;
+      QubiqCompleted: TypedContractEvent<QubiqCompletedEvent.InputTuple, QubiqCompletedEvent.OutputTuple, QubiqCompletedEvent.OutputObject>;
+    
+
+      'QubiqContributed(uint256,uint32,uint32,address,uint256,uint256,uint256)': TypedContractEvent<QubiqContributedEvent.InputTuple, QubiqContributedEvent.OutputTuple, QubiqContributedEvent.OutputObject>;
+      QubiqContributed: TypedContractEvent<QubiqContributedEvent.InputTuple, QubiqContributedEvent.OutputTuple, QubiqContributedEvent.OutputObject>;
     
 
       'UintConfigSet(bytes32,uint256)': TypedContractEvent<UintConfigSetEvent.InputTuple, UintConfigSetEvent.OutputTuple, UintConfigSetEvent.OutputObject>;

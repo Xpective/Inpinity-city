@@ -15,6 +15,8 @@ getContractFactory(name: 'CityHistory', signerOrOptions?: ethers.Signer | Factor
 getContractFactory(name: 'CityLand', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityLand__factory>
 getContractFactory(name: 'CityRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityRegistry__factory>
 getContractFactory(name: 'CityStatus', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.CityStatus__factory>
+getContractFactory(name: 'ICityHistory', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityHistory__factory>
+getContractFactory(name: 'ICityStatus', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ICityStatus__factory>
 getContractFactory(name: 'IFarmingV6', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IFarmingV6__factory>
 getContractFactory(name: 'IINPI', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IINPI__factory>
 getContractFactory(name: 'IInpinityNFT', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IInpinityNFT__factory>
@@ -31,6 +33,8 @@ getContractAt(name: 'CityHistory', address: string | ethers.Addressable, signer?
 getContractAt(name: 'CityLand', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityLand>
 getContractAt(name: 'CityRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityRegistry>
 getContractAt(name: 'CityStatus', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.CityStatus>
+getContractAt(name: 'ICityHistory', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityHistory>
+getContractAt(name: 'ICityStatus', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ICityStatus>
 getContractAt(name: 'IFarmingV6', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IFarmingV6>
 getContractAt(name: 'IINPI', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IINPI>
 getContractAt(name: 'IInpinityNFT', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IInpinityNFT>
@@ -47,6 +51,8 @@ deployContract(name: 'CityHistory', signerOrOptions?: ethers.Signer | DeployCont
 deployContract(name: 'CityLand', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityLand>
 deployContract(name: 'CityRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityRegistry>
 deployContract(name: 'CityStatus', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityStatus>
+deployContract(name: 'ICityHistory', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityHistory>
+deployContract(name: 'ICityStatus', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityStatus>
 deployContract(name: 'IFarmingV6', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFarmingV6>
 deployContract(name: 'IINPI', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IINPI>
 deployContract(name: 'IInpinityNFT', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IInpinityNFT>
@@ -63,6 +69,8 @@ deployContract(name: 'CityHistory', args: any[], signerOrOptions?: ethers.Signer
 deployContract(name: 'CityLand', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityLand>
 deployContract(name: 'CityRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityRegistry>
 deployContract(name: 'CityStatus', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.CityStatus>
+deployContract(name: 'ICityHistory', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityHistory>
+deployContract(name: 'ICityStatus', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ICityStatus>
 deployContract(name: 'IFarmingV6', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IFarmingV6>
 deployContract(name: 'IINPI', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IINPI>
 deployContract(name: 'IInpinityNFT', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IInpinityNFT>

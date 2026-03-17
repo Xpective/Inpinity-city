@@ -6,11 +6,12 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CityHistoryInterface extends Interface {
-    getFunction(nameOrSignature: "cityRegistry" | "initializePlotHistory" | "owner" | "provenanceOf" | "recordAetherUse" | "recordLayerAdded" | "recordOwnershipTransfer" | "renounceOwnership" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedCallers" | "cityRegistry" | "initializePlotHistory" | "owner" | "provenanceOf" | "recordAetherUse" | "recordLayerAdded" | "recordOwnershipTransfer" | "renounceOwnership" | "setAuthorizedCaller" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AetherUseRecorded" | "LayerAdded" | "OwnershipTransferRecorded" | "OwnershipTransferred" | "PlotHistoryInitialized"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'cityRegistry', values?: undefined): string;
+    encodeFunctionData(functionFragment: 'authorizedCallers', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'cityRegistry', values?: undefined): string;
 encodeFunctionData(functionFragment: 'initializePlotHistory', values: [BigNumberish, AddressLike, BigNumberish, boolean]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'provenanceOf', values: [BigNumberish]): string;
@@ -18,9 +19,11 @@ encodeFunctionData(functionFragment: 'recordAetherUse', values: [BigNumberish]):
 encodeFunctionData(functionFragment: 'recordLayerAdded', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'recordOwnershipTransfer', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
+encodeFunctionData(functionFragment: 'setAuthorizedCaller', values: [AddressLike, boolean]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
-    decodeFunctionResult(functionFragment: 'cityRegistry', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'authorizedCallers', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'cityRegistry', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'initializePlotHistory', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'provenanceOf', data: BytesLike): Result;
@@ -28,14 +31,63 @@ decodeFunctionResult(functionFragment: 'recordAetherUse', data: BytesLike): Resu
 decodeFunctionResult(functionFragment: 'recordLayerAdded', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'recordOwnershipTransfer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setAuthorizedCaller', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
   
+    export namespace AetherUseRecordedEvent {
+      export type InputTuple = [plotId: BigNumberish, totalAetherUses: BigNumberish];
+      export type OutputTuple = [plotId: bigint, totalAetherUses: bigint];
+      export interface OutputObject {plotId: bigint, totalAetherUses: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace LayerAddedEvent {
+      export type InputTuple = [plotId: BigNumberish, newLayerCount: BigNumberish];
+      export type OutputTuple = [plotId: bigint, newLayerCount: bigint];
+      export interface OutputObject {plotId: bigint, newLayerCount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace OwnershipTransferRecordedEvent {
+      export type InputTuple = [plotId: BigNumberish, transferCount: BigNumberish];
+      export type OutputTuple = [plotId: bigint, transferCount: bigint];
+      export interface OutputObject {plotId: bigint, transferCount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace OwnershipTransferredEvent {
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
       export type OutputTuple = [previousOwner: string, newOwner: string];
       export interface OutputObject {previousOwner: string, newOwner: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace PlotHistoryInitializedEvent {
+      export type InputTuple = [plotId: BigNumberish, firstBuilder: AddressLike, faction: BigNumberish, genesisEra: boolean];
+      export type OutputTuple = [plotId: bigint, firstBuilder: string, faction: bigint, genesisEra: boolean];
+      export interface OutputObject {plotId: bigint, firstBuilder: string, faction: bigint, genesisEra: boolean };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -77,6 +129,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
 
     
+    
+    authorizedCallers: TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
     
     cityRegistry: TypedContractMethod<
       [],
@@ -142,6 +202,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    setAuthorizedCaller: TypedContractMethod<
+      [caller: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
@@ -152,7 +220,12 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'cityRegistry'): TypedContractMethod<
+    getFunction(nameOrSignature: 'authorizedCallers'): TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'cityRegistry'): TypedContractMethod<
       [],
       [string],
       'view'
@@ -192,18 +265,43 @@ getFunction(nameOrSignature: 'renounceOwnership'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setAuthorizedCaller'): TypedContractMethod<
+      [caller: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
       'nonpayable'
     >;
 
-    getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+    getEvent(key: 'AetherUseRecorded'): TypedContractEvent<AetherUseRecordedEvent.InputTuple, AetherUseRecordedEvent.OutputTuple, AetherUseRecordedEvent.OutputObject>;
+getEvent(key: 'LayerAdded'): TypedContractEvent<LayerAddedEvent.InputTuple, LayerAddedEvent.OutputTuple, LayerAddedEvent.OutputObject>;
+getEvent(key: 'OwnershipTransferRecorded'): TypedContractEvent<OwnershipTransferRecordedEvent.InputTuple, OwnershipTransferRecordedEvent.OutputTuple, OwnershipTransferRecordedEvent.OutputObject>;
+getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+getEvent(key: 'PlotHistoryInitialized'): TypedContractEvent<PlotHistoryInitializedEvent.InputTuple, PlotHistoryInitializedEvent.OutputTuple, PlotHistoryInitializedEvent.OutputObject>;
 
     filters: {
       
+      'AetherUseRecorded(uint256,uint32)': TypedContractEvent<AetherUseRecordedEvent.InputTuple, AetherUseRecordedEvent.OutputTuple, AetherUseRecordedEvent.OutputObject>;
+      AetherUseRecorded: TypedContractEvent<AetherUseRecordedEvent.InputTuple, AetherUseRecordedEvent.OutputTuple, AetherUseRecordedEvent.OutputObject>;
+    
+
+      'LayerAdded(uint256,uint32)': TypedContractEvent<LayerAddedEvent.InputTuple, LayerAddedEvent.OutputTuple, LayerAddedEvent.OutputObject>;
+      LayerAdded: TypedContractEvent<LayerAddedEvent.InputTuple, LayerAddedEvent.OutputTuple, LayerAddedEvent.OutputObject>;
+    
+
+      'OwnershipTransferRecorded(uint256,uint32)': TypedContractEvent<OwnershipTransferRecordedEvent.InputTuple, OwnershipTransferRecordedEvent.OutputTuple, OwnershipTransferRecordedEvent.OutputObject>;
+      OwnershipTransferRecorded: TypedContractEvent<OwnershipTransferRecordedEvent.InputTuple, OwnershipTransferRecordedEvent.OutputTuple, OwnershipTransferRecordedEvent.OutputObject>;
+    
+
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+    
+
+      'PlotHistoryInitialized(uint256,address,uint8,bool)': TypedContractEvent<PlotHistoryInitializedEvent.InputTuple, PlotHistoryInitializedEvent.OutputTuple, PlotHistoryInitializedEvent.OutputObject>;
+      PlotHistoryInitialized: TypedContractEvent<PlotHistoryInitializedEvent.InputTuple, PlotHistoryInitializedEvent.OutputTuple, PlotHistoryInitializedEvent.OutputObject>;
     
     };
   }

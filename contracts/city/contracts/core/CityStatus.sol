@@ -34,6 +34,14 @@ contract CityStatus is Ownable {
         cityRegistry = CityRegistry(cityRegistryAddress);
     }
 
+    modifier onlyPlotOwnerOrAuthorized(uint256 plotId) {
+        CityTypes.PlotCore memory plot = cityRegistry.getPlotCore(plotId);
+        if (!(msg.sender == owner() || authorizedCallers[msg.sender] || plot.owner == msg.sender)) {
+            revert CityErrors.NotPlotOwner();
+        }
+        _;
+    }
+
     modifier onlyAuthorized() {
         if (!(msg.sender == owner() || authorizedCallers[msg.sender])) {
             revert CityErrors.NotPlotOwner();
@@ -46,8 +54,7 @@ contract CityStatus is Ownable {
         authorizedCallers[caller] = allowed;
     }
 
-    function touchActivity(uint256 plotId) external onlyAuthorized {
-        cityRegistry.getPlotCore(plotId);
+    function touchActivity(uint256 plotId) external onlyPlotOwnerOrAuthorized(plotId) {
         lastActivityAtOf[plotId] = uint64(block.timestamp);
     }
 
@@ -77,9 +84,9 @@ contract CityStatus is Ownable {
             return overrideStatus;
         }
 
-        uint256 dormantDays = cityConfig.getUintConfig(keccak256("DORMANT_THRESHOLD_DAYS"));
-        uint256 decayedDays = cityConfig.getUintConfig(keccak256("DECAYED_THRESHOLD_DAYS"));
-        uint256 layerDays = cityConfig.getUintConfig(keccak256("LAYER_ELIGIBLE_THRESHOLD_DAYS"));
+        uint256 dormantDays = cityConfig.getUintConfig(cityConfig.KEY_DORMANT_THRESHOLD_DAYS());
+        uint256 decayedDays = cityConfig.getUintConfig(cityConfig.KEY_DECAYED_THRESHOLD_DAYS());
+        uint256 layerDays = cityConfig.getUintConfig(cityConfig.KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS());
 
         uint256 latestSignal = _max(lastActivityAtOf[plotId], lastMaintenanceAtOf[plotId]);
 
@@ -89,15 +96,9 @@ contract CityStatus is Ownable {
 
         uint256 elapsed = block.timestamp - latestSignal;
 
-        if (elapsed < dormantDays * 1 days) {
-            return CityTypes.PlotStatus.Active;
-        }
-        if (elapsed < decayedDays * 1 days) {
-            return CityTypes.PlotStatus.Dormant;
-        }
-        if (elapsed < layerDays * 1 days) {
-            return CityTypes.PlotStatus.Decayed;
-        }
+        if (elapsed < dormantDays * 1 days) return CityTypes.PlotStatus.Active;
+        if (elapsed < decayedDays * 1 days) return CityTypes.PlotStatus.Dormant;
+        if (elapsed < layerDays * 1 days) return CityTypes.PlotStatus.Decayed;
         return CityTypes.PlotStatus.LayerEligible;
     }
 

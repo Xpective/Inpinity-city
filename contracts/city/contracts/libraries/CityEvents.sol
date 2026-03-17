@@ -52,6 +52,8 @@ library CityEvents {
         bool usedAether
     );
 
+    event PlotCompleted(uint256 indexed plotId);
+
     event AetherUsed(
         uint256 indexed plotId,
         uint32 indexed x,

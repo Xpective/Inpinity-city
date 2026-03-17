@@ -18,6 +18,75 @@ import type { NonPayableOverrides } from "../../common.js"
         "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "totalAetherUses",
+        "type": "uint32"
+      }
+    ],
+    "name": "AetherUseRecorded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "x",
+        "type": "uint32"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "y",
+        "type": "uint32"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "AetherUsed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "CityKeyTokenSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      },
+      {
         "indexed": true,
         "internalType": "enum CityTypes.CommunityBuildingKind",
         "name": "buildingKind",
@@ -65,6 +134,76 @@ import type { NonPayableOverrides } from "../../common.js"
       {
         "indexed": true,
         "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "enum CityTypes.Faction",
+        "name": "faction",
+        "type": "uint8"
+      }
+    ],
+    "name": "FactionChosen",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "newLayerCount",
+        "type": "uint32"
+      }
+    ],
+    "name": "LayerAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      }
+    ],
+    "name": "ManualStatusCleared",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "transferCount",
+        "type": "uint32"
+      }
+    ],
+    "name": "OwnershipTransferRecorded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "owner",
         "type": "address"
       },
@@ -88,6 +227,50 @@ import type { NonPayableOverrides } from "../../common.js"
       }
     ],
     "name": "PersonalPlotReserved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      }
+    ],
+    "name": "PlotCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "firstBuilder",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "enum CityTypes.Faction",
+        "name": "faction",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "genesisEra",
+        "type": "bool"
+      }
+    ],
+    "name": "PlotHistoryInitialized",
     "type": "event"
   },
   {
@@ -145,6 +328,86 @@ import type { NonPayableOverrides } from "../../common.js"
     "inputs": [
       {
         "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "x",
+        "type": "uint32"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "y",
+        "type": "uint32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "usedAether",
+        "type": "bool"
+      }
+    ],
+    "name": "QubiqCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "plotId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "x",
+        "type": "uint32"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "y",
+        "type": "uint32"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "contributor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oil",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "lemons",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "iron",
+        "type": "uint256"
+      }
+    ],
+    "name": "QubiqContributed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "bytes32",
         "name": "key",
         "type": "bytes32"
@@ -161,7 +424,7 @@ import type { NonPayableOverrides } from "../../common.js"
   }
 ] as const;
 
-  const _bytecode = "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122087e04dc9998af94bf7c1bfb09aa4e42c61f765b0de1b124ad1c5a6bcd88848ad64736f6c63430008180033";
+  const _bytecode = "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea264697066735822122067299d4c012424973908a4bf6929b8aad231b1aab2c231f0ea22d5c33b55b10064736f6c63430008180033";
 
   
       type CityEventsConstructorParams = [signer?: Signer] | ConstructorParameters<typeof ContractFactory>;

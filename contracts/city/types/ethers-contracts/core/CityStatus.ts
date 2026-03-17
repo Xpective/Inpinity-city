@@ -6,12 +6,14 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CityStatusInterface extends Interface {
-    getFunction(nameOrSignature: "cityConfig" | "cityRegistry" | "getDerivedStatus" | "isLayerEligible" | "lastActivityAtOf" | "lastMaintenanceAtOf" | "manualStatusOverrideOf" | "owner" | "recordMaintenance" | "renounceOwnership" | "setManualStatus" | "touchActivity" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedCallers" | "cityConfig" | "cityRegistry" | "clearManualStatus" | "getDerivedStatus" | "isLayerEligible" | "lastActivityAtOf" | "lastMaintenanceAtOf" | "manualStatusOverrideOf" | "owner" | "recordMaintenance" | "renounceOwnership" | "setAuthorizedCaller" | "setManualStatus" | "touchActivity" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "OwnershipTransferred" | "PlotStatusUpdated"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "ManualStatusCleared" | "OwnershipTransferred" | "PlotStatusUpdated"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'cityConfig', values?: undefined): string;
+    encodeFunctionData(functionFragment: 'authorizedCallers', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'cityConfig', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityRegistry', values?: undefined): string;
+encodeFunctionData(functionFragment: 'clearManualStatus', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getDerivedStatus', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isLayerEligible', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'lastActivityAtOf', values: [BigNumberish]): string;
@@ -20,12 +22,15 @@ encodeFunctionData(functionFragment: 'manualStatusOverrideOf', values: [BigNumbe
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'recordMaintenance', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
+encodeFunctionData(functionFragment: 'setAuthorizedCaller', values: [AddressLike, boolean]): string;
 encodeFunctionData(functionFragment: 'setManualStatus', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'touchActivity', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
-    decodeFunctionResult(functionFragment: 'cityConfig', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'authorizedCallers', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'cityConfig', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityRegistry', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'clearManualStatus', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getDerivedStatus', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isLayerEligible', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'lastActivityAtOf', data: BytesLike): Result;
@@ -34,12 +39,25 @@ decodeFunctionResult(functionFragment: 'manualStatusOverrideOf', data: BytesLike
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'recordMaintenance', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setAuthorizedCaller', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setManualStatus', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'touchActivity', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
   
+    export namespace ManualStatusClearedEvent {
+      export type InputTuple = [plotId: BigNumberish];
+      export type OutputTuple = [plotId: bigint];
+      export interface OutputObject {plotId: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace OwnershipTransferredEvent {
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
       export type OutputTuple = [previousOwner: string, newOwner: string];
@@ -98,6 +116,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     
     
+    authorizedCallers: TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     cityConfig: TypedContractMethod<
       [],
       [string],
@@ -110,6 +136,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       [],
       [string],
       'view'
+    >
+    
+
+    
+    clearManualStatus: TypedContractMethod<
+      [plotId: BigNumberish, ],
+      [void],
+      'nonpayable'
     >
     
 
@@ -178,6 +212,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    setAuthorizedCaller: TypedContractMethod<
+      [caller: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     setManualStatus: TypedContractMethod<
       [plotId: BigNumberish, status: BigNumberish, ],
       [void],
@@ -204,7 +246,12 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'cityConfig'): TypedContractMethod<
+    getFunction(nameOrSignature: 'authorizedCallers'): TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'cityConfig'): TypedContractMethod<
       [],
       [string],
       'view'
@@ -213,6 +260,11 @@ getFunction(nameOrSignature: 'cityRegistry'): TypedContractMethod<
       [],
       [string],
       'view'
+    >;
+getFunction(nameOrSignature: 'clearManualStatus'): TypedContractMethod<
+      [plotId: BigNumberish, ],
+      [void],
+      'nonpayable'
     >;
 getFunction(nameOrSignature: 'getDerivedStatus'): TypedContractMethod<
       [plotId: BigNumberish, ],
@@ -254,6 +306,11 @@ getFunction(nameOrSignature: 'renounceOwnership'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setAuthorizedCaller'): TypedContractMethod<
+      [caller: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'setManualStatus'): TypedContractMethod<
       [plotId: BigNumberish, status: BigNumberish, ],
       [void],
@@ -270,11 +327,16 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       'nonpayable'
     >;
 
-    getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+    getEvent(key: 'ManualStatusCleared'): TypedContractEvent<ManualStatusClearedEvent.InputTuple, ManualStatusClearedEvent.OutputTuple, ManualStatusClearedEvent.OutputObject>;
+getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 getEvent(key: 'PlotStatusUpdated'): TypedContractEvent<PlotStatusUpdatedEvent.InputTuple, PlotStatusUpdatedEvent.OutputTuple, PlotStatusUpdatedEvent.OutputObject>;
 
     filters: {
       
+      'ManualStatusCleared(uint256)': TypedContractEvent<ManualStatusClearedEvent.InputTuple, ManualStatusClearedEvent.OutputTuple, ManualStatusClearedEvent.OutputObject>;
+      ManualStatusCleared: TypedContractEvent<ManualStatusClearedEvent.InputTuple, ManualStatusClearedEvent.OutputTuple, ManualStatusClearedEvent.OutputObject>;
+    
+
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
     

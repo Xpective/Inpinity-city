@@ -6,7 +6,7 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CityConfigInterface extends Interface {
-    getFunction(nameOrSignature: "KEY_BUILDING_GOLD_COST" | "KEY_BUILDING_IRON_COST" | "KEY_BUILDING_LEMONS_COST" | "KEY_BUILDING_OIL_COST" | "KEY_COMMUNITY_HEIGHT" | "KEY_COMMUNITY_WIDTH" | "KEY_FARMING" | "KEY_INACTIVITY_DAYS" | "KEY_INITIAL_FEE_BPS" | "KEY_INPI" | "KEY_INPINITY_NFT" | "KEY_MAX_PERSONAL_PLOTS" | "KEY_MERCENARY" | "KEY_PARTNERSHIP" | "KEY_PERSONAL_HEIGHT" | "KEY_PERSONAL_WIDTH" | "KEY_PIRATES" | "KEY_PITRONE" | "KEY_QUBIQ_IRON_COST" | "KEY_QUBIQ_LEMONS_COST" | "KEY_QUBIQ_OIL_COST" | "KEY_RESOURCE_TOKEN" | "KEY_TREASURY" | "getAddressConfig" | "getUintConfig" | "owner" | "renounceOwnership" | "setAddressConfig" | "setUintConfig" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "KEY_BUILDING_GOLD_COST" | "KEY_BUILDING_IRON_COST" | "KEY_BUILDING_LEMONS_COST" | "KEY_BUILDING_OIL_COST" | "KEY_COMMUNITY_HEIGHT" | "KEY_COMMUNITY_WIDTH" | "KEY_DECAYED_THRESHOLD_DAYS" | "KEY_DORMANT_THRESHOLD_DAYS" | "KEY_FARMING" | "KEY_INACTIVITY_DAYS" | "KEY_INITIAL_FEE_BPS" | "KEY_INPI" | "KEY_INPINITY_NFT" | "KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS" | "KEY_MAX_PERSONAL_PLOTS" | "KEY_MERCENARY" | "KEY_PARTNERSHIP" | "KEY_PERSONAL_HEIGHT" | "KEY_PERSONAL_WIDTH" | "KEY_PIRATES" | "KEY_PITRONE" | "KEY_QUBIQ_IRON_COST" | "KEY_QUBIQ_LEMONS_COST" | "KEY_QUBIQ_OIL_COST" | "KEY_RESOURCE_TOKEN" | "KEY_TREASURY" | "getAddressConfig" | "getUintConfig" | "owner" | "renounceOwnership" | "setAddressConfig" | "setUintConfig" | "transferOwnership"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "ConfigInitialized" | "CoreAddressSet" | "OwnershipTransferred" | "UintConfigSet"): EventFragment;
 
@@ -16,11 +16,14 @@ encodeFunctionData(functionFragment: 'KEY_BUILDING_LEMONS_COST', values?: undefi
 encodeFunctionData(functionFragment: 'KEY_BUILDING_OIL_COST', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_COMMUNITY_HEIGHT', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_COMMUNITY_WIDTH', values?: undefined): string;
+encodeFunctionData(functionFragment: 'KEY_DECAYED_THRESHOLD_DAYS', values?: undefined): string;
+encodeFunctionData(functionFragment: 'KEY_DORMANT_THRESHOLD_DAYS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_FARMING', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_INACTIVITY_DAYS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_INITIAL_FEE_BPS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_INPI', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_INPINITY_NFT', values?: undefined): string;
+encodeFunctionData(functionFragment: 'KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_MAX_PERSONAL_PLOTS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_MERCENARY', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KEY_PARTNERSHIP', values?: undefined): string;
@@ -47,11 +50,14 @@ decodeFunctionResult(functionFragment: 'KEY_BUILDING_LEMONS_COST', data: BytesLi
 decodeFunctionResult(functionFragment: 'KEY_BUILDING_OIL_COST', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_COMMUNITY_HEIGHT', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_COMMUNITY_WIDTH', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'KEY_DECAYED_THRESHOLD_DAYS', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'KEY_DORMANT_THRESHOLD_DAYS', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_FARMING', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_INACTIVITY_DAYS', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_INITIAL_FEE_BPS', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_INPI', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_INPINITY_NFT', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_MAX_PERSONAL_PLOTS', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_MERCENARY', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'KEY_PARTNERSHIP', data: BytesLike): Result;
@@ -204,6 +210,22 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    KEY_DECAYED_THRESHOLD_DAYS: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    KEY_DORMANT_THRESHOLD_DAYS: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     KEY_FARMING: TypedContractMethod<
       [],
       [string],
@@ -237,6 +259,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     
     KEY_INPINITY_NFT: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
+    KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS: TypedContractMethod<
       [],
       [string],
       'view'
@@ -428,6 +458,16 @@ getFunction(nameOrSignature: 'KEY_COMMUNITY_WIDTH'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'KEY_DECAYED_THRESHOLD_DAYS'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'KEY_DORMANT_THRESHOLD_DAYS'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
 getFunction(nameOrSignature: 'KEY_FARMING'): TypedContractMethod<
       [],
       [string],
@@ -449,6 +489,11 @@ getFunction(nameOrSignature: 'KEY_INPI'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'KEY_INPINITY_NFT'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'KEY_LAYER_ELIGIBLE_THRESHOLD_DAYS'): TypedContractMethod<
       [],
       [string],
       'view'

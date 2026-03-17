@@ -15,6 +15,7 @@ contract CityRegistry is Ownable {
 
     uint256 public nextPlotId = 1;
 
+    mapping(address => bool) public hasCityKeyOf;
     mapping(address => uint256) public cityKeyTokenOf;
     mapping(address => CityTypes.Faction) public chosenFactionOf;
 
@@ -37,9 +38,7 @@ contract CityRegistry is Ownable {
     }
 
     function setCityKeyToken(uint256 tokenId) external {
-        if (personalPlotCountOf[msg.sender] > 0) {
-            revert CityErrors.InvalidValue();
-        }
+        if (personalPlotCountOf[msg.sender] > 0) revert CityErrors.InvalidValue();
 
         address nftAddress = cityConfig.getAddressConfig(cityConfig.KEY_INPINITY_NFT());
         if (nftAddress == address(0)) revert CityErrors.InvalidConfig();
@@ -47,15 +46,16 @@ contract CityRegistry is Ownable {
         address ownerOfToken = IInpinityNFT(nftAddress).ownerOf(tokenId);
         if (ownerOfToken != msg.sender) revert CityErrors.NotPlotOwner();
 
+        hasCityKeyOf[msg.sender] = true;
         cityKeyTokenOf[msg.sender] = tokenId;
+
         emit CityEvents.CityKeyTokenSet(msg.sender, tokenId);
     }
 
     function chooseFaction(CityTypes.Faction faction) external {
-        if (cityKeyTokenOf[msg.sender] == 0) revert CityErrors.InvalidValue();
-        if (chosenFactionOf[msg.sender] != CityTypes.Faction.None) {
-            revert CityErrors.InvalidFaction();
-        }
+        if (!hasCityKeyOf[msg.sender]) revert CityErrors.InvalidValue();
+        if (chosenFactionOf[msg.sender] != CityTypes.Faction.None) revert CityErrors.InvalidFaction();
+
         if (faction != CityTypes.Faction.Inpinity && faction != CityTypes.Faction.Inphinity) {
             revert CityErrors.InvalidFaction();
         }
@@ -65,7 +65,7 @@ contract CityRegistry is Ownable {
     }
 
     function reserveNextPersonalPlot(uint8 slotIndex) external returns (uint256 plotId) {
-        if (cityKeyTokenOf[msg.sender] == 0) revert CityErrors.InvalidValue();
+        if (!hasCityKeyOf[msg.sender]) revert CityErrors.InvalidValue();
 
         CityTypes.Faction faction = chosenFactionOf[msg.sender];
         if (faction != CityTypes.Faction.Inpinity && faction != CityTypes.Faction.Inphinity) {
@@ -74,20 +74,17 @@ contract CityRegistry is Ownable {
 
         uint256 maxPlots = cityConfig.getUintConfig(cityConfig.KEY_MAX_PERSONAL_PLOTS());
         if (slotIndex >= maxPlots) revert CityErrors.InvalidValue();
-        if (personalPlotCountOf[msg.sender] >= maxPlots) {
-            revert CityErrors.MaxPersonalPlotsReached();
-        }
+        if (personalPlotCountOf[msg.sender] >= maxPlots) revert CityErrors.MaxPersonalPlotsReached();
 
         uint8 expectedNextSlot = personalPlotCountOf[msg.sender];
-        if (slotIndex != expectedNextSlot) {
-            revert CityErrors.InvalidValue();
-        }
+        if (slotIndex != expectedNextSlot) revert CityErrors.InvalidValue();
 
         if (personalPlotSlotsOf[msg.sender][slotIndex].occupied) {
             revert CityErrors.PlotSlotOccupied();
         }
 
         plotId = nextPlotId++;
+
         personalPlotSlotsOf[msg.sender][slotIndex] = CityTypes.PlotSlot({
             plotId: plotId,
             occupied: true
