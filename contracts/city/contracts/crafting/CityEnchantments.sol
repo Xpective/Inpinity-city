@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libraries/CityErrors.sol";
+import "./BonusTypes.sol";
 
 contract CityEnchantments is Ownable {
     enum EnchantmentCategory {
@@ -32,33 +33,12 @@ contract CityEnchantments is Ownable {
         bool enabled;
     }
 
-    struct EnchantmentBonuses {
-        int256 minDamageBonus;
-        int256 maxDamageBonus;
-        int256 attackSpeedBonus;
-        int256 critChanceBpsBonus;
-        int256 critMultiplierBpsBonus;
-        int256 accuracyBpsBonus;
-        int256 rangeBonus;
-        int256 maxDurabilityBonus;
-        int256 armorPenBpsBonus;
-        int256 blockChanceBpsBonus;
-        int256 lifeStealBpsBonus;
-        int256 energyCostBonus;
-        int256 heatGenerationBonus;
-        int256 stabilityBonus;
-        int256 cooldownMsBonus;
-        int256 projectileSpeedBonus;
-        int256 aoeRadiusBonus;
-        int256 enchantmentSlotsBonus;
-        int256 materiaSlotsBonus;
-    }
-
     mapping(uint256 => EnchantmentDefinition) public enchantmentDefinitionOf;
-    mapping(uint256 => mapping(uint256 => EnchantmentBonuses)) public enchantmentBonusesOf; // enchantId => level => bonuses
+    mapping(uint256 => mapping(uint256 => BonusTypes.BonusSet)) public enchantmentBonusesOf;
     mapping(address => bool) public authorizedCallers;
 
     event AuthorizedCallerSet(address indexed caller, bool allowed);
+
     event EnchantmentDefinitionSet(
         uint256 indexed enchantmentId,
         string name,
@@ -67,6 +47,7 @@ contract CityEnchantments is Ownable {
         uint256 maxLevel,
         bool enabled
     );
+
     event EnchantmentBonusesSet(
         uint256 indexed enchantmentId,
         uint256 indexed level
@@ -124,7 +105,7 @@ contract CityEnchantments is Ownable {
     function setEnchantmentBonuses(
         uint256 enchantmentId,
         uint256 level,
-        EnchantmentBonuses calldata bonuses
+        BonusTypes.BonusSet calldata bonuses
     ) external onlyAuthorized {
         EnchantmentDefinition memory def = enchantmentDefinitionOf[enchantmentId];
         if (def.id == 0 || !def.enabled) revert CityErrors.InvalidValue();
@@ -137,7 +118,7 @@ contract CityEnchantments is Ownable {
     function getEnchantmentBonuses(
         uint256 enchantmentId,
         uint256 level
-    ) external view returns (EnchantmentBonuses memory) {
+    ) external view returns (BonusTypes.BonusSet memory) {
         return enchantmentBonusesOf[enchantmentId][level];
     }
 
@@ -164,6 +145,39 @@ contract CityEnchantments is Ownable {
         if (!def.enabled) return false;
         if (level == 0 || level > def.maxLevel) return false;
         return true;
+    }
+
+    function hasBonusesForLevel(
+        uint256 enchantmentId,
+        uint256 level
+    ) external view returns (bool) {
+        EnchantmentDefinition memory def = enchantmentDefinitionOf[enchantmentId];
+        if (def.id == 0) return false;
+        if (level == 0 || level > def.maxLevel) return false;
+
+        BonusTypes.BonusSet memory b = enchantmentBonusesOf[enchantmentId][level];
+
+        return (
+            b.minDamageBonus != 0 ||
+            b.maxDamageBonus != 0 ||
+            b.attackSpeedBonus != 0 ||
+            b.critChanceBpsBonus != 0 ||
+            b.critMultiplierBpsBonus != 0 ||
+            b.accuracyBpsBonus != 0 ||
+            b.rangeBonus != 0 ||
+            b.maxDurabilityBonus != 0 ||
+            b.armorPenBpsBonus != 0 ||
+            b.blockChanceBpsBonus != 0 ||
+            b.lifeStealBpsBonus != 0 ||
+            b.energyCostBonus != 0 ||
+            b.heatGenerationBonus != 0 ||
+            b.stabilityBonus != 0 ||
+            b.cooldownMsBonus != 0 ||
+            b.projectileSpeedBonus != 0 ||
+            b.aoeRadiusBonus != 0 ||
+            b.enchantmentSlotsBonus != 0 ||
+            b.materiaSlotsBonus != 0
+        );
     }
 
     function getEnchantmentMeta(

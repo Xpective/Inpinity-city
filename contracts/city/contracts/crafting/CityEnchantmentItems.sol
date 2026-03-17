@@ -195,6 +195,31 @@ contract CityEnchantmentItems is ERC1155, Ownable {
         );
     }
 
+    function enchantmentItemExists(uint256 itemId) external view returns (bool) {
+        return enchantmentItemDefinitionOf[itemId].id != 0;
+    }
+
+    function isEnchantmentItemEnabled(uint256 itemId) external view returns (bool) {
+        return enchantmentItemDefinitionOf[itemId].enabled;
+    }
+
+    function isEnchantmentItemUsable(uint256 itemId) external view returns (bool) {
+        EnchantmentItemDefinition memory def = enchantmentItemDefinitionOf[itemId];
+        if (def.id == 0) return false;
+        if (!def.enabled) return false;
+        if (def.enchantmentDefinitionId == 0) return false;
+        if (def.level == 0) return false;
+        return true;
+    }
+
+    function getEnchantmentDefinitionForItem(
+        uint256 itemId
+    ) external view returns (CityEnchantments.EnchantmentDefinition memory) {
+        EnchantmentItemDefinition memory def = enchantmentItemDefinitionOf[itemId];
+        if (def.id == 0) revert CityErrors.InvalidValue();
+        return cityEnchantments.getEnchantmentDefinition(def.enchantmentDefinitionId);
+    }
+
     function _toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) return "0";
 

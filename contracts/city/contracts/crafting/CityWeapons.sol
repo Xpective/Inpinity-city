@@ -164,6 +164,7 @@ contract CityWeapons is ERC721, Ownable {
 
     string public baseTokenURI;
     uint256 public nextTokenId = 1;
+    bool public weaponsPaused;
 
     mapping(uint256 => WeaponDefinition) public weaponDefinitionOf;
     mapping(uint256 => WeaponInstance) public weaponInstanceOf;
@@ -175,6 +176,7 @@ contract CityWeapons is ERC721, Ownable {
     event AuthorizedMinterSet(address indexed minter, bool allowed);
     event BaseURISet(string newBaseURI);
     event WeaponSocketsSet(address indexed weaponSockets);
+    event WeaponsPausedSet(bool paused);
 
     event WeaponDefinitionSet(
         uint256 indexed weaponDefinitionId,
@@ -212,6 +214,11 @@ contract CityWeapons is ERC721, Ownable {
         _;
     }
 
+    modifier whenWeaponsNotPaused() {
+        if (weaponsPaused) revert CityErrors.InvalidValue();
+        _;
+    }
+
     function setAuthorizedMinter(address minter, bool allowed) external onlyOwner {
         if (minter == address(0)) revert CityErrors.ZeroAddress();
         authorizedMinters[minter] = allowed;
@@ -227,6 +234,11 @@ contract CityWeapons is ERC721, Ownable {
         if (weaponSocketsAddress == address(0)) revert CityErrors.ZeroAddress();
         cityWeaponSockets = ICityWeaponSockets(weaponSocketsAddress);
         emit WeaponSocketsSet(weaponSocketsAddress);
+    }
+
+    function setWeaponsPaused(bool paused) external onlyOwner {
+        weaponsPaused = paused;
+        emit WeaponsPausedSet(paused);
     }
 
     function setWeaponDefinition(
@@ -324,7 +336,7 @@ contract CityWeapons is ERC721, Ownable {
         bool genesisEra,
         bool usedAether,
         uint256 nonce
-    ) external onlyAuthorizedMinter returns (uint256 tokenId) {
+    ) external onlyAuthorizedMinter whenWeaponsNotPaused returns (uint256 tokenId) {
         if (to == address(0)) revert CityErrors.ZeroAddress();
 
         WeaponDefinition memory def = weaponDefinitionOf[weaponDefinitionId];
@@ -385,7 +397,7 @@ contract CityWeapons is ERC721, Ownable {
         emit WeaponMetadataRevisionSet(tokenId, metadataRevision);
     }
 
-    function setUpgradeLevel(uint256 tokenId, uint256 upgradeLevel) external onlyAuthorizedMinter {
+    function setUpgradeLevel(uint256 tokenId, uint256 upgradeLevel) external onlyAuthorizedMinter whenWeaponsNotPaused {
         _requireMinted(tokenId);
 
         WeaponInstance storage inst = weaponInstanceOf[tokenId];
@@ -399,7 +411,7 @@ contract CityWeapons is ERC721, Ownable {
         emit WeaponUpgradeLevelSet(tokenId, upgradeLevel);
     }
 
-    function setDurability(uint256 tokenId, uint256 durability) external onlyAuthorizedMinter {
+    function setDurability(uint256 tokenId, uint256 durability) external onlyAuthorizedMinter whenWeaponsNotPaused {
         _requireMinted(tokenId);
 
         WeaponInstance storage inst = weaponInstanceOf[tokenId];
@@ -417,7 +429,7 @@ contract CityWeapons is ERC721, Ownable {
     function setWeaponBonuses(
         uint256 tokenId,
         WeaponBonuses calldata bonuses
-    ) external onlyAuthorizedMinter {
+    ) external onlyAuthorizedMinter whenWeaponsNotPaused {
         _requireMinted(tokenId);
 
         weaponBonusesOf[tokenId] = bonuses;
@@ -661,6 +673,10 @@ contract CityWeapons is ERC721, Ownable {
             upgradeLevel: inst.upgradeLevel,
             maxUpgradeLevel: def.maxUpgradeLevel
         });
+    }
+
+    function weaponExists(uint256 tokenId) external view returns (bool) {
+        return _ownerOf(tokenId) != address(0);
     }
 
     function computeCraftSeed(

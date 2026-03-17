@@ -4,9 +4,16 @@
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
   
+export declare namespace CityEnchantments {
+      
+    export type EnchantmentDefinitionStruct = {id: BigNumberish, name: string, category: BigNumberish, rarityTier: BigNumberish, maxLevel: BigNumberish, enabled: boolean}
+
+    export type EnchantmentDefinitionStructOutput = [id: bigint, name: string, category: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean] & {id: bigint, name: string, category: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }
+  
+    }
 
   export interface CityEnchantmentItemsInterface extends Interface {
-    getFunction(nameOrSignature: "authorizedConsumers" | "authorizedMinters" | "balanceOf" | "balanceOfBatch" | "baseMetadataURI" | "burnEnchantmentItem" | "cityEnchantments" | "enchantmentItemDefinitionOf" | "getEnchantmentItemMeta" | "isApprovedForAll" | "mintEnchantmentItem" | "owner" | "renounceOwnership" | "safeBatchTransferFrom" | "safeTransferFrom" | "setApprovalForAll" | "setAuthorizedConsumer" | "setAuthorizedMinter" | "setBaseMetadataURI" | "setEnchantmentItemDefinition" | "supportsInterface" | "transferOwnership" | "uri"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedConsumers" | "authorizedMinters" | "balanceOf" | "balanceOfBatch" | "baseMetadataURI" | "burnEnchantmentItem" | "cityEnchantments" | "enchantmentItemDefinitionOf" | "enchantmentItemExists" | "getEnchantmentDefinitionForItem" | "getEnchantmentItemMeta" | "isApprovedForAll" | "isEnchantmentItemEnabled" | "isEnchantmentItemUsable" | "mintEnchantmentItem" | "owner" | "renounceOwnership" | "safeBatchTransferFrom" | "safeTransferFrom" | "setApprovalForAll" | "setAuthorizedConsumer" | "setAuthorizedMinter" | "setBaseMetadataURI" | "setEnchantmentItemDefinition" | "supportsInterface" | "transferOwnership" | "uri"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "ApprovalForAll" | "AuthorizedConsumerSet" | "AuthorizedMinterSet" | "BaseMetadataURISet" | "EnchantmentItemBurned" | "EnchantmentItemDefinitionSet" | "EnchantmentItemMinted" | "OwnershipTransferred" | "TransferBatch" | "TransferSingle" | "URI"): EventFragment;
 
@@ -18,8 +25,12 @@ encodeFunctionData(functionFragment: 'baseMetadataURI', values?: undefined): str
 encodeFunctionData(functionFragment: 'burnEnchantmentItem', values: [AddressLike, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'cityEnchantments', values?: undefined): string;
 encodeFunctionData(functionFragment: 'enchantmentItemDefinitionOf', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'enchantmentItemExists', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getEnchantmentDefinitionForItem', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getEnchantmentItemMeta', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isApprovedForAll', values: [AddressLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'isEnchantmentItemEnabled', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'isEnchantmentItemUsable', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'mintEnchantmentItem', values: [AddressLike, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
@@ -42,8 +53,12 @@ decodeFunctionResult(functionFragment: 'baseMetadataURI', data: BytesLike): Resu
 decodeFunctionResult(functionFragment: 'burnEnchantmentItem', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityEnchantments', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'enchantmentItemDefinitionOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'enchantmentItemExists', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getEnchantmentDefinitionForItem', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getEnchantmentItemMeta', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isApprovedForAll', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'isEnchantmentItemEnabled', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'isEnchantmentItemUsable', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'mintEnchantmentItem', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
@@ -290,6 +305,22 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
     
 
     
+    enchantmentItemExists: TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    getEnchantmentDefinitionForItem: TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [CityEnchantments.EnchantmentDefinitionStructOutput],
+      'view'
+    >
+    
+
+    
     getEnchantmentItemMeta: TypedContractMethod<
       [itemId: BigNumberish, ],
       [[bigint, bigint, bigint, boolean, boolean] & {enchantmentDefinitionId: bigint, level: bigint, rarityTier: bigint, burnOnUse: boolean, enabled: boolean }],
@@ -300,6 +331,22 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
     
     isApprovedForAll: TypedContractMethod<
       [account: AddressLike, operator: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    isEnchantmentItemEnabled: TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    isEnchantmentItemUsable: TypedContractMethod<
+      [itemId: BigNumberish, ],
       [boolean],
       'view'
     >
@@ -452,6 +499,16 @@ getFunction(nameOrSignature: 'enchantmentItemDefinitionOf'): TypedContractMethod
       [[bigint, bigint, bigint, bigint, boolean, boolean] & {id: bigint, enchantmentDefinitionId: bigint, level: bigint, rarityTier: bigint, burnOnUse: boolean, enabled: boolean }],
       'view'
     >;
+getFunction(nameOrSignature: 'enchantmentItemExists'): TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getEnchantmentDefinitionForItem'): TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [CityEnchantments.EnchantmentDefinitionStructOutput],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getEnchantmentItemMeta'): TypedContractMethod<
       [itemId: BigNumberish, ],
       [[bigint, bigint, bigint, boolean, boolean] & {enchantmentDefinitionId: bigint, level: bigint, rarityTier: bigint, burnOnUse: boolean, enabled: boolean }],
@@ -459,6 +516,16 @@ getFunction(nameOrSignature: 'getEnchantmentItemMeta'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'isApprovedForAll'): TypedContractMethod<
       [account: AddressLike, operator: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'isEnchantmentItemEnabled'): TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'isEnchantmentItemUsable'): TypedContractMethod<
+      [itemId: BigNumberish, ],
       [boolean],
       'view'
     >;

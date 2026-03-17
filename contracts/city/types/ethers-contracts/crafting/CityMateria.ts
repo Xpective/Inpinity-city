@@ -4,13 +4,16 @@
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
   
+export declare namespace BonusTypes {
+      
+    export type BonusSetStruct = {minDamageBonus: BigNumberish, maxDamageBonus: BigNumberish, attackSpeedBonus: BigNumberish, critChanceBpsBonus: BigNumberish, critMultiplierBpsBonus: BigNumberish, accuracyBpsBonus: BigNumberish, rangeBonus: BigNumberish, maxDurabilityBonus: BigNumberish, armorPenBpsBonus: BigNumberish, blockChanceBpsBonus: BigNumberish, lifeStealBpsBonus: BigNumberish, energyCostBonus: BigNumberish, heatGenerationBonus: BigNumberish, stabilityBonus: BigNumberish, cooldownMsBonus: BigNumberish, projectileSpeedBonus: BigNumberish, aoeRadiusBonus: BigNumberish, enchantmentSlotsBonus: BigNumberish, materiaSlotsBonus: BigNumberish}
+
+    export type BonusSetStructOutput = [minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint] & {minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint }
+  
+    }
+
 export declare namespace CityMateria {
       
-    export type MateriaBonusesStruct = {minDamageBonus: BigNumberish, maxDamageBonus: BigNumberish, attackSpeedBonus: BigNumberish, critChanceBpsBonus: BigNumberish, critMultiplierBpsBonus: BigNumberish, accuracyBpsBonus: BigNumberish, rangeBonus: BigNumberish, maxDurabilityBonus: BigNumberish, armorPenBpsBonus: BigNumberish, blockChanceBpsBonus: BigNumberish, lifeStealBpsBonus: BigNumberish, energyCostBonus: BigNumberish, heatGenerationBonus: BigNumberish, stabilityBonus: BigNumberish, cooldownMsBonus: BigNumberish, projectileSpeedBonus: BigNumberish, aoeRadiusBonus: BigNumberish, enchantmentSlotsBonus: BigNumberish, materiaSlotsBonus: BigNumberish}
-
-    export type MateriaBonusesStructOutput = [minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint] & {minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint }
-  
-
     export type MateriaDefinitionStruct = {id: BigNumberish, name: string, category: BigNumberish, element: BigNumberish, rarityTier: BigNumberish, maxLevel: BigNumberish, enabled: boolean}
 
     export type MateriaDefinitionStructOutput = [id: bigint, name: string, category: bigint, element: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean] & {id: bigint, name: string, category: bigint, element: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }
@@ -18,7 +21,7 @@ export declare namespace CityMateria {
     }
 
   export interface CityMateriaInterface extends Interface {
-    getFunction(nameOrSignature: "authorizedCallers" | "getMateriaBonuses" | "getMateriaDefinition" | "getMateriaMeta" | "isMateriaEnabled" | "isMateriaUsable" | "materiaBonusesOf" | "materiaDefinitionOf" | "materiaExists" | "owner" | "renounceOwnership" | "setAuthorizedCaller" | "setMateriaBonuses" | "setMateriaDefinition" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedCallers" | "getMateriaBonuses" | "getMateriaDefinition" | "getMateriaMeta" | "hasBonusesForLevel" | "isMateriaEnabled" | "isMateriaUsable" | "materiaBonusesOf" | "materiaDefinitionOf" | "materiaExists" | "owner" | "renounceOwnership" | "setAuthorizedCaller" | "setMateriaBonuses" | "setMateriaDefinition" | "transferOwnership"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "MateriaBonusesSet" | "MateriaDefinitionSet" | "OwnershipTransferred"): EventFragment;
 
@@ -26,6 +29,7 @@ export declare namespace CityMateria {
 encodeFunctionData(functionFragment: 'getMateriaBonuses', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getMateriaDefinition', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getMateriaMeta', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'hasBonusesForLevel', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isMateriaEnabled', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isMateriaUsable', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'materiaBonusesOf', values: [BigNumberish, BigNumberish]): string;
@@ -34,7 +38,7 @@ encodeFunctionData(functionFragment: 'materiaExists', values: [BigNumberish]): s
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'setAuthorizedCaller', values: [AddressLike, boolean]): string;
-encodeFunctionData(functionFragment: 'setMateriaBonuses', values: [BigNumberish, BigNumberish, CityMateria.MateriaBonusesStruct]): string;
+encodeFunctionData(functionFragment: 'setMateriaBonuses', values: [BigNumberish, BigNumberish, BonusTypes.BonusSetStruct]): string;
 encodeFunctionData(functionFragment: 'setMateriaDefinition', values: [BigNumberish, string, BigNumberish, BigNumberish, BigNumberish, BigNumberish, boolean]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
@@ -42,6 +46,7 @@ encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike])
 decodeFunctionResult(functionFragment: 'getMateriaBonuses', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getMateriaDefinition', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getMateriaMeta', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'hasBonusesForLevel', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isMateriaEnabled', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isMateriaUsable', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'materiaBonusesOf', data: BytesLike): Result;
@@ -148,7 +153,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
     getMateriaBonuses: TypedContractMethod<
       [materiaId: BigNumberish, level: BigNumberish, ],
-      [CityMateria.MateriaBonusesStructOutput],
+      [BonusTypes.BonusSetStructOutput],
       'view'
     >
     
@@ -165,6 +170,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     getMateriaMeta: TypedContractMethod<
       [materiaId: BigNumberish, ],
       [[string, bigint, bigint, bigint, bigint, boolean] & {name: string, category: bigint, element: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }],
+      'view'
+    >
+    
+
+    
+    hasBonusesForLevel: TypedContractMethod<
+      [materiaId: BigNumberish, level: BigNumberish, ],
+      [boolean],
       'view'
     >
     
@@ -235,7 +248,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     
     setMateriaBonuses: TypedContractMethod<
-      [materiaId: BigNumberish, level: BigNumberish, bonuses: CityMateria.MateriaBonusesStruct, ],
+      [materiaId: BigNumberish, level: BigNumberish, bonuses: BonusTypes.BonusSetStruct, ],
       [void],
       'nonpayable'
     >
@@ -267,7 +280,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     >;
 getFunction(nameOrSignature: 'getMateriaBonuses'): TypedContractMethod<
       [materiaId: BigNumberish, level: BigNumberish, ],
-      [CityMateria.MateriaBonusesStructOutput],
+      [BonusTypes.BonusSetStructOutput],
       'view'
     >;
 getFunction(nameOrSignature: 'getMateriaDefinition'): TypedContractMethod<
@@ -278,6 +291,11 @@ getFunction(nameOrSignature: 'getMateriaDefinition'): TypedContractMethod<
 getFunction(nameOrSignature: 'getMateriaMeta'): TypedContractMethod<
       [materiaId: BigNumberish, ],
       [[string, bigint, bigint, bigint, bigint, boolean] & {name: string, category: bigint, element: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }],
+      'view'
+    >;
+getFunction(nameOrSignature: 'hasBonusesForLevel'): TypedContractMethod<
+      [materiaId: BigNumberish, level: BigNumberish, ],
+      [boolean],
       'view'
     >;
 getFunction(nameOrSignature: 'isMateriaEnabled'): TypedContractMethod<
@@ -321,7 +339,7 @@ getFunction(nameOrSignature: 'setAuthorizedCaller'): TypedContractMethod<
       'nonpayable'
     >;
 getFunction(nameOrSignature: 'setMateriaBonuses'): TypedContractMethod<
-      [materiaId: BigNumberish, level: BigNumberish, bonuses: CityMateria.MateriaBonusesStruct, ],
+      [materiaId: BigNumberish, level: BigNumberish, bonuses: BonusTypes.BonusSetStruct, ],
       [void],
       'nonpayable'
     >;

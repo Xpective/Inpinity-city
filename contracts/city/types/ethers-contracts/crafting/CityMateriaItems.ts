@@ -4,9 +4,16 @@
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
   
+export declare namespace CityMateria {
+      
+    export type MateriaDefinitionStruct = {id: BigNumberish, name: string, category: BigNumberish, element: BigNumberish, rarityTier: BigNumberish, maxLevel: BigNumberish, enabled: boolean}
+
+    export type MateriaDefinitionStructOutput = [id: bigint, name: string, category: bigint, element: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean] & {id: bigint, name: string, category: bigint, element: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }
+  
+    }
 
   export interface CityMateriaItemsInterface extends Interface {
-    getFunction(nameOrSignature: "authorizedConsumers" | "authorizedMinters" | "balanceOf" | "balanceOfBatch" | "baseMetadataURI" | "burnMateriaItem" | "cityMateria" | "getMateriaItemMeta" | "isApprovedForAll" | "materiaItemDefinitionOf" | "mintMateriaItem" | "owner" | "renounceOwnership" | "safeBatchTransferFrom" | "safeTransferFrom" | "setApprovalForAll" | "setAuthorizedConsumer" | "setAuthorizedMinter" | "setBaseMetadataURI" | "setMateriaItemDefinition" | "supportsInterface" | "transferOwnership" | "uri"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedConsumers" | "authorizedMinters" | "balanceOf" | "balanceOfBatch" | "baseMetadataURI" | "burnMateriaItem" | "cityMateria" | "getMateriaDefinitionForItem" | "getMateriaItemMeta" | "isApprovedForAll" | "isMateriaItemEnabled" | "isMateriaItemUsable" | "materiaItemDefinitionOf" | "materiaItemExists" | "mintMateriaItem" | "owner" | "renounceOwnership" | "safeBatchTransferFrom" | "safeTransferFrom" | "setApprovalForAll" | "setAuthorizedConsumer" | "setAuthorizedMinter" | "setBaseMetadataURI" | "setMateriaItemDefinition" | "supportsInterface" | "transferOwnership" | "uri"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "ApprovalForAll" | "AuthorizedConsumerSet" | "AuthorizedMinterSet" | "BaseMetadataURISet" | "MateriaItemBurned" | "MateriaItemDefinitionSet" | "MateriaItemMinted" | "OwnershipTransferred" | "TransferBatch" | "TransferSingle" | "URI"): EventFragment;
 
@@ -17,9 +24,13 @@ encodeFunctionData(functionFragment: 'balanceOfBatch', values: [AddressLike[], B
 encodeFunctionData(functionFragment: 'baseMetadataURI', values?: undefined): string;
 encodeFunctionData(functionFragment: 'burnMateriaItem', values: [AddressLike, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'cityMateria', values?: undefined): string;
+encodeFunctionData(functionFragment: 'getMateriaDefinitionForItem', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getMateriaItemMeta', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isApprovedForAll', values: [AddressLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'isMateriaItemEnabled', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'isMateriaItemUsable', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'materiaItemDefinitionOf', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'materiaItemExists', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'mintMateriaItem', values: [AddressLike, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
@@ -41,9 +52,13 @@ decodeFunctionResult(functionFragment: 'balanceOfBatch', data: BytesLike): Resul
 decodeFunctionResult(functionFragment: 'baseMetadataURI', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'burnMateriaItem', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityMateria', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getMateriaDefinitionForItem', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getMateriaItemMeta', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isApprovedForAll', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'isMateriaItemEnabled', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'isMateriaItemUsable', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'materiaItemDefinitionOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'materiaItemExists', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'mintMateriaItem', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
@@ -282,6 +297,14 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
     
 
     
+    getMateriaDefinitionForItem: TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [CityMateria.MateriaDefinitionStructOutput],
+      'view'
+    >
+    
+
+    
     getMateriaItemMeta: TypedContractMethod<
       [itemId: BigNumberish, ],
       [[bigint, bigint, bigint, boolean, boolean] & {materiaDefinitionId: bigint, level: bigint, rarityTier: bigint, burnOnUse: boolean, enabled: boolean }],
@@ -298,9 +321,33 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
     
 
     
+    isMateriaItemEnabled: TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    isMateriaItemUsable: TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     materiaItemDefinitionOf: TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, bigint, bigint, bigint, boolean, boolean] & {id: bigint, materiaDefinitionId: bigint, level: bigint, rarityTier: bigint, burnOnUse: boolean, enabled: boolean }],
+      'view'
+    >
+    
+
+    
+    materiaItemExists: TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
       'view'
     >
     
@@ -447,6 +494,11 @@ getFunction(nameOrSignature: 'cityMateria'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'getMateriaDefinitionForItem'): TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [CityMateria.MateriaDefinitionStructOutput],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getMateriaItemMeta'): TypedContractMethod<
       [itemId: BigNumberish, ],
       [[bigint, bigint, bigint, boolean, boolean] & {materiaDefinitionId: bigint, level: bigint, rarityTier: bigint, burnOnUse: boolean, enabled: boolean }],
@@ -457,9 +509,24 @@ getFunction(nameOrSignature: 'isApprovedForAll'): TypedContractMethod<
       [boolean],
       'view'
     >;
+getFunction(nameOrSignature: 'isMateriaItemEnabled'): TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'isMateriaItemUsable'): TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'materiaItemDefinitionOf'): TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, bigint, bigint, bigint, boolean, boolean] & {id: bigint, materiaDefinitionId: bigint, level: bigint, rarityTier: bigint, burnOnUse: boolean, enabled: boolean }],
+      'view'
+    >;
+getFunction(nameOrSignature: 'materiaItemExists'): TypedContractMethod<
+      [itemId: BigNumberish, ],
+      [boolean],
       'view'
     >;
 getFunction(nameOrSignature: 'mintMateriaItem'): TypedContractMethod<

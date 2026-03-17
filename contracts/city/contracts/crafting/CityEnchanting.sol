@@ -13,8 +13,10 @@ contract CityEnchanting is Ownable {
     ICityEnchantmentItems public immutable cityEnchantmentItems;
 
     mapping(address => bool) public authorizedCallers;
+    bool public enchantingPaused;
 
     event AuthorizedCallerSet(address indexed caller, bool allowed);
+    event EnchantingPausedSet(bool paused);
 
     event EnchantmentItemApplied(
         address indexed user,
@@ -24,6 +26,12 @@ contract CityEnchanting is Ownable {
         uint256 enchantmentDefinitionId,
         uint256 level,
         bool burned
+    );
+
+    event EnchantmentRemovedBySystem(
+        address indexed user,
+        uint256 indexed weaponTokenId,
+        uint256 indexed slotIndex
     );
 
     constructor(
@@ -53,20 +61,28 @@ contract CityEnchanting is Ownable {
         _;
     }
 
+    modifier whenEnchantingNotPaused() {
+        if (enchantingPaused) revert CityErrors.InvalidValue();
+        _;
+    }
+
     function setAuthorizedCaller(address caller, bool allowed) external onlyOwner {
         if (caller == address(0)) revert CityErrors.ZeroAddress();
         authorizedCallers[caller] = allowed;
         emit AuthorizedCallerSet(caller, allowed);
     }
 
+    function setEnchantingPaused(bool paused) external onlyOwner {
+        enchantingPaused = paused;
+        emit EnchantingPausedSet(paused);
+    }
+
     function applyEnchantmentItem(
         uint256 weaponTokenId,
         uint256 slotIndex,
         uint256 enchantmentItemId
-    ) external {
-        if (cityWeapons.ownerOf(weaponTokenId) != msg.sender) {
-            revert CityErrors.NotPlotOwner();
-        }
+    ) external whenEnchantingNotPaused {
+        _requireWeaponOwner(weaponTokenId, msg.sender);
 
         (
             uint256 enchantmentDefinitionId,
@@ -106,11 +122,9 @@ contract CityEnchanting is Ownable {
         uint256 weaponTokenId,
         uint256 slotIndex,
         uint256 enchantmentItemId
-    ) external onlyAuthorized {
+    ) external onlyAuthorized whenEnchantingNotPaused {
         if (user == address(0)) revert CityErrors.ZeroAddress();
-        if (cityWeapons.ownerOf(weaponTokenId) != user) {
-            revert CityErrors.NotPlotOwner();
-        }
+        _requireWeaponOwner(weaponTokenId, user);
 
         (
             uint256 enchantmentDefinitionId,
@@ -148,18 +162,28 @@ contract CityEnchanting is Ownable {
     function removeEnchantmentFromSlot(
         uint256 weaponTokenId,
         uint256 slotIndex
-    ) external {
-        if (cityWeapons.ownerOf(weaponTokenId) != msg.sender) {
-            revert CityErrors.NotPlotOwner();
-        }
+    ) external whenEnchantingNotPaused {
+        _requireWeaponOwner(weaponTokenId, msg.sender);
 
         cityWeaponSockets.removeEnchantment(weaponTokenId, slotIndex);
+
+        emit EnchantmentRemovedBySystem(msg.sender, weaponTokenId, slotIndex);
     }
 
     function adminRemoveEnchantmentFromSlot(
         uint256 weaponTokenId,
         uint256 slotIndex
-    ) external onlyAuthorized {
+    ) external onlyAuthorized whenEnchantingNotPaused {
+        address owner = cityWeapons.ownerOf(weaponTokenId);
+
         cityWeaponSockets.removeEnchantment(weaponTokenId, slotIndex);
+
+        emit EnchantmentRemovedBySystem(owner, weaponTokenId, slotIndex);
+    }
+
+    function _requireWeaponOwner(uint256 weaponTokenId, address expectedOwner) internal view {
+        if (cityWeapons.ownerOf(weaponTokenId) != expectedOwner) {
+            revert CityErrors.NotPlotOwner();
+        }
     }
 }

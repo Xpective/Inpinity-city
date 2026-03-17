@@ -6,22 +6,28 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CityComponentsInterface extends Interface {
-    getFunction(nameOrSignature: "authorizedMinters" | "balanceOf" | "balanceOfBatch" | "baseMetadataURI" | "componentDefinitionOf" | "isApprovedForAll" | "mintComponent" | "owner" | "renounceOwnership" | "safeBatchTransferFrom" | "safeTransferFrom" | "setApprovalForAll" | "setAuthorizedMinter" | "setBaseMetadataURI" | "setComponentDefinition" | "supportsInterface" | "transferOwnership" | "uri"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedConsumers" | "authorizedMinters" | "balanceOf" | "balanceOfBatch" | "baseMetadataURI" | "burnComponent" | "componentDefinitionOf" | "componentExists" | "getComponentMeta" | "isApprovedForAll" | "isComponentEnabled" | "mintComponent" | "owner" | "renounceOwnership" | "safeBatchTransferFrom" | "safeTransferFrom" | "setApprovalForAll" | "setAuthorizedConsumer" | "setAuthorizedMinter" | "setBaseMetadataURI" | "setComponentDefinition" | "supportsInterface" | "transferOwnership" | "uri"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "ApprovalForAll" | "AuthorizedMinterSet" | "BaseMetadataURISet" | "ComponentDefinitionSet" | "ComponentMinted" | "OwnershipTransferred" | "TransferBatch" | "TransferSingle" | "URI"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "ApprovalForAll" | "AuthorizedConsumerSet" | "AuthorizedMinterSet" | "BaseMetadataURISet" | "ComponentBurned" | "ComponentDefinitionSet" | "ComponentMinted" | "OwnershipTransferred" | "TransferBatch" | "TransferSingle" | "URI"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'authorizedMinters', values: [AddressLike]): string;
+    encodeFunctionData(functionFragment: 'authorizedConsumers', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'authorizedMinters', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'balanceOf', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'balanceOfBatch', values: [AddressLike[], BigNumberish[]]): string;
 encodeFunctionData(functionFragment: 'baseMetadataURI', values?: undefined): string;
+encodeFunctionData(functionFragment: 'burnComponent', values: [AddressLike, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'componentDefinitionOf', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'componentExists', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getComponentMeta', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isApprovedForAll', values: [AddressLike, AddressLike]): string;
+encodeFunctionData(functionFragment: 'isComponentEnabled', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'mintComponent', values: [AddressLike, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'safeBatchTransferFrom', values: [AddressLike, AddressLike, BigNumberish[], BigNumberish[], BytesLike]): string;
 encodeFunctionData(functionFragment: 'safeTransferFrom', values: [AddressLike, AddressLike, BigNumberish, BigNumberish, BytesLike]): string;
 encodeFunctionData(functionFragment: 'setApprovalForAll', values: [AddressLike, boolean]): string;
+encodeFunctionData(functionFragment: 'setAuthorizedConsumer', values: [AddressLike, boolean]): string;
 encodeFunctionData(functionFragment: 'setAuthorizedMinter', values: [AddressLike, boolean]): string;
 encodeFunctionData(functionFragment: 'setBaseMetadataURI', values: [string]): string;
 encodeFunctionData(functionFragment: 'setComponentDefinition', values: [BigNumberish, string, BigNumberish, BigNumberish, BigNumberish, boolean]): string;
@@ -29,18 +35,24 @@ encodeFunctionData(functionFragment: 'supportsInterface', values: [BytesLike]): 
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'uri', values: [BigNumberish]): string;
 
-    decodeFunctionResult(functionFragment: 'authorizedMinters', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'authorizedConsumers', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'authorizedMinters', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'balanceOfBatch', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'baseMetadataURI', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'burnComponent', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'componentDefinitionOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'componentExists', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getComponentMeta', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isApprovedForAll', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'isComponentEnabled', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'mintComponent', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'safeBatchTransferFrom', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'safeTransferFrom', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setApprovalForAll', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setAuthorizedConsumer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setAuthorizedMinter', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setBaseMetadataURI', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setComponentDefinition', data: BytesLike): Result;
@@ -54,6 +66,18 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
       export type InputTuple = [account: AddressLike, operator: AddressLike, approved: boolean];
       export type OutputTuple = [account: string, operator: string, approved: boolean];
       export interface OutputObject {account: string, operator: string, approved: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace AuthorizedConsumerSetEvent {
+      export type InputTuple = [consumer: AddressLike, allowed: boolean];
+      export type OutputTuple = [consumer: string, allowed: boolean];
+      export interface OutputObject {consumer: string, allowed: boolean };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -78,6 +102,18 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
       export type InputTuple = [newBaseMetadataURI: string];
       export type OutputTuple = [newBaseMetadataURI: string];
       export interface OutputObject {newBaseMetadataURI: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace ComponentBurnedEvent {
+      export type InputTuple = [from: AddressLike, componentId: BigNumberish, amount: BigNumberish];
+      export type OutputTuple = [from: string, componentId: bigint, amount: bigint];
+      export interface OutputObject {from: string, componentId: bigint, amount: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -192,6 +228,14 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
 
     
     
+    authorizedConsumers: TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     authorizedMinters: TypedContractMethod<
       [arg0: AddressLike, ],
       [boolean],
@@ -224,6 +268,14 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
     
 
     
+    burnComponent: TypedContractMethod<
+      [from: AddressLike, componentId: BigNumberish, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     componentDefinitionOf: TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, string, bigint, bigint, bigint, boolean] & {id: bigint, name: string, category: bigint, rarityTier: bigint, techTier: bigint, enabled: boolean }],
@@ -232,8 +284,32 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
     
 
     
+    componentExists: TypedContractMethod<
+      [componentId: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    getComponentMeta: TypedContractMethod<
+      [componentId: BigNumberish, ],
+      [[string, bigint, bigint, bigint, boolean] & {name: string, category: bigint, rarityTier: bigint, techTier: bigint, enabled: boolean }],
+      'view'
+    >
+    
+
+    
     isApprovedForAll: TypedContractMethod<
       [account: AddressLike, operator: AddressLike, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    isComponentEnabled: TypedContractMethod<
+      [componentId: BigNumberish, ],
       [boolean],
       'view'
     >
@@ -282,6 +358,14 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
     
     setApprovalForAll: TypedContractMethod<
       [operator: AddressLike, approved: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    setAuthorizedConsumer: TypedContractMethod<
+      [consumer: AddressLike, allowed: boolean, ],
       [void],
       'nonpayable'
     >
@@ -338,7 +422,12 @@ decodeFunctionResult(functionFragment: 'uri', data: BytesLike): Result;
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'authorizedMinters'): TypedContractMethod<
+    getFunction(nameOrSignature: 'authorizedConsumers'): TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'authorizedMinters'): TypedContractMethod<
       [arg0: AddressLike, ],
       [boolean],
       'view'
@@ -358,13 +447,33 @@ getFunction(nameOrSignature: 'baseMetadataURI'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'burnComponent'): TypedContractMethod<
+      [from: AddressLike, componentId: BigNumberish, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'componentDefinitionOf'): TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, string, bigint, bigint, bigint, boolean] & {id: bigint, name: string, category: bigint, rarityTier: bigint, techTier: bigint, enabled: boolean }],
       'view'
     >;
+getFunction(nameOrSignature: 'componentExists'): TypedContractMethod<
+      [componentId: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getComponentMeta'): TypedContractMethod<
+      [componentId: BigNumberish, ],
+      [[string, bigint, bigint, bigint, boolean] & {name: string, category: bigint, rarityTier: bigint, techTier: bigint, enabled: boolean }],
+      'view'
+    >;
 getFunction(nameOrSignature: 'isApprovedForAll'): TypedContractMethod<
       [account: AddressLike, operator: AddressLike, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'isComponentEnabled'): TypedContractMethod<
+      [componentId: BigNumberish, ],
       [boolean],
       'view'
     >;
@@ -395,6 +504,11 @@ getFunction(nameOrSignature: 'safeTransferFrom'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'setApprovalForAll'): TypedContractMethod<
       [operator: AddressLike, approved: boolean, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'setAuthorizedConsumer'): TypedContractMethod<
+      [consumer: AddressLike, allowed: boolean, ],
       [void],
       'nonpayable'
     >;
@@ -430,8 +544,10 @@ getFunction(nameOrSignature: 'uri'): TypedContractMethod<
     >;
 
     getEvent(key: 'ApprovalForAll'): TypedContractEvent<ApprovalForAllEvent.InputTuple, ApprovalForAllEvent.OutputTuple, ApprovalForAllEvent.OutputObject>;
+getEvent(key: 'AuthorizedConsumerSet'): TypedContractEvent<AuthorizedConsumerSetEvent.InputTuple, AuthorizedConsumerSetEvent.OutputTuple, AuthorizedConsumerSetEvent.OutputObject>;
 getEvent(key: 'AuthorizedMinterSet'): TypedContractEvent<AuthorizedMinterSetEvent.InputTuple, AuthorizedMinterSetEvent.OutputTuple, AuthorizedMinterSetEvent.OutputObject>;
 getEvent(key: 'BaseMetadataURISet'): TypedContractEvent<BaseMetadataURISetEvent.InputTuple, BaseMetadataURISetEvent.OutputTuple, BaseMetadataURISetEvent.OutputObject>;
+getEvent(key: 'ComponentBurned'): TypedContractEvent<ComponentBurnedEvent.InputTuple, ComponentBurnedEvent.OutputTuple, ComponentBurnedEvent.OutputObject>;
 getEvent(key: 'ComponentDefinitionSet'): TypedContractEvent<ComponentDefinitionSetEvent.InputTuple, ComponentDefinitionSetEvent.OutputTuple, ComponentDefinitionSetEvent.OutputObject>;
 getEvent(key: 'ComponentMinted'): TypedContractEvent<ComponentMintedEvent.InputTuple, ComponentMintedEvent.OutputTuple, ComponentMintedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
@@ -445,12 +561,20 @@ getEvent(key: 'URI'): TypedContractEvent<URIEvent.InputTuple, URIEvent.OutputTup
       ApprovalForAll: TypedContractEvent<ApprovalForAllEvent.InputTuple, ApprovalForAllEvent.OutputTuple, ApprovalForAllEvent.OutputObject>;
     
 
+      'AuthorizedConsumerSet(address,bool)': TypedContractEvent<AuthorizedConsumerSetEvent.InputTuple, AuthorizedConsumerSetEvent.OutputTuple, AuthorizedConsumerSetEvent.OutputObject>;
+      AuthorizedConsumerSet: TypedContractEvent<AuthorizedConsumerSetEvent.InputTuple, AuthorizedConsumerSetEvent.OutputTuple, AuthorizedConsumerSetEvent.OutputObject>;
+    
+
       'AuthorizedMinterSet(address,bool)': TypedContractEvent<AuthorizedMinterSetEvent.InputTuple, AuthorizedMinterSetEvent.OutputTuple, AuthorizedMinterSetEvent.OutputObject>;
       AuthorizedMinterSet: TypedContractEvent<AuthorizedMinterSetEvent.InputTuple, AuthorizedMinterSetEvent.OutputTuple, AuthorizedMinterSetEvent.OutputObject>;
     
 
       'BaseMetadataURISet(string)': TypedContractEvent<BaseMetadataURISetEvent.InputTuple, BaseMetadataURISetEvent.OutputTuple, BaseMetadataURISetEvent.OutputObject>;
       BaseMetadataURISet: TypedContractEvent<BaseMetadataURISetEvent.InputTuple, BaseMetadataURISetEvent.OutputTuple, BaseMetadataURISetEvent.OutputObject>;
+    
+
+      'ComponentBurned(address,uint256,uint256)': TypedContractEvent<ComponentBurnedEvent.InputTuple, ComponentBurnedEvent.OutputTuple, ComponentBurnedEvent.OutputObject>;
+      ComponentBurned: TypedContractEvent<ComponentBurnedEvent.InputTuple, ComponentBurnedEvent.OutputTuple, ComponentBurnedEvent.OutputObject>;
     
 
       'ComponentDefinitionSet(uint256,string,uint256,uint256,uint256,bool)': TypedContractEvent<ComponentDefinitionSetEvent.InputTuple, ComponentDefinitionSetEvent.OutputTuple, ComponentDefinitionSetEvent.OutputObject>;

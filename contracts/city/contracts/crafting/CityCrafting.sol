@@ -20,7 +20,9 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
         Component,
         Blueprint,
         WeaponPrototype,
-        Enchantment
+        Enchantment,
+        MateriaItem,
+        EnchantmentItem
     }
 
     struct Recipe {
@@ -29,16 +31,13 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
         uint256 outputId;
         uint256 outputAmount;
 
-        // Kosten für ResourceToken IDs 0..9
         uint256[RESOURCE_COUNT] resourceCosts;
 
-        // spätere Erweiterungen / Zugangsvoraussetzungen
-        uint256 requiredFaction;      // 0 = none, 1 = Inpinity, 2 = Inphinity, 3 = Neutral/Borderline
-        uint256 requiredDistrictKind; // 0 = none
-        uint256 requiredBuildingId;   // 0 = none
-        uint256 requiredTechTier;     // 0 = none
+        uint256 requiredFaction;
+        uint256 requiredDistrictKind;
+        uint256 requiredBuildingId;
+        uint256 requiredTechTier;
 
-        // für Weapon-Rezepte
         uint256 rarityTier;
         uint256 frameTier;
 
@@ -53,11 +52,10 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
     ICityBlueprints public cityBlueprints;
 
     uint256 public craftNonce;
+    bool public craftingPaused;
 
     mapping(uint256 => Recipe) public recipeOf;
     mapping(address => bool) public authorizedCallers;
-
-    // user => recipeId => discovered
     mapping(address => mapping(uint256 => bool)) public recipeDiscoveredBy;
 
     event AuthorizedCallerSet(address indexed caller, bool allowed);
@@ -65,6 +63,8 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
     event CityWeaponsSet(address indexed weapons);
     event CityComponentsSet(address indexed components);
     event CityBlueprintsSet(address indexed blueprints);
+
+    event CraftingPausedSet(bool paused);
 
     event RecipeSet(
         uint256 indexed recipeId,
@@ -107,6 +107,11 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
         _;
     }
 
+    modifier whenCraftingNotPaused() {
+        if (craftingPaused) revert CityErrors.InvalidValue();
+        _;
+    }
+
     function setAuthorizedCaller(address caller, bool allowed) external onlyOwner {
         if (caller == address(0)) revert CityErrors.ZeroAddress();
         authorizedCallers[caller] = allowed;
@@ -129,6 +134,11 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
         if (cityBlueprintsAddress == address(0)) revert CityErrors.ZeroAddress();
         cityBlueprints = ICityBlueprints(cityBlueprintsAddress);
         emit CityBlueprintsSet(cityBlueprintsAddress);
+    }
+
+    function setCraftingPaused(bool paused) external onlyOwner {
+        craftingPaused = paused;
+        emit CraftingPausedSet(paused);
     }
 
     function setRecipe(
@@ -177,7 +187,7 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
         emit RecipeDiscovered(user, recipeId);
     }
 
-    function craft(uint256 recipeId) external nonReentrant {
+    function craft(uint256 recipeId) external nonReentrant whenCraftingNotPaused {
         Recipe memory recipe = recipeOf[recipeId];
         _validateRecipe(recipe, msg.sender);
 
@@ -200,7 +210,7 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
         uint256 visualVariant,
         bool genesisEra,
         bool usedAether
-    ) external nonReentrant returns (uint256 tokenId) {
+    ) external nonReentrant whenCraftingNotPaused returns (uint256 tokenId) {
         Recipe memory recipe = recipeOf[recipeId];
         _validateRecipe(recipe, msg.sender);
 
@@ -252,13 +262,6 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
         // - requiredDistrictKind
         // - requiredBuildingId
         // - requiredTechTier
-        //
-        // Diese sollen später über injizierte Contracts geprüft werden:
-        // - CityRegistry
-        // - CityDistricts
-        // - CityBuildings / PersonalBuildings / CommunityBuildings
-        //
-        // Für v1 bleiben sie bewusst vorbereitet, aber noch nicht aktiv ausgewertet.
     }
 
     function _consumeResources(address from, uint256[RESOURCE_COUNT] memory resourceCosts) internal {
@@ -270,7 +273,6 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
 
         IResourceToken resourceToken = IResourceToken(resourceTokenAddr);
 
-        // Preflight checks zuerst, damit keine Teiltransfers passieren
         for (uint256 i = 0; i < RESOURCE_COUNT; i++) {
             uint256 cost = resourceCosts[i];
             if (cost > 0) {
@@ -280,7 +282,6 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
             }
         }
 
-        // Danach Transfers direkt an Treasury
         for (uint256 i = 0; i < RESOURCE_COUNT; i++) {
             uint256 cost = resourceCosts[i];
             if (cost > 0) {
@@ -302,11 +303,12 @@ contract CityCrafting is Ownable, ERC1155Holder, ReentrancyGuard {
             return;
         }
 
-        if (recipe.outputKind == RecipeOutputKind.Resource) {
-            revert CityErrors.InvalidValue();
-        }
-
-        if (recipe.outputKind == RecipeOutputKind.Enchantment) {
+        if (
+            recipe.outputKind == RecipeOutputKind.Resource ||
+            recipe.outputKind == RecipeOutputKind.Enchantment ||
+            recipe.outputKind == RecipeOutputKind.MateriaItem ||
+            recipe.outputKind == RecipeOutputKind.EnchantmentItem
+        ) {
             revert CityErrors.InvalidValue();
         }
 

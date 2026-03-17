@@ -6,6 +6,7 @@ import "../libraries/CityErrors.sol";
 import "./CityWeapons.sol";
 import "./CityEnchantments.sol";
 import "./CityMateria.sol";
+import "./BonusTypes.sol";
 
 contract CityWeaponSockets is Ownable {
     struct EnchantmentSlot {
@@ -118,6 +119,8 @@ contract CityWeaponSockets is Ownable {
     ) external onlyAuthorized {
         (CityWeapons.WeaponDefinition memory def,,) = cityWeapons.getWeaponStats(tokenId);
 
+        // v1: prüft Basis-Slots aus WeaponDefinition.
+        // Später kann dies auf effektive Slots (inkl. Boni) erweitert werden.
         if (slotIndex >= def.enchantmentSlots) revert CityErrors.InvalidValue();
         if (enchantmentSlotOfWeapon[tokenId][slotIndex].occupied) revert CityErrors.InvalidValue();
 
@@ -145,6 +148,10 @@ contract CityWeaponSockets is Ownable {
         uint256 tokenId,
         uint256 slotIndex
     ) external onlyAuthorized {
+        if (!enchantmentSlotOfWeapon[tokenId][slotIndex].occupied) {
+            revert CityErrors.InvalidValue();
+        }
+
         delete enchantmentSlotOfWeapon[tokenId][slotIndex];
         emit EnchantmentRemoved(tokenId, slotIndex);
     }
@@ -157,6 +164,8 @@ contract CityWeaponSockets is Ownable {
     ) external onlyAuthorized {
         (CityWeapons.WeaponDefinition memory def,,) = cityWeapons.getWeaponStats(tokenId);
 
+        // v1: prüft Basis-Slots aus WeaponDefinition.
+        // Später kann dies auf effektive Slots (inkl. Boni) erweitert werden.
         if (slotIndex >= def.materiaSlots) revert CityErrors.InvalidValue();
         if (materiaSlotOfWeapon[tokenId][slotIndex].occupied) revert CityErrors.InvalidValue();
 
@@ -185,6 +194,10 @@ contract CityWeaponSockets is Ownable {
         uint256 tokenId,
         uint256 slotIndex
     ) external onlyAuthorized {
+        if (!materiaSlotOfWeapon[tokenId][slotIndex].occupied) {
+            revert CityErrors.InvalidValue();
+        }
+
         delete materiaSlotOfWeapon[tokenId][slotIndex];
         emit MateriaRemoved(tokenId, slotIndex);
     }
@@ -233,7 +246,7 @@ contract CityWeaponSockets is Ownable {
         for (uint256 i = 0; i < def.enchantmentSlots; i++) {
             EnchantmentSlot memory s = enchantmentSlotOfWeapon[tokenId][i];
             if (s.occupied) {
-                CityEnchantments.EnchantmentBonuses memory b =
+                BonusTypes.BonusSet memory b =
                     cityEnchantments.getEnchantmentBonuses(s.enchantmentId, s.level);
 
                 total.minDamageBonus += b.minDamageBonus;
@@ -261,7 +274,7 @@ contract CityWeaponSockets is Ownable {
         for (uint256 i = 0; i < def.materiaSlots; i++) {
             MateriaSlot memory s = materiaSlotOfWeapon[tokenId][i];
             if (s.occupied) {
-                CityMateria.MateriaBonuses memory b =
+                BonusTypes.BonusSet memory b =
                     cityMateria.getMateriaBonuses(s.materiaId, s.level);
 
                 total.minDamageBonus += b.minDamageBonus;

@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libraries/CityErrors.sol";
+import "./BonusTypes.sol";
 
 contract CityMateria is Ownable {
     enum MateriaCategory {
@@ -41,33 +42,12 @@ contract CityMateria is Ownable {
         bool enabled;
     }
 
-    struct MateriaBonuses {
-        int256 minDamageBonus;
-        int256 maxDamageBonus;
-        int256 attackSpeedBonus;
-        int256 critChanceBpsBonus;
-        int256 critMultiplierBpsBonus;
-        int256 accuracyBpsBonus;
-        int256 rangeBonus;
-        int256 maxDurabilityBonus;
-        int256 armorPenBpsBonus;
-        int256 blockChanceBpsBonus;
-        int256 lifeStealBpsBonus;
-        int256 energyCostBonus;
-        int256 heatGenerationBonus;
-        int256 stabilityBonus;
-        int256 cooldownMsBonus;
-        int256 projectileSpeedBonus;
-        int256 aoeRadiusBonus;
-        int256 enchantmentSlotsBonus;
-        int256 materiaSlotsBonus;
-    }
-
     mapping(uint256 => MateriaDefinition) public materiaDefinitionOf;
-    mapping(uint256 => mapping(uint256 => MateriaBonuses)) public materiaBonusesOf; // materiaId => level => bonuses
+    mapping(uint256 => mapping(uint256 => BonusTypes.BonusSet)) public materiaBonusesOf;
     mapping(address => bool) public authorizedCallers;
 
     event AuthorizedCallerSet(address indexed caller, bool allowed);
+
     event MateriaDefinitionSet(
         uint256 indexed materiaId,
         string name,
@@ -77,6 +57,7 @@ contract CityMateria is Ownable {
         uint256 maxLevel,
         bool enabled
     );
+
     event MateriaBonusesSet(
         uint256 indexed materiaId,
         uint256 indexed level
@@ -137,7 +118,7 @@ contract CityMateria is Ownable {
     function setMateriaBonuses(
         uint256 materiaId,
         uint256 level,
-        MateriaBonuses calldata bonuses
+        BonusTypes.BonusSet calldata bonuses
     ) external onlyAuthorized {
         MateriaDefinition memory def = materiaDefinitionOf[materiaId];
         if (def.id == 0 || !def.enabled) revert CityErrors.InvalidValue();
@@ -150,7 +131,7 @@ contract CityMateria is Ownable {
     function getMateriaBonuses(
         uint256 materiaId,
         uint256 level
-    ) external view returns (MateriaBonuses memory) {
+    ) external view returns (BonusTypes.BonusSet memory) {
         return materiaBonusesOf[materiaId][level];
     }
 
@@ -177,6 +158,39 @@ contract CityMateria is Ownable {
         if (!def.enabled) return false;
         if (level == 0 || level > def.maxLevel) return false;
         return true;
+    }
+
+    function hasBonusesForLevel(
+        uint256 materiaId,
+        uint256 level
+    ) external view returns (bool) {
+        MateriaDefinition memory def = materiaDefinitionOf[materiaId];
+        if (def.id == 0) return false;
+        if (level == 0 || level > def.maxLevel) return false;
+
+        BonusTypes.BonusSet memory b = materiaBonusesOf[materiaId][level];
+
+        return (
+            b.minDamageBonus != 0 ||
+            b.maxDamageBonus != 0 ||
+            b.attackSpeedBonus != 0 ||
+            b.critChanceBpsBonus != 0 ||
+            b.critMultiplierBpsBonus != 0 ||
+            b.accuracyBpsBonus != 0 ||
+            b.rangeBonus != 0 ||
+            b.maxDurabilityBonus != 0 ||
+            b.armorPenBpsBonus != 0 ||
+            b.blockChanceBpsBonus != 0 ||
+            b.lifeStealBpsBonus != 0 ||
+            b.energyCostBonus != 0 ||
+            b.heatGenerationBonus != 0 ||
+            b.stabilityBonus != 0 ||
+            b.cooldownMsBonus != 0 ||
+            b.projectileSpeedBonus != 0 ||
+            b.aoeRadiusBonus != 0 ||
+            b.enchantmentSlotsBonus != 0 ||
+            b.materiaSlotsBonus != 0
+        );
     }
 
     function getMateriaMeta(

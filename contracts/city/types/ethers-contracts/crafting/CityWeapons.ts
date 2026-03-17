@@ -28,9 +28,9 @@ export declare namespace CityWeapons {
     }
 
   export interface CityWeaponsInterface extends Interface {
-    getFunction(nameOrSignature: "approve" | "authorizedMinters" | "balanceOf" | "baseTokenURI" | "cityWeaponSockets" | "computeCraftSeed" | "computeProvenanceHash" | "getApproved" | "getCombatProfile" | "getEffectiveCombatProfile" | "getWeaponStats" | "isApprovedForAll" | "mintWeapon" | "name" | "nextTokenId" | "owner" | "ownerOf" | "renounceOwnership" | "safeTransferFrom(address,address,uint256)" | "safeTransferFrom(address,address,uint256,bytes)" | "setApprovalForAll" | "setAuthorizedMinter" | "setBaseURI" | "setDurability" | "setMetadataRevision" | "setUpgradeLevel" | "setWeaponBonuses" | "setWeaponDefinition" | "setWeaponSockets" | "supportsInterface" | "symbol" | "tokenURI" | "transferFrom" | "transferOwnership" | "weaponBonusesOf" | "weaponDefinitionOf" | "weaponInstanceOf"): FunctionFragment;
+    getFunction(nameOrSignature: "approve" | "authorizedMinters" | "balanceOf" | "baseTokenURI" | "cityWeaponSockets" | "computeCraftSeed" | "computeProvenanceHash" | "getApproved" | "getCombatProfile" | "getEffectiveCombatProfile" | "getWeaponStats" | "isApprovedForAll" | "mintWeapon" | "name" | "nextTokenId" | "owner" | "ownerOf" | "renounceOwnership" | "safeTransferFrom(address,address,uint256)" | "safeTransferFrom(address,address,uint256,bytes)" | "setApprovalForAll" | "setAuthorizedMinter" | "setBaseURI" | "setDurability" | "setMetadataRevision" | "setUpgradeLevel" | "setWeaponBonuses" | "setWeaponDefinition" | "setWeaponSockets" | "setWeaponsPaused" | "supportsInterface" | "symbol" | "tokenURI" | "transferFrom" | "transferOwnership" | "weaponBonusesOf" | "weaponDefinitionOf" | "weaponExists" | "weaponInstanceOf" | "weaponsPaused"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "Approval" | "ApprovalForAll" | "AuthorizedMinterSet" | "BaseURISet" | "OwnershipTransferred" | "Transfer" | "WeaponBonusesSet" | "WeaponDefinitionSet" | "WeaponDurabilitySet" | "WeaponMetadataRevisionSet" | "WeaponMinted" | "WeaponSocketsSet" | "WeaponUpgradeLevelSet"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "Approval" | "ApprovalForAll" | "AuthorizedMinterSet" | "BaseURISet" | "OwnershipTransferred" | "Transfer" | "WeaponBonusesSet" | "WeaponDefinitionSet" | "WeaponDurabilitySet" | "WeaponMetadataRevisionSet" | "WeaponMinted" | "WeaponSocketsSet" | "WeaponUpgradeLevelSet" | "WeaponsPausedSet"): EventFragment;
 
     encodeFunctionData(functionFragment: 'approve', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'authorizedMinters', values: [AddressLike]): string;
@@ -61,6 +61,7 @@ encodeFunctionData(functionFragment: 'setUpgradeLevel', values: [BigNumberish, B
 encodeFunctionData(functionFragment: 'setWeaponBonuses', values: [BigNumberish, CityWeapons.WeaponBonusesStruct]): string;
 encodeFunctionData(functionFragment: 'setWeaponDefinition', values: [BigNumberish, string, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, boolean]): string;
 encodeFunctionData(functionFragment: 'setWeaponSockets', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'setWeaponsPaused', values: [boolean]): string;
 encodeFunctionData(functionFragment: 'supportsInterface', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'symbol', values?: undefined): string;
 encodeFunctionData(functionFragment: 'tokenURI', values: [BigNumberish]): string;
@@ -68,7 +69,9 @@ encodeFunctionData(functionFragment: 'transferFrom', values: [AddressLike, Addre
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'weaponBonusesOf', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'weaponDefinitionOf', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'weaponExists', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'weaponInstanceOf', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'weaponsPaused', values?: undefined): string;
 
     decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'authorizedMinters', data: BytesLike): Result;
@@ -99,6 +102,7 @@ decodeFunctionResult(functionFragment: 'setUpgradeLevel', data: BytesLike): Resu
 decodeFunctionResult(functionFragment: 'setWeaponBonuses', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setWeaponDefinition', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setWeaponSockets', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setWeaponsPaused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'supportsInterface', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'tokenURI', data: BytesLike): Result;
@@ -106,7 +110,9 @@ decodeFunctionResult(functionFragment: 'transferFrom', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'weaponBonusesOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'weaponDefinitionOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'weaponExists', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'weaponInstanceOf', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'weaponsPaused', data: BytesLike): Result;
   }
 
   
@@ -258,6 +264,18 @@ decodeFunctionResult(functionFragment: 'weaponInstanceOf', data: BytesLike): Res
       export type InputTuple = [tokenId: BigNumberish, upgradeLevel: BigNumberish];
       export type OutputTuple = [tokenId: bigint, upgradeLevel: bigint];
       export interface OutputObject {tokenId: bigint, upgradeLevel: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace WeaponsPausedSetEvent {
+      export type InputTuple = [paused: boolean];
+      export type OutputTuple = [paused: boolean];
+      export interface OutputObject {paused: boolean };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -532,6 +550,14 @@ decodeFunctionResult(functionFragment: 'weaponInstanceOf', data: BytesLike): Res
     
 
     
+    setWeaponsPaused: TypedContractMethod<
+      [paused: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     supportsInterface: TypedContractMethod<
       [interfaceId: BytesLike, ],
       [boolean],
@@ -588,9 +614,25 @@ decodeFunctionResult(functionFragment: 'weaponInstanceOf', data: BytesLike): Res
     
 
     
+    weaponExists: TypedContractMethod<
+      [tokenId: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
     weaponInstanceOf: TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, string, string, boolean, boolean] & {tokenId: bigint, weaponDefinitionId: bigint, rarityTier: bigint, frameTier: bigint, durability: bigint, upgradeLevel: bigint, metadataRevision: bigint, originPlotId: bigint, originFaction: bigint, originDistrictKind: bigint, craftedAt: bigint, visualVariant: bigint, resonanceType: bigint, craftSeed: string, provenanceHash: string, genesisEra: boolean, usedAether: boolean }],
+      'view'
+    >
+    
+
+    
+    weaponsPaused: TypedContractMethod<
+      [],
+      [boolean],
       'view'
     >
     
@@ -743,6 +785,11 @@ getFunction(nameOrSignature: 'setWeaponSockets'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setWeaponsPaused'): TypedContractMethod<
+      [paused: boolean, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'supportsInterface'): TypedContractMethod<
       [interfaceId: BytesLike, ],
       [boolean],
@@ -778,9 +825,19 @@ getFunction(nameOrSignature: 'weaponDefinitionOf'): TypedContractMethod<
       [[bigint, string, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean] & {id: bigint, name: string, class: bigint, damageType: bigint, techTier: bigint, requiredLevel: bigint, requiredTechTier: bigint, minDamage: bigint, maxDamage: bigint, attackSpeed: bigint, critChanceBps: bigint, critMultiplierBps: bigint, accuracyBps: bigint, range: bigint, maxDurability: bigint, armorPenBps: bigint, blockChanceBps: bigint, lifeStealBps: bigint, energyCost: bigint, heatGeneration: bigint, stability: bigint, cooldownMs: bigint, projectileSpeed: bigint, aoeRadius: bigint, enchantmentSlots: bigint, materiaSlots: bigint, visualVariant: bigint, maxUpgradeLevel: bigint, familySetId: bigint, enabled: boolean }],
       'view'
     >;
+getFunction(nameOrSignature: 'weaponExists'): TypedContractMethod<
+      [tokenId: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'weaponInstanceOf'): TypedContractMethod<
       [arg0: BigNumberish, ],
       [[bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, string, string, boolean, boolean] & {tokenId: bigint, weaponDefinitionId: bigint, rarityTier: bigint, frameTier: bigint, durability: bigint, upgradeLevel: bigint, metadataRevision: bigint, originPlotId: bigint, originFaction: bigint, originDistrictKind: bigint, craftedAt: bigint, visualVariant: bigint, resonanceType: bigint, craftSeed: string, provenanceHash: string, genesisEra: boolean, usedAether: boolean }],
+      'view'
+    >;
+getFunction(nameOrSignature: 'weaponsPaused'): TypedContractMethod<
+      [],
+      [boolean],
       'view'
     >;
 
@@ -797,6 +854,7 @@ getEvent(key: 'WeaponMetadataRevisionSet'): TypedContractEvent<WeaponMetadataRev
 getEvent(key: 'WeaponMinted'): TypedContractEvent<WeaponMintedEvent.InputTuple, WeaponMintedEvent.OutputTuple, WeaponMintedEvent.OutputObject>;
 getEvent(key: 'WeaponSocketsSet'): TypedContractEvent<WeaponSocketsSetEvent.InputTuple, WeaponSocketsSetEvent.OutputTuple, WeaponSocketsSetEvent.OutputObject>;
 getEvent(key: 'WeaponUpgradeLevelSet'): TypedContractEvent<WeaponUpgradeLevelSetEvent.InputTuple, WeaponUpgradeLevelSetEvent.OutputTuple, WeaponUpgradeLevelSetEvent.OutputObject>;
+getEvent(key: 'WeaponsPausedSet'): TypedContractEvent<WeaponsPausedSetEvent.InputTuple, WeaponsPausedSetEvent.OutputTuple, WeaponsPausedSetEvent.OutputObject>;
 
     filters: {
       
@@ -850,6 +908,10 @@ getEvent(key: 'WeaponUpgradeLevelSet'): TypedContractEvent<WeaponUpgradeLevelSet
 
       'WeaponUpgradeLevelSet(uint256,uint256)': TypedContractEvent<WeaponUpgradeLevelSetEvent.InputTuple, WeaponUpgradeLevelSetEvent.OutputTuple, WeaponUpgradeLevelSetEvent.OutputObject>;
       WeaponUpgradeLevelSet: TypedContractEvent<WeaponUpgradeLevelSetEvent.InputTuple, WeaponUpgradeLevelSetEvent.OutputTuple, WeaponUpgradeLevelSetEvent.OutputObject>;
+    
+
+      'WeaponsPausedSet(bool)': TypedContractEvent<WeaponsPausedSetEvent.InputTuple, WeaponsPausedSetEvent.OutputTuple, WeaponsPausedSetEvent.OutputObject>;
+      WeaponsPausedSet: TypedContractEvent<WeaponsPausedSetEvent.InputTuple, WeaponsPausedSetEvent.OutputTuple, WeaponsPausedSetEvent.OutputObject>;
     
     };
   }

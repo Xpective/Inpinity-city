@@ -6,9 +6,9 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CityEnchantingInterface extends Interface {
-    getFunction(nameOrSignature: "adminApplyEnchantmentItem" | "adminRemoveEnchantmentFromSlot" | "applyEnchantmentItem" | "authorizedCallers" | "cityEnchantmentItems" | "cityWeaponSockets" | "cityWeapons" | "owner" | "removeEnchantmentFromSlot" | "renounceOwnership" | "setAuthorizedCaller" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "adminApplyEnchantmentItem" | "adminRemoveEnchantmentFromSlot" | "applyEnchantmentItem" | "authorizedCallers" | "cityEnchantmentItems" | "cityWeaponSockets" | "cityWeapons" | "enchantingPaused" | "owner" | "removeEnchantmentFromSlot" | "renounceOwnership" | "setAuthorizedCaller" | "setEnchantingPaused" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "EnchantmentItemApplied" | "OwnershipTransferred"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "EnchantingPausedSet" | "EnchantmentItemApplied" | "EnchantmentRemovedBySystem" | "OwnershipTransferred"): EventFragment;
 
     encodeFunctionData(functionFragment: 'adminApplyEnchantmentItem', values: [AddressLike, BigNumberish, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'adminRemoveEnchantmentFromSlot', values: [BigNumberish, BigNumberish]): string;
@@ -17,10 +17,12 @@ encodeFunctionData(functionFragment: 'authorizedCallers', values: [AddressLike])
 encodeFunctionData(functionFragment: 'cityEnchantmentItems', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityWeaponSockets', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityWeapons', values?: undefined): string;
+encodeFunctionData(functionFragment: 'enchantingPaused', values?: undefined): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'removeEnchantmentFromSlot', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'setAuthorizedCaller', values: [AddressLike, boolean]): string;
+encodeFunctionData(functionFragment: 'setEnchantingPaused', values: [boolean]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
     decodeFunctionResult(functionFragment: 'adminApplyEnchantmentItem', data: BytesLike): Result;
@@ -30,10 +32,12 @@ decodeFunctionResult(functionFragment: 'authorizedCallers', data: BytesLike): Re
 decodeFunctionResult(functionFragment: 'cityEnchantmentItems', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityWeaponSockets', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityWeapons', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'enchantingPaused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'removeEnchantmentFromSlot', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setAuthorizedCaller', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setEnchantingPaused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
@@ -50,10 +54,34 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
   
 
+    export namespace EnchantingPausedSetEvent {
+      export type InputTuple = [paused: boolean];
+      export type OutputTuple = [paused: boolean];
+      export interface OutputObject {paused: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace EnchantmentItemAppliedEvent {
       export type InputTuple = [user: AddressLike, weaponTokenId: BigNumberish, enchantmentItemId: BigNumberish, slotIndex: BigNumberish, enchantmentDefinitionId: BigNumberish, level: BigNumberish, burned: boolean];
       export type OutputTuple = [user: string, weaponTokenId: bigint, enchantmentItemId: bigint, slotIndex: bigint, enchantmentDefinitionId: bigint, level: bigint, burned: boolean];
       export interface OutputObject {user: string, weaponTokenId: bigint, enchantmentItemId: bigint, slotIndex: bigint, enchantmentDefinitionId: bigint, level: bigint, burned: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace EnchantmentRemovedBySystemEvent {
+      export type InputTuple = [user: AddressLike, weaponTokenId: BigNumberish, slotIndex: BigNumberish];
+      export type OutputTuple = [user: string, weaponTokenId: bigint, slotIndex: bigint];
+      export interface OutputObject {user: string, weaponTokenId: bigint, slotIndex: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -164,6 +192,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    enchantingPaused: TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >
+    
+
+    
     owner: TypedContractMethod<
       [],
       [string],
@@ -190,6 +226,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
     setAuthorizedCaller: TypedContractMethod<
       [caller: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    setEnchantingPaused: TypedContractMethod<
+      [paused: boolean, ],
       [void],
       'nonpayable'
     >
@@ -241,6 +285,11 @@ getFunction(nameOrSignature: 'cityWeapons'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'enchantingPaused'): TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'owner'): TypedContractMethod<
       [],
       [string],
@@ -261,6 +310,11 @@ getFunction(nameOrSignature: 'setAuthorizedCaller'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setEnchantingPaused'): TypedContractMethod<
+      [paused: boolean, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
@@ -268,7 +322,9 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
     >;
 
     getEvent(key: 'AuthorizedCallerSet'): TypedContractEvent<AuthorizedCallerSetEvent.InputTuple, AuthorizedCallerSetEvent.OutputTuple, AuthorizedCallerSetEvent.OutputObject>;
+getEvent(key: 'EnchantingPausedSet'): TypedContractEvent<EnchantingPausedSetEvent.InputTuple, EnchantingPausedSetEvent.OutputTuple, EnchantingPausedSetEvent.OutputObject>;
 getEvent(key: 'EnchantmentItemApplied'): TypedContractEvent<EnchantmentItemAppliedEvent.InputTuple, EnchantmentItemAppliedEvent.OutputTuple, EnchantmentItemAppliedEvent.OutputObject>;
+getEvent(key: 'EnchantmentRemovedBySystem'): TypedContractEvent<EnchantmentRemovedBySystemEvent.InputTuple, EnchantmentRemovedBySystemEvent.OutputTuple, EnchantmentRemovedBySystemEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 
     filters: {
@@ -277,8 +333,16 @@ getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEv
       AuthorizedCallerSet: TypedContractEvent<AuthorizedCallerSetEvent.InputTuple, AuthorizedCallerSetEvent.OutputTuple, AuthorizedCallerSetEvent.OutputObject>;
     
 
+      'EnchantingPausedSet(bool)': TypedContractEvent<EnchantingPausedSetEvent.InputTuple, EnchantingPausedSetEvent.OutputTuple, EnchantingPausedSetEvent.OutputObject>;
+      EnchantingPausedSet: TypedContractEvent<EnchantingPausedSetEvent.InputTuple, EnchantingPausedSetEvent.OutputTuple, EnchantingPausedSetEvent.OutputObject>;
+    
+
       'EnchantmentItemApplied(address,uint256,uint256,uint256,uint256,uint256,bool)': TypedContractEvent<EnchantmentItemAppliedEvent.InputTuple, EnchantmentItemAppliedEvent.OutputTuple, EnchantmentItemAppliedEvent.OutputObject>;
       EnchantmentItemApplied: TypedContractEvent<EnchantmentItemAppliedEvent.InputTuple, EnchantmentItemAppliedEvent.OutputTuple, EnchantmentItemAppliedEvent.OutputObject>;
+    
+
+      'EnchantmentRemovedBySystem(address,uint256,uint256)': TypedContractEvent<EnchantmentRemovedBySystemEvent.InputTuple, EnchantmentRemovedBySystemEvent.OutputTuple, EnchantmentRemovedBySystemEvent.OutputObject>;
+      EnchantmentRemovedBySystem: TypedContractEvent<EnchantmentRemovedBySystemEvent.InputTuple, EnchantmentRemovedBySystemEvent.OutputTuple, EnchantmentRemovedBySystemEvent.OutputObject>;
     
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;

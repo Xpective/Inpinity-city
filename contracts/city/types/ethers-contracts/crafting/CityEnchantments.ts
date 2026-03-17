@@ -4,13 +4,16 @@
 import type { BaseContract, BigNumberish, BytesLike, FunctionFragment, Result, Interface, EventFragment, AddressLike, ContractRunner, ContractMethod, Listener } from "ethers"
 import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, TypedLogDescription, TypedListener, TypedContractMethod } from "../common.js"
   
+export declare namespace BonusTypes {
+      
+    export type BonusSetStruct = {minDamageBonus: BigNumberish, maxDamageBonus: BigNumberish, attackSpeedBonus: BigNumberish, critChanceBpsBonus: BigNumberish, critMultiplierBpsBonus: BigNumberish, accuracyBpsBonus: BigNumberish, rangeBonus: BigNumberish, maxDurabilityBonus: BigNumberish, armorPenBpsBonus: BigNumberish, blockChanceBpsBonus: BigNumberish, lifeStealBpsBonus: BigNumberish, energyCostBonus: BigNumberish, heatGenerationBonus: BigNumberish, stabilityBonus: BigNumberish, cooldownMsBonus: BigNumberish, projectileSpeedBonus: BigNumberish, aoeRadiusBonus: BigNumberish, enchantmentSlotsBonus: BigNumberish, materiaSlotsBonus: BigNumberish}
+
+    export type BonusSetStructOutput = [minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint] & {minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint }
+  
+    }
+
 export declare namespace CityEnchantments {
       
-    export type EnchantmentBonusesStruct = {minDamageBonus: BigNumberish, maxDamageBonus: BigNumberish, attackSpeedBonus: BigNumberish, critChanceBpsBonus: BigNumberish, critMultiplierBpsBonus: BigNumberish, accuracyBpsBonus: BigNumberish, rangeBonus: BigNumberish, maxDurabilityBonus: BigNumberish, armorPenBpsBonus: BigNumberish, blockChanceBpsBonus: BigNumberish, lifeStealBpsBonus: BigNumberish, energyCostBonus: BigNumberish, heatGenerationBonus: BigNumberish, stabilityBonus: BigNumberish, cooldownMsBonus: BigNumberish, projectileSpeedBonus: BigNumberish, aoeRadiusBonus: BigNumberish, enchantmentSlotsBonus: BigNumberish, materiaSlotsBonus: BigNumberish}
-
-    export type EnchantmentBonusesStructOutput = [minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint] & {minDamageBonus: bigint, maxDamageBonus: bigint, attackSpeedBonus: bigint, critChanceBpsBonus: bigint, critMultiplierBpsBonus: bigint, accuracyBpsBonus: bigint, rangeBonus: bigint, maxDurabilityBonus: bigint, armorPenBpsBonus: bigint, blockChanceBpsBonus: bigint, lifeStealBpsBonus: bigint, energyCostBonus: bigint, heatGenerationBonus: bigint, stabilityBonus: bigint, cooldownMsBonus: bigint, projectileSpeedBonus: bigint, aoeRadiusBonus: bigint, enchantmentSlotsBonus: bigint, materiaSlotsBonus: bigint }
-  
-
     export type EnchantmentDefinitionStruct = {id: BigNumberish, name: string, category: BigNumberish, rarityTier: BigNumberish, maxLevel: BigNumberish, enabled: boolean}
 
     export type EnchantmentDefinitionStructOutput = [id: bigint, name: string, category: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean] & {id: bigint, name: string, category: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }
@@ -18,7 +21,7 @@ export declare namespace CityEnchantments {
     }
 
   export interface CityEnchantmentsInterface extends Interface {
-    getFunction(nameOrSignature: "authorizedCallers" | "enchantmentBonusesOf" | "enchantmentDefinitionOf" | "enchantmentExists" | "getEnchantmentBonuses" | "getEnchantmentDefinition" | "getEnchantmentMeta" | "isEnchantmentEnabled" | "isEnchantmentUsable" | "owner" | "renounceOwnership" | "setAuthorizedCaller" | "setEnchantmentBonuses" | "setEnchantmentDefinition" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "authorizedCallers" | "enchantmentBonusesOf" | "enchantmentDefinitionOf" | "enchantmentExists" | "getEnchantmentBonuses" | "getEnchantmentDefinition" | "getEnchantmentMeta" | "hasBonusesForLevel" | "isEnchantmentEnabled" | "isEnchantmentUsable" | "owner" | "renounceOwnership" | "setAuthorizedCaller" | "setEnchantmentBonuses" | "setEnchantmentDefinition" | "transferOwnership"): FunctionFragment;
 
     getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "EnchantmentBonusesSet" | "EnchantmentDefinitionSet" | "OwnershipTransferred"): EventFragment;
 
@@ -29,12 +32,13 @@ encodeFunctionData(functionFragment: 'enchantmentExists', values: [BigNumberish]
 encodeFunctionData(functionFragment: 'getEnchantmentBonuses', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getEnchantmentDefinition', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getEnchantmentMeta', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'hasBonusesForLevel', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isEnchantmentEnabled', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'isEnchantmentUsable', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'setAuthorizedCaller', values: [AddressLike, boolean]): string;
-encodeFunctionData(functionFragment: 'setEnchantmentBonuses', values: [BigNumberish, BigNumberish, CityEnchantments.EnchantmentBonusesStruct]): string;
+encodeFunctionData(functionFragment: 'setEnchantmentBonuses', values: [BigNumberish, BigNumberish, BonusTypes.BonusSetStruct]): string;
 encodeFunctionData(functionFragment: 'setEnchantmentDefinition', values: [BigNumberish, string, BigNumberish, BigNumberish, BigNumberish, boolean]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
@@ -45,6 +49,7 @@ decodeFunctionResult(functionFragment: 'enchantmentExists', data: BytesLike): Re
 decodeFunctionResult(functionFragment: 'getEnchantmentBonuses', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getEnchantmentDefinition', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getEnchantmentMeta', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'hasBonusesForLevel', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isEnchantmentEnabled', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'isEnchantmentUsable', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
@@ -172,7 +177,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
     getEnchantmentBonuses: TypedContractMethod<
       [enchantmentId: BigNumberish, level: BigNumberish, ],
-      [CityEnchantments.EnchantmentBonusesStructOutput],
+      [BonusTypes.BonusSetStructOutput],
       'view'
     >
     
@@ -189,6 +194,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     getEnchantmentMeta: TypedContractMethod<
       [enchantmentId: BigNumberish, ],
       [[string, bigint, bigint, bigint, boolean] & {name: string, category: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }],
+      'view'
+    >
+    
+
+    
+    hasBonusesForLevel: TypedContractMethod<
+      [enchantmentId: BigNumberish, level: BigNumberish, ],
+      [boolean],
       'view'
     >
     
@@ -235,7 +248,7 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
 
     
     setEnchantmentBonuses: TypedContractMethod<
-      [enchantmentId: BigNumberish, level: BigNumberish, bonuses: CityEnchantments.EnchantmentBonusesStruct, ],
+      [enchantmentId: BigNumberish, level: BigNumberish, bonuses: BonusTypes.BonusSetStruct, ],
       [void],
       'nonpayable'
     >
@@ -282,7 +295,7 @@ getFunction(nameOrSignature: 'enchantmentExists'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'getEnchantmentBonuses'): TypedContractMethod<
       [enchantmentId: BigNumberish, level: BigNumberish, ],
-      [CityEnchantments.EnchantmentBonusesStructOutput],
+      [BonusTypes.BonusSetStructOutput],
       'view'
     >;
 getFunction(nameOrSignature: 'getEnchantmentDefinition'): TypedContractMethod<
@@ -293,6 +306,11 @@ getFunction(nameOrSignature: 'getEnchantmentDefinition'): TypedContractMethod<
 getFunction(nameOrSignature: 'getEnchantmentMeta'): TypedContractMethod<
       [enchantmentId: BigNumberish, ],
       [[string, bigint, bigint, bigint, boolean] & {name: string, category: bigint, rarityTier: bigint, maxLevel: bigint, enabled: boolean }],
+      'view'
+    >;
+getFunction(nameOrSignature: 'hasBonusesForLevel'): TypedContractMethod<
+      [enchantmentId: BigNumberish, level: BigNumberish, ],
+      [boolean],
       'view'
     >;
 getFunction(nameOrSignature: 'isEnchantmentEnabled'): TypedContractMethod<
@@ -321,7 +339,7 @@ getFunction(nameOrSignature: 'setAuthorizedCaller'): TypedContractMethod<
       'nonpayable'
     >;
 getFunction(nameOrSignature: 'setEnchantmentBonuses'): TypedContractMethod<
-      [enchantmentId: BigNumberish, level: BigNumberish, bonuses: CityEnchantments.EnchantmentBonusesStruct, ],
+      [enchantmentId: BigNumberish, level: BigNumberish, bonuses: BonusTypes.BonusSetStruct, ],
       [void],
       'nonpayable'
     >;

@@ -1,0 +1,43 @@
+{
+  "network": "base",
+  "chainId": 8453,
+  "deployer": "0xcBC1cf1159B4Db5B407684fdE0E9E635E9e3726f",
+  "cityConfig": "0x565076216ec76E7Af61BafBE22D8EA7C1C8DF691",
+  "addresses": {
+    "inpinityNft": "0x277a0D5864293C78d7387C54B48c35D5E9578Ab1",
+    "resourceToken": "0x71E76a6065197acdd1a4d6B736712F80D1Fd3D8b",
+    "farming": "0x55Ee68e576E97288802D3b887d79Bf7177EfCb92",
+    "pirates": "0xc3A9c40fE8664A0aa9243a8DEe27ADf4E4f9e731",
+    "mercenary": "0x484d4ae1C70c938a4819B04d4b08DCBFf9639094",
+    "partnership": "0xb18323efE4Cc8c36e10D664E287b4e2c82Fe3ad9",
+    "inpi": "0x232FB12582ac10d5fAd97e9ECa22670e8Ba67d0D",
+    "pitrone": "0x7240Ec5B3Ba944888E186c74D0f8B4F5F71c9AE8",
+    "treasury": "0xe0634dA5958cDBb7d9C95366d14dF430A64D9204"
+  },
+  "uintConfig": {
+    "maxPersonalPlots": 7,
+    "inactivityDays": 180,
+    "dormantDays": 60,
+    "decayedDays": 120,
+    "layerEligibleDays": 180,
+    "personalWidth": 5,
+    "personalHeight": 5,
+    "communityWidth": 25,
+    "communityHeight": 25,
+    "qubiqOilCost": 50,
+    "qubiqLemonsCost": 25,
+    "qubiqIronCost": 15,
+    "buildingOilCost": 100,
+    "buildingLemonsCost": 50,
+    "buildingIronCost": 20,
+    "buildingGoldCost": 10,
+    "initialFeeBps": 250
+  },
+  "updatedAt": "2026-03-17T19:43:01.921Z",
+  "cityRegistry": "0x5d3269813Fea0C0F487A21cBf9992b95008558BF",
+  "cityLand": "0x0547a35c2Ff215004A2EBfe2Be5f3A8EeE6A5323",
+  "cityDistricts": "0xB3cFaeDA09FB5ee84C3c26F276980773197af113",
+  "cityStatus": "0x28AfE371044e9AcD4C99Bef3F5FbBe2431cF04C0",
+  "cityHistory": "0x6C83aC3E4C58c493e3116E31cF7e32935497Af3c",
+  "cityValidation": "0x77BBd6850C2780055c4C20008145E9E5dEC20332"
+}

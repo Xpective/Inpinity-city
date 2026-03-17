@@ -6,9 +6,9 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CityMateriaSystemInterface extends Interface {
-    getFunction(nameOrSignature: "adminApplyMateriaItem" | "adminRemoveMateriaFromSlot" | "applyMateriaItem" | "authorizedCallers" | "cityMateriaItems" | "cityWeaponSockets" | "cityWeapons" | "owner" | "removeMateriaFromSlot" | "renounceOwnership" | "setAuthorizedCaller" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "adminApplyMateriaItem" | "adminRemoveMateriaFromSlot" | "applyMateriaItem" | "authorizedCallers" | "cityMateriaItems" | "cityWeaponSockets" | "cityWeapons" | "materiaSystemPaused" | "owner" | "removeMateriaFromSlot" | "renounceOwnership" | "setAuthorizedCaller" | "setMateriaSystemPaused" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "MateriaItemApplied" | "OwnershipTransferred"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "MateriaItemApplied" | "MateriaRemovedBySystem" | "MateriaSystemPausedSet" | "OwnershipTransferred"): EventFragment;
 
     encodeFunctionData(functionFragment: 'adminApplyMateriaItem', values: [AddressLike, BigNumberish, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'adminRemoveMateriaFromSlot', values: [BigNumberish, BigNumberish]): string;
@@ -17,10 +17,12 @@ encodeFunctionData(functionFragment: 'authorizedCallers', values: [AddressLike])
 encodeFunctionData(functionFragment: 'cityMateriaItems', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityWeaponSockets', values?: undefined): string;
 encodeFunctionData(functionFragment: 'cityWeapons', values?: undefined): string;
+encodeFunctionData(functionFragment: 'materiaSystemPaused', values?: undefined): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'removeMateriaFromSlot', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'setAuthorizedCaller', values: [AddressLike, boolean]): string;
+encodeFunctionData(functionFragment: 'setMateriaSystemPaused', values: [boolean]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
 
     decodeFunctionResult(functionFragment: 'adminApplyMateriaItem', data: BytesLike): Result;
@@ -30,10 +32,12 @@ decodeFunctionResult(functionFragment: 'authorizedCallers', data: BytesLike): Re
 decodeFunctionResult(functionFragment: 'cityMateriaItems', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityWeaponSockets', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'cityWeapons', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'materiaSystemPaused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'removeMateriaFromSlot', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setAuthorizedCaller', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setMateriaSystemPaused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
   }
 
@@ -54,6 +58,30 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type InputTuple = [user: AddressLike, weaponTokenId: BigNumberish, materiaItemId: BigNumberish, slotIndex: BigNumberish, materiaDefinitionId: BigNumberish, level: BigNumberish, burned: boolean];
       export type OutputTuple = [user: string, weaponTokenId: bigint, materiaItemId: bigint, slotIndex: bigint, materiaDefinitionId: bigint, level: bigint, burned: boolean];
       export interface OutputObject {user: string, weaponTokenId: bigint, materiaItemId: bigint, slotIndex: bigint, materiaDefinitionId: bigint, level: bigint, burned: boolean };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace MateriaRemovedBySystemEvent {
+      export type InputTuple = [user: AddressLike, weaponTokenId: BigNumberish, slotIndex: BigNumberish];
+      export type OutputTuple = [user: string, weaponTokenId: bigint, slotIndex: bigint];
+      export interface OutputObject {user: string, weaponTokenId: bigint, slotIndex: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace MateriaSystemPausedSetEvent {
+      export type InputTuple = [paused: boolean];
+      export type OutputTuple = [paused: boolean];
+      export interface OutputObject {paused: boolean };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -164,6 +192,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    materiaSystemPaused: TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >
+    
+
+    
     owner: TypedContractMethod<
       [],
       [string],
@@ -190,6 +226,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
     setAuthorizedCaller: TypedContractMethod<
       [caller: AddressLike, allowed: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    setMateriaSystemPaused: TypedContractMethod<
+      [paused: boolean, ],
       [void],
       'nonpayable'
     >
@@ -241,6 +285,11 @@ getFunction(nameOrSignature: 'cityWeapons'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'materiaSystemPaused'): TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'owner'): TypedContractMethod<
       [],
       [string],
@@ -261,6 +310,11 @@ getFunction(nameOrSignature: 'setAuthorizedCaller'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setMateriaSystemPaused'): TypedContractMethod<
+      [paused: boolean, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [newOwner: AddressLike, ],
       [void],
@@ -269,6 +323,8 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
 
     getEvent(key: 'AuthorizedCallerSet'): TypedContractEvent<AuthorizedCallerSetEvent.InputTuple, AuthorizedCallerSetEvent.OutputTuple, AuthorizedCallerSetEvent.OutputObject>;
 getEvent(key: 'MateriaItemApplied'): TypedContractEvent<MateriaItemAppliedEvent.InputTuple, MateriaItemAppliedEvent.OutputTuple, MateriaItemAppliedEvent.OutputObject>;
+getEvent(key: 'MateriaRemovedBySystem'): TypedContractEvent<MateriaRemovedBySystemEvent.InputTuple, MateriaRemovedBySystemEvent.OutputTuple, MateriaRemovedBySystemEvent.OutputObject>;
+getEvent(key: 'MateriaSystemPausedSet'): TypedContractEvent<MateriaSystemPausedSetEvent.InputTuple, MateriaSystemPausedSetEvent.OutputTuple, MateriaSystemPausedSetEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 
     filters: {
@@ -279,6 +335,14 @@ getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEv
 
       'MateriaItemApplied(address,uint256,uint256,uint256,uint256,uint256,bool)': TypedContractEvent<MateriaItemAppliedEvent.InputTuple, MateriaItemAppliedEvent.OutputTuple, MateriaItemAppliedEvent.OutputObject>;
       MateriaItemApplied: TypedContractEvent<MateriaItemAppliedEvent.InputTuple, MateriaItemAppliedEvent.OutputTuple, MateriaItemAppliedEvent.OutputObject>;
+    
+
+      'MateriaRemovedBySystem(address,uint256,uint256)': TypedContractEvent<MateriaRemovedBySystemEvent.InputTuple, MateriaRemovedBySystemEvent.OutputTuple, MateriaRemovedBySystemEvent.OutputObject>;
+      MateriaRemovedBySystem: TypedContractEvent<MateriaRemovedBySystemEvent.InputTuple, MateriaRemovedBySystemEvent.OutputTuple, MateriaRemovedBySystemEvent.OutputObject>;
+    
+
+      'MateriaSystemPausedSet(bool)': TypedContractEvent<MateriaSystemPausedSetEvent.InputTuple, MateriaSystemPausedSetEvent.OutputTuple, MateriaSystemPausedSetEvent.OutputObject>;
+      MateriaSystemPausedSet: TypedContractEvent<MateriaSystemPausedSetEvent.InputTuple, MateriaSystemPausedSetEvent.OutputTuple, MateriaSystemPausedSetEvent.OutputObject>;
     
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;

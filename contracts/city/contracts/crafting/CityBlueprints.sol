@@ -11,8 +11,8 @@ contract CityBlueprints is ERC1155, Ownable {
         string name;
         uint256 rarityTier;
         uint256 techTier;
-        uint256 factionLock;      // 0 = none
-        uint256 districtLock;     // 0 = none
+        uint256 factionLock;   // 0 = none
+        uint256 districtLock;  // 0 = none
         bool enabled;
     }
 
@@ -20,8 +20,10 @@ contract CityBlueprints is ERC1155, Ownable {
 
     mapping(uint256 => BlueprintDefinition) public blueprintDefinitionOf;
     mapping(address => bool) public authorizedMinters;
+    mapping(address => bool) public authorizedConsumers;
 
     event AuthorizedMinterSet(address indexed minter, bool allowed);
+    event AuthorizedConsumerSet(address indexed consumer, bool allowed);
     event BaseMetadataURISet(string newBaseMetadataURI);
 
     event BlueprintDefinitionSet(
@@ -36,6 +38,12 @@ contract CityBlueprints is ERC1155, Ownable {
 
     event BlueprintMinted(
         address indexed to,
+        uint256 indexed blueprintId,
+        uint256 amount
+    );
+
+    event BlueprintBurned(
+        address indexed from,
         uint256 indexed blueprintId,
         uint256 amount
     );
@@ -55,10 +63,23 @@ contract CityBlueprints is ERC1155, Ownable {
         _;
     }
 
+    modifier onlyAuthorizedConsumer() {
+        if (!(msg.sender == owner() || authorizedConsumers[msg.sender])) {
+            revert CityErrors.NotAuthorized();
+        }
+        _;
+    }
+
     function setAuthorizedMinter(address minter, bool allowed) external onlyOwner {
         if (minter == address(0)) revert CityErrors.ZeroAddress();
         authorizedMinters[minter] = allowed;
         emit AuthorizedMinterSet(minter, allowed);
+    }
+
+    function setAuthorizedConsumer(address consumer, bool allowed) external onlyOwner {
+        if (consumer == address(0)) revert CityErrors.ZeroAddress();
+        authorizedConsumers[consumer] = allowed;
+        emit AuthorizedConsumerSet(consumer, allowed);
     }
 
     function setBaseMetadataURI(string calldata newBaseMetadataURI) external onlyOwner {
@@ -116,6 +137,54 @@ contract CityBlueprints is ERC1155, Ownable {
 
         _mint(to, blueprintId, amount, "");
         emit BlueprintMinted(to, blueprintId, amount);
+    }
+
+    function burnBlueprint(
+        address from,
+        uint256 blueprintId,
+        uint256 amount
+    ) external onlyAuthorizedConsumer {
+        if (from == address(0)) revert CityErrors.ZeroAddress();
+        if (amount == 0) revert CityErrors.InvalidValue();
+
+        BlueprintDefinition memory def = blueprintDefinitionOf[blueprintId];
+        if (def.id == 0 || !def.enabled) revert CityErrors.InvalidValue();
+
+        _burn(from, blueprintId, amount);
+        emit BlueprintBurned(from, blueprintId, amount);
+    }
+
+    function blueprintExists(uint256 blueprintId) external view returns (bool) {
+        return blueprintDefinitionOf[blueprintId].id != 0;
+    }
+
+    function isBlueprintEnabled(uint256 blueprintId) external view returns (bool) {
+        return blueprintDefinitionOf[blueprintId].enabled;
+    }
+
+    function getBlueprintMeta(
+        uint256 blueprintId
+    )
+        external
+        view
+        returns (
+            string memory name,
+            uint256 rarityTier,
+            uint256 techTier,
+            uint256 factionLock,
+            uint256 districtLock,
+            bool enabled
+        )
+    {
+        BlueprintDefinition memory def = blueprintDefinitionOf[blueprintId];
+        return (
+            def.name,
+            def.rarityTier,
+            def.techTier,
+            def.factionLock,
+            def.districtLock,
+            def.enabled
+        );
     }
 
     function _toString(uint256 value) internal pure returns (string memory) {

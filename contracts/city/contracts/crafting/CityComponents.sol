@@ -19,8 +19,10 @@ contract CityComponents is ERC1155, Ownable {
 
     mapping(uint256 => ComponentDefinition) public componentDefinitionOf;
     mapping(address => bool) public authorizedMinters;
+    mapping(address => bool) public authorizedConsumers;
 
     event AuthorizedMinterSet(address indexed minter, bool allowed);
+    event AuthorizedConsumerSet(address indexed consumer, bool allowed);
     event BaseMetadataURISet(string newBaseMetadataURI);
 
     event ComponentDefinitionSet(
@@ -34,6 +36,12 @@ contract CityComponents is ERC1155, Ownable {
 
     event ComponentMinted(
         address indexed to,
+        uint256 indexed componentId,
+        uint256 amount
+    );
+
+    event ComponentBurned(
+        address indexed from,
         uint256 indexed componentId,
         uint256 amount
     );
@@ -53,10 +61,23 @@ contract CityComponents is ERC1155, Ownable {
         _;
     }
 
+    modifier onlyAuthorizedConsumer() {
+        if (!(msg.sender == owner() || authorizedConsumers[msg.sender])) {
+            revert CityErrors.NotAuthorized();
+        }
+        _;
+    }
+
     function setAuthorizedMinter(address minter, bool allowed) external onlyOwner {
         if (minter == address(0)) revert CityErrors.ZeroAddress();
         authorizedMinters[minter] = allowed;
         emit AuthorizedMinterSet(minter, allowed);
+    }
+
+    function setAuthorizedConsumer(address consumer, bool allowed) external onlyOwner {
+        if (consumer == address(0)) revert CityErrors.ZeroAddress();
+        authorizedConsumers[consumer] = allowed;
+        emit AuthorizedConsumerSet(consumer, allowed);
     }
 
     function setBaseMetadataURI(string calldata newBaseMetadataURI) external onlyOwner {
@@ -111,6 +132,52 @@ contract CityComponents is ERC1155, Ownable {
 
         _mint(to, componentId, amount, "");
         emit ComponentMinted(to, componentId, amount);
+    }
+
+    function burnComponent(
+        address from,
+        uint256 componentId,
+        uint256 amount
+    ) external onlyAuthorizedConsumer {
+        if (from == address(0)) revert CityErrors.ZeroAddress();
+        if (amount == 0) revert CityErrors.InvalidValue();
+
+        ComponentDefinition memory def = componentDefinitionOf[componentId];
+        if (def.id == 0 || !def.enabled) revert CityErrors.InvalidValue();
+
+        _burn(from, componentId, amount);
+        emit ComponentBurned(from, componentId, amount);
+    }
+
+    function componentExists(uint256 componentId) external view returns (bool) {
+        return componentDefinitionOf[componentId].id != 0;
+    }
+
+    function isComponentEnabled(uint256 componentId) external view returns (bool) {
+        return componentDefinitionOf[componentId].enabled;
+    }
+
+    function getComponentMeta(
+        uint256 componentId
+    )
+        external
+        view
+        returns (
+            string memory name,
+            uint256 category,
+            uint256 rarityTier,
+            uint256 techTier,
+            bool enabled
+        )
+    {
+        ComponentDefinition memory def = componentDefinitionOf[componentId];
+        return (
+            def.name,
+            def.category,
+            def.rarityTier,
+            def.techTier,
+            def.enabled
+        );
     }
 
     function _toString(uint256 value) internal pure returns (string memory) {

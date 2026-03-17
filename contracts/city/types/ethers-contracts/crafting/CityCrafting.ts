@@ -6,9 +6,9 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface CityCraftingInterface extends Interface {
-    getFunction(nameOrSignature: "RESOURCE_COUNT" | "authorizedCallers" | "cityBlueprints" | "cityComponents" | "cityConfig" | "cityWeapons" | "craft" | "craftNonce" | "craftWeapon" | "discoverRecipe" | "getRecipeCosts" | "onERC1155BatchReceived" | "onERC1155Received" | "owner" | "recipeDiscoveredBy" | "recipeOf" | "renounceOwnership" | "setAuthorizedCaller" | "setCityBlueprints" | "setCityComponents" | "setCityWeapons" | "setRecipe" | "supportsInterface" | "transferOwnership"): FunctionFragment;
+    getFunction(nameOrSignature: "RESOURCE_COUNT" | "authorizedCallers" | "cityBlueprints" | "cityComponents" | "cityConfig" | "cityWeapons" | "craft" | "craftNonce" | "craftWeapon" | "craftingPaused" | "discoverRecipe" | "getRecipeCosts" | "onERC1155BatchReceived" | "onERC1155Received" | "owner" | "recipeDiscoveredBy" | "recipeOf" | "renounceOwnership" | "setAuthorizedCaller" | "setCityBlueprints" | "setCityComponents" | "setCityWeapons" | "setCraftingPaused" | "setRecipe" | "supportsInterface" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "CityBlueprintsSet" | "CityComponentsSet" | "CityWeaponsSet" | "Crafted" | "OwnershipTransferred" | "RecipeDiscovered" | "RecipeSet" | "WeaponCrafted"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "AuthorizedCallerSet" | "CityBlueprintsSet" | "CityComponentsSet" | "CityWeaponsSet" | "Crafted" | "CraftingPausedSet" | "OwnershipTransferred" | "RecipeDiscovered" | "RecipeSet" | "WeaponCrafted"): EventFragment;
 
     encodeFunctionData(functionFragment: 'RESOURCE_COUNT', values?: undefined): string;
 encodeFunctionData(functionFragment: 'authorizedCallers', values: [AddressLike]): string;
@@ -19,6 +19,7 @@ encodeFunctionData(functionFragment: 'cityWeapons', values?: undefined): string;
 encodeFunctionData(functionFragment: 'craft', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'craftNonce', values?: undefined): string;
 encodeFunctionData(functionFragment: 'craftWeapon', values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, boolean, boolean]): string;
+encodeFunctionData(functionFragment: 'craftingPaused', values?: undefined): string;
 encodeFunctionData(functionFragment: 'discoverRecipe', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getRecipeCosts', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'onERC1155BatchReceived', values: [AddressLike, AddressLike, BigNumberish[], BigNumberish[], BytesLike]): string;
@@ -31,6 +32,7 @@ encodeFunctionData(functionFragment: 'setAuthorizedCaller', values: [AddressLike
 encodeFunctionData(functionFragment: 'setCityBlueprints', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setCityComponents', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setCityWeapons', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'setCraftingPaused', values: [boolean]): string;
 encodeFunctionData(functionFragment: 'setRecipe', values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish[], BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, BigNumberish, boolean, boolean]): string;
 encodeFunctionData(functionFragment: 'supportsInterface', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
@@ -44,6 +46,7 @@ decodeFunctionResult(functionFragment: 'cityWeapons', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'craft', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'craftNonce', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'craftWeapon', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'craftingPaused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'discoverRecipe', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getRecipeCosts', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'onERC1155BatchReceived', data: BytesLike): Result;
@@ -56,6 +59,7 @@ decodeFunctionResult(functionFragment: 'setAuthorizedCaller', data: BytesLike): 
 decodeFunctionResult(functionFragment: 'setCityBlueprints', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setCityComponents', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setCityWeapons', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setCraftingPaused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setRecipe', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'supportsInterface', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
@@ -114,6 +118,18 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
       export type InputTuple = [user: AddressLike, recipeId: BigNumberish, outputKind: BigNumberish, outputId: BigNumberish, outputAmount: BigNumberish];
       export type OutputTuple = [user: string, recipeId: bigint, outputKind: bigint, outputId: bigint, outputAmount: bigint];
       export interface OutputObject {user: string, recipeId: bigint, outputKind: bigint, outputId: bigint, outputAmount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace CraftingPausedSetEvent {
+      export type InputTuple = [paused: boolean];
+      export type OutputTuple = [paused: boolean];
+      export interface OutputObject {paused: boolean };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -276,6 +292,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    craftingPaused: TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >
+    
+
+    
     discoverRecipe: TypedContractMethod<
       [user: AddressLike, recipeId: BigNumberish, ],
       [void],
@@ -372,6 +396,14 @@ decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Re
     
 
     
+    setCraftingPaused: TypedContractMethod<
+      [paused: boolean, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     setRecipe: TypedContractMethod<
       [recipeId: BigNumberish, outputKind: BigNumberish, outputId: BigNumberish, outputAmount: BigNumberish, resourceCosts: BigNumberish[], requiredFaction: BigNumberish, requiredDistrictKind: BigNumberish, requiredBuildingId: BigNumberish, requiredTechTier: BigNumberish, rarityTier: BigNumberish, frameTier: BigNumberish, requiresDiscovery: boolean, enabled: boolean, ],
       [void],
@@ -443,6 +475,11 @@ getFunction(nameOrSignature: 'craftWeapon'): TypedContractMethod<
       [bigint],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'craftingPaused'): TypedContractMethod<
+      [],
+      [boolean],
+      'view'
+    >;
 getFunction(nameOrSignature: 'discoverRecipe'): TypedContractMethod<
       [user: AddressLike, recipeId: BigNumberish, ],
       [void],
@@ -503,6 +540,11 @@ getFunction(nameOrSignature: 'setCityWeapons'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setCraftingPaused'): TypedContractMethod<
+      [paused: boolean, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'setRecipe'): TypedContractMethod<
       [recipeId: BigNumberish, outputKind: BigNumberish, outputId: BigNumberish, outputAmount: BigNumberish, resourceCosts: BigNumberish[], requiredFaction: BigNumberish, requiredDistrictKind: BigNumberish, requiredBuildingId: BigNumberish, requiredTechTier: BigNumberish, rarityTier: BigNumberish, frameTier: BigNumberish, requiresDiscovery: boolean, enabled: boolean, ],
       [void],
@@ -524,6 +566,7 @@ getEvent(key: 'CityBlueprintsSet'): TypedContractEvent<CityBlueprintsSetEvent.In
 getEvent(key: 'CityComponentsSet'): TypedContractEvent<CityComponentsSetEvent.InputTuple, CityComponentsSetEvent.OutputTuple, CityComponentsSetEvent.OutputObject>;
 getEvent(key: 'CityWeaponsSet'): TypedContractEvent<CityWeaponsSetEvent.InputTuple, CityWeaponsSetEvent.OutputTuple, CityWeaponsSetEvent.OutputObject>;
 getEvent(key: 'Crafted'): TypedContractEvent<CraftedEvent.InputTuple, CraftedEvent.OutputTuple, CraftedEvent.OutputObject>;
+getEvent(key: 'CraftingPausedSet'): TypedContractEvent<CraftingPausedSetEvent.InputTuple, CraftingPausedSetEvent.OutputTuple, CraftingPausedSetEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
 getEvent(key: 'RecipeDiscovered'): TypedContractEvent<RecipeDiscoveredEvent.InputTuple, RecipeDiscoveredEvent.OutputTuple, RecipeDiscoveredEvent.OutputObject>;
 getEvent(key: 'RecipeSet'): TypedContractEvent<RecipeSetEvent.InputTuple, RecipeSetEvent.OutputTuple, RecipeSetEvent.OutputObject>;
@@ -549,6 +592,10 @@ getEvent(key: 'WeaponCrafted'): TypedContractEvent<WeaponCraftedEvent.InputTuple
 
       'Crafted(address,uint256,uint8,uint256,uint256)': TypedContractEvent<CraftedEvent.InputTuple, CraftedEvent.OutputTuple, CraftedEvent.OutputObject>;
       Crafted: TypedContractEvent<CraftedEvent.InputTuple, CraftedEvent.OutputTuple, CraftedEvent.OutputObject>;
+    
+
+      'CraftingPausedSet(bool)': TypedContractEvent<CraftingPausedSetEvent.InputTuple, CraftingPausedSetEvent.OutputTuple, CraftingPausedSetEvent.OutputObject>;
+      CraftingPausedSet: TypedContractEvent<CraftingPausedSetEvent.InputTuple, CraftingPausedSetEvent.OutputTuple, CraftingPausedSetEvent.OutputObject>;
     
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;

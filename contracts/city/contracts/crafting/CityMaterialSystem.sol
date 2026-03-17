@@ -13,8 +13,10 @@ contract CityMateriaSystem is Ownable {
     ICityMateriaItems public immutable cityMateriaItems;
 
     mapping(address => bool) public authorizedCallers;
+    bool public materiaSystemPaused;
 
     event AuthorizedCallerSet(address indexed caller, bool allowed);
+    event MateriaSystemPausedSet(bool paused);
 
     event MateriaItemApplied(
         address indexed user,
@@ -24,6 +26,12 @@ contract CityMateriaSystem is Ownable {
         uint256 materiaDefinitionId,
         uint256 level,
         bool burned
+    );
+
+    event MateriaRemovedBySystem(
+        address indexed user,
+        uint256 indexed weaponTokenId,
+        uint256 indexed slotIndex
     );
 
     constructor(
@@ -53,20 +61,28 @@ contract CityMateriaSystem is Ownable {
         _;
     }
 
+    modifier whenMateriaSystemNotPaused() {
+        if (materiaSystemPaused) revert CityErrors.InvalidValue();
+        _;
+    }
+
     function setAuthorizedCaller(address caller, bool allowed) external onlyOwner {
         if (caller == address(0)) revert CityErrors.ZeroAddress();
         authorizedCallers[caller] = allowed;
         emit AuthorizedCallerSet(caller, allowed);
     }
 
+    function setMateriaSystemPaused(bool paused) external onlyOwner {
+        materiaSystemPaused = paused;
+        emit MateriaSystemPausedSet(paused);
+    }
+
     function applyMateriaItem(
         uint256 weaponTokenId,
         uint256 slotIndex,
         uint256 materiaItemId
-    ) external {
-        if (cityWeapons.ownerOf(weaponTokenId) != msg.sender) {
-            revert CityErrors.NotPlotOwner();
-        }
+    ) external whenMateriaSystemNotPaused {
+        _requireWeaponOwner(weaponTokenId, msg.sender);
 
         (
             uint256 materiaDefinitionId,
@@ -106,11 +122,9 @@ contract CityMateriaSystem is Ownable {
         uint256 weaponTokenId,
         uint256 slotIndex,
         uint256 materiaItemId
-    ) external onlyAuthorized {
+    ) external onlyAuthorized whenMateriaSystemNotPaused {
         if (user == address(0)) revert CityErrors.ZeroAddress();
-        if (cityWeapons.ownerOf(weaponTokenId) != user) {
-            revert CityErrors.NotPlotOwner();
-        }
+        _requireWeaponOwner(weaponTokenId, user);
 
         (
             uint256 materiaDefinitionId,
@@ -148,18 +162,28 @@ contract CityMateriaSystem is Ownable {
     function removeMateriaFromSlot(
         uint256 weaponTokenId,
         uint256 slotIndex
-    ) external {
-        if (cityWeapons.ownerOf(weaponTokenId) != msg.sender) {
-            revert CityErrors.NotPlotOwner();
-        }
+    ) external whenMateriaSystemNotPaused {
+        _requireWeaponOwner(weaponTokenId, msg.sender);
 
         cityWeaponSockets.removeMateria(weaponTokenId, slotIndex);
+
+        emit MateriaRemovedBySystem(msg.sender, weaponTokenId, slotIndex);
     }
 
     function adminRemoveMateriaFromSlot(
         uint256 weaponTokenId,
         uint256 slotIndex
-    ) external onlyAuthorized {
+    ) external onlyAuthorized whenMateriaSystemNotPaused {
+        address owner = cityWeapons.ownerOf(weaponTokenId);
+
         cityWeaponSockets.removeMateria(weaponTokenId, slotIndex);
+
+        emit MateriaRemovedBySystem(owner, weaponTokenId, slotIndex);
+    }
+
+    function _requireWeaponOwner(uint256 weaponTokenId, address expectedOwner) internal view {
+        if (cityWeapons.ownerOf(weaponTokenId) != expectedOwner) {
+            revert CityErrors.NotPlotOwner();
+        }
     }
 }

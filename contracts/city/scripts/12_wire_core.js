@@ -1,56 +1,101 @@
-import { ethers } from "hardhat";
-import dotenv from "dotenv";
+import { network } from "hardhat";
+import fs from "fs";
+import path from "path";
 
-dotenv.config();
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function loadJson(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Datei nicht gefunden: ${filePath}`);
+  }
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+async function sendAndWait(txPromise, label, delay = 1500) {
+  const tx = await txPromise;
+  console.log(`${label}: ${tx.hash}`);
+  await tx.wait();
+  await sleep(delay);
+}
 
 async function main() {
+  const { ethers } = await network.connect();
   const [deployer] = await ethers.getSigners();
+  const net = await ethers.provider.getNetwork();
 
-  console.log("Wiring core contracts with:", deployer.address);
+  console.log("========================================");
+  console.log("12_wire_core.js");
+  console.log("Deployer:", deployer.address);
+  console.log("Chain ID:", Number(net.chainId));
+  console.log("========================================");
 
-  const CITY_REGISTRY_ADDRESS = process.env.CITY_REGISTRY_ADDRESS;
-  const CITY_HISTORY_ADDRESS = process.env.CITY_HISTORY_ADDRESS;
-  const CITY_STATUS_ADDRESS = process.env.CITY_STATUS_ADDRESS;
-  const CITY_LAND_ADDRESS = process.env.CITY_LAND_ADDRESS;
-  const CITY_DISTRICTS_ADDRESS = process.env.CITY_DISTRICTS_ADDRESS;
+  const coreFile = path.resolve("deployments", "city-core.json");
+  const deployed = JSON.parse(fs.readFileSync(coreFile, "utf8"));
 
-  if (
-    !CITY_REGISTRY_ADDRESS ||
-    !CITY_HISTORY_ADDRESS ||
-    !CITY_STATUS_ADDRESS ||
-    !CITY_LAND_ADDRESS ||
-    !CITY_DISTRICTS_ADDRESS
-  ) {
-    throw new Error("Missing one or more CITY_*_ADDRESS values in .env");
+  const requiredKeys = [
+    "cityConfig",
+    "cityRegistry",
+    "cityLand",
+    "cityDistricts",
+    "cityStatus",
+    "cityHistory",
+    "cityValidation"
+  ];
+
+  for (const key of requiredKeys) {
+    if (!deployed[key]) {
+      throw new Error(`${key} fehlt in deployments/city-core.json`);
+    }
   }
 
-  const registry = await ethers.getContractAt("CityRegistry", CITY_REGISTRY_ADDRESS);
-  const history = await ethers.getContractAt("CityHistory", CITY_HISTORY_ADDRESS);
-  const status = await ethers.getContractAt("CityStatus", CITY_STATUS_ADDRESS);
-  const land = await ethers.getContractAt("CityLand", CITY_LAND_ADDRESS);
-  const districts = await ethers.getContractAt("CityDistricts", CITY_DISTRICTS_ADDRESS);
+  const cityRegistry = await ethers.getContractAt("CityRegistry", deployed.cityRegistry);
+  const cityLand = await ethers.getContractAt("CityLand", deployed.cityLand);
+  const cityDistricts = await ethers.getContractAt("CityDistricts", deployed.cityDistricts);
+  const cityStatus = await ethers.getContractAt("CityStatus", deployed.cityStatus);
+  const cityHistory = await ethers.getContractAt("CityHistory", deployed.cityHistory);
 
-  console.log("1) Setting hooks in CityRegistry...");
-  await (await registry.setCityHistory(CITY_HISTORY_ADDRESS)).wait();
-  await (await registry.setCityDistricts(CITY_DISTRICTS_ADDRESS)).wait();
+  let nextNonce = await ethers.provider.getTransactionCount(deployer.address, "pending");
+  console.log("Start nonce:", nextNonce);
 
-  console.log("2) Setting hooks in CityLand...");
-  await (await land.setHooks(CITY_STATUS_ADDRESS, CITY_HISTORY_ADDRESS)).wait();
+  // 1) Registry -> History
+  await sendAndWait(
+    cityRegistry.setCityHistory(deployed.cityHistory, { nonce: nextNonce++ }),
+    "CityRegistry.setCityHistory"
+  );
 
-  console.log("3) Authorizing Registry + Land in CityHistory...");
-  await (await history.setAuthorizedCaller(CITY_REGISTRY_ADDRESS, true)).wait();
-  await (await history.setAuthorizedCaller(CITY_LAND_ADDRESS, true)).wait();
+  // 2) History erlaubt Registry
+  await sendAndWait(
+    cityHistory.setAuthorizedCaller(deployed.cityRegistry, true, { nonce: nextNonce++ }),
+    "CityHistory.setAuthorizedCaller(cityRegistry)"
+  );
 
-  console.log("4) Authorizing Land in CityStatus...");
-  await (await status.setAuthorizedCaller(CITY_LAND_ADDRESS, true)).wait();
+  // 3) Status erlaubt Land
+  await sendAndWait(
+    cityStatus.setAuthorizedCaller(deployed.cityLand, true, { nonce: nextNonce++ }),
+    "CityStatus.setAuthorizedCaller(cityLand)"
+  );
 
-  console.log("5) Authorizing Registry in CityDistricts...");
-  await (await districts.setAuthorizedCaller(CITY_REGISTRY_ADDRESS, true)).wait();
+  // 4) Districts erlaubt Registry
+  await sendAndWait(
+    cityDistricts.setAuthorizedCaller(deployed.cityRegistry, true, { nonce: nextNonce++ }),
+    "CityDistricts.setAuthorizedCaller(cityRegistry)"
+  );
 
-  console.log("Core wiring completed.");
+  // 5) Land -> Hooks(Status, History)
+  await sendAndWait(
+    cityLand.setHooks(deployed.cityStatus, deployed.cityHistory, { nonce: nextNonce++ }),
+    "CityLand.setHooks(status, history)"
+  );
+
+  console.log("========================================");
+  console.log("Core-Wiring fertig.");
+  console.log("========================================");
 }
 
 main().catch((error) => {
+  console.error("Fehler in 12_wire_core.js");
   console.error(error);
   process.exitCode = 1;
 });

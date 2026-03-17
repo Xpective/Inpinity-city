@@ -195,6 +195,31 @@ contract CityMateriaItems is ERC1155, Ownable {
         );
     }
 
+    function materiaItemExists(uint256 itemId) external view returns (bool) {
+        return materiaItemDefinitionOf[itemId].id != 0;
+    }
+
+    function isMateriaItemEnabled(uint256 itemId) external view returns (bool) {
+        return materiaItemDefinitionOf[itemId].enabled;
+    }
+
+    function isMateriaItemUsable(uint256 itemId) external view returns (bool) {
+        MateriaItemDefinition memory def = materiaItemDefinitionOf[itemId];
+        if (def.id == 0) return false;
+        if (!def.enabled) return false;
+        if (def.materiaDefinitionId == 0) return false;
+        if (def.level == 0) return false;
+        return true;
+    }
+
+    function getMateriaDefinitionForItem(
+        uint256 itemId
+    ) external view returns (CityMateria.MateriaDefinition memory) {
+        MateriaItemDefinition memory def = materiaItemDefinitionOf[itemId];
+        if (def.id == 0) revert CityErrors.InvalidValue();
+        return cityMateria.getMateriaDefinition(def.materiaDefinitionId);
+    }
+
     function _toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) return "0";
 
