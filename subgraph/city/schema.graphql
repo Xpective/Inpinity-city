@@ -12,6 +12,9 @@ type Plot @entity(immutable: false) {
   owner: Player
   plotType: String!
   faction: String!
+  status: String!
+  width: BigInt!
+  height: BigInt!
   createdAt: BigInt!
   exists: Boolean!
 }
@@ -23,6 +26,32 @@ type WeaponDefinition @entity(immutable: false) {
   classId: Int!
   damageTypeId: Int!
   techTier: BigInt!
+
+  requiredLevel: BigInt!
+  requiredTechTier: BigInt!
+  minDamage: BigInt!
+  maxDamage: BigInt!
+  attackSpeed: BigInt!
+  critChanceBps: BigInt!
+  critMultiplierBps: BigInt!
+  accuracyBps: BigInt!
+  range: BigInt!
+  maxDurability: BigInt!
+  armorPenBps: BigInt!
+  blockChanceBps: BigInt!
+  lifeStealBps: BigInt!
+  energyCost: BigInt!
+  heatGeneration: BigInt!
+  stability: BigInt!
+  cooldownMs: BigInt!
+  projectileSpeed: BigInt!
+  aoeRadius: BigInt!
+  enchantmentSlots: BigInt!
+  materiaSlots: BigInt!
+  visualVariant: BigInt!
+  maxUpgradeLevel: BigInt!
+  familySetId: BigInt!
+
   enabled: Boolean!
   createdAtBlock: BigInt!
   createdAtTimestamp: BigInt!
@@ -33,15 +62,130 @@ type WeaponInstance @entity(immutable: false) {
   tokenId: BigInt!
   owner: Player!
   weaponDefinition: WeaponDefinition!
-  metadataRevision: BigInt!
-  upgradeLevel: BigInt!
+
+  rarityTier: BigInt!
+  frameTier: BigInt!
   durability: BigInt!
+  upgradeLevel: BigInt!
+  metadataRevision: BigInt!
+
+  originPlotId: BigInt!
+  originFaction: BigInt!
+  originDistrictKind: BigInt!
+  craftedAt: BigInt!
+  visualVariant: BigInt!
+  resonanceType: Int!
   craftSeed: Bytes!
   provenanceHash: Bytes!
+  genesisEra: Boolean!
+  usedAether: Boolean!
+
   txHash: Bytes!
   blockNumber: BigInt!
 }
 
+# Bonus-Entität für die per WeaponBonusesSet gesetzten Boni
+type WeaponBonuses @entity(immutable: false) {
+  id: ID!                                   # tokenId als String
+  weapon: WeaponInstance!                    # direkte Referenz
+  minDamageBonus: BigInt!
+  maxDamageBonus: BigInt!
+  attackSpeedBonus: BigInt!
+  critChanceBpsBonus: BigInt!
+  critMultiplierBpsBonus: BigInt!
+  accuracyBpsBonus: BigInt!
+  rangeBonus: BigInt!
+  maxDurabilityBonus: BigInt!
+  armorPenBpsBonus: BigInt!
+  blockChanceBpsBonus: BigInt!
+  lifeStealBpsBonus: BigInt!
+  energyCostBonus: BigInt!
+  heatGenerationBonus: BigInt!
+  stabilityBonus: BigInt!
+  cooldownMsBonus: BigInt!
+  projectileSpeedBonus: BigInt!
+  aoeRadiusBonus: BigInt!
+  enchantmentSlotsBonus: BigInt!
+  materiaSlotsBonus: BigInt!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+# Autorisierte Minter
+type AuthorizedMinter @entity(immutable: false) {
+  id: ID!                                   # Adresse des Minters
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+# Basis-URI-Änderungen
+type BaseURI @entity(immutable: false) {
+  id: ID!                                   # immer "current"
+  uri: String!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+# WeaponSockets-Adresse (umbenannt in socketsAddress)
+type WeaponSockets @entity(immutable: false) {
+  id: ID!                                   # immer "current"
+  socketsAddress: Bytes!                     # eindeutiger Name
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+# Pausenzustand
+type WeaponsPaused @entity(immutable: false) {
+  id: ID!                                   # immer "current"
+  paused: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+# Ownership-Transfer-Ereignisse
+type OwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# ERC721-Transfer-Ereignisse
+type TransferEvent @entity(immutable: true) {
+  id: ID!
+  from: Bytes!
+  to: Bytes!
+  tokenId: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# Approval-Ereignisse
+type ApprovalEvent @entity(immutable: true) {
+  id: ID!
+  owner: Bytes!
+  approved: Bytes!
+  tokenId: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ApprovalForAllEvent @entity(immutable: true) {
+  id: ID!
+  owner: Bytes!
+  operator: Bytes!
+  approved: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# RecipeDefinition und CraftEvent (unverändert)
 type RecipeDefinition @entity(immutable: false) {
   id: ID!
   recipeId: BigInt!
@@ -66,4 +210,904 @@ type CraftEvent @entity(immutable: true) {
   txHash: Bytes!
   blockNumber: BigInt!
   timestamp: BigInt!
+}
+
+# CityCrafting-spezifische Entitäten
+
+type AuthorizedCaller @entity(immutable: false) {
+  id: ID!                                   # Adresse des Callers
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CityBlueprints @entity(immutable: false) {
+  id: ID!                                   # immer "current"
+  address: Bytes!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CityComponents @entity(immutable: false) {
+  id: ID!                                   # immer "current"
+  address: Bytes!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CityWeaponsAddress @entity(immutable: false) {
+  id: ID!                                   # immer "current"
+  address: Bytes!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CraftingPaused @entity(immutable: false) {
+  id: ID!                                   # immer "current"
+  paused: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CraftingOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type RecipeDiscoveredEvent @entity(immutable: true) {
+  id: ID!
+  user: Bytes!
+  recipeId: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# CityLand-spezifische Entitäten
+
+type PlotQubiq @entity(immutable: false) {
+  id: ID!
+  plot: Plot!
+  x: Int!
+  y: Int!
+  oilDeposited: BigInt!
+  lemonsDeposited: BigInt!
+  ironDeposited: BigInt!
+  completed: Boolean!
+  usedAether: Boolean!
+  lastContributor: Bytes
+  completedAt: BigInt
+  createdAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type AetherUse @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  x: Int!
+  y: Int!
+  user: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type PlotCompletion @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type QubiqContribution @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  x: Int!
+  y: Int!
+  contributor: Bytes!
+  oil: BigInt!
+  lemons: BigInt!
+  iron: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type PlotStats @entity(immutable: false) {
+  id: ID!
+  plot: Plot!
+  completedQubiqCount: Int!
+  aetherUsesCount: Int!
+  totalOil: BigInt!
+  totalLemons: BigInt!
+  totalIron: BigInt!
+  updatedAt: BigInt!
+}
+
+# CityConfig-spezifische Entitäten
+
+type CityConfigState @entity(immutable: false) {
+  id: ID!                           # immer "current"
+  admin: Bytes
+  owner: Bytes
+  initializedAtBlock: BigInt
+  initializedAtTimestamp: BigInt
+  updatedAtBlock: BigInt
+  updatedAtTimestamp: BigInt
+}
+
+type CityConfigAddressEntry @entity(immutable: false) {
+  id: ID!                           # bytes32 key als hex string
+  key: Bytes!
+  value: Bytes!
+  keyLabel: String
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CityConfigUintEntry @entity(immutable: false) {
+  id: ID!                           # bytes32 key als hex string
+  key: Bytes!
+  value: BigInt!
+  keyLabel: String
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type ConfigInitializedEvent @entity(immutable: true) {
+  id: ID!
+  admin: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type CoreAddressSetEvent @entity(immutable: true) {
+  id: ID!
+  key: Bytes!
+  value: Bytes!
+  keyLabel: String
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type UintConfigSetEvent @entity(immutable: true) {
+  id: ID!
+  key: Bytes!
+  value: BigInt!
+  keyLabel: String
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ConfigOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+# CityHistory-spezifische Entitäten
+
+# CityHistory-spezifische Entitäten
+
+type PlotProvenance @entity(immutable: false) {
+  id: ID!                           # plotId
+  plot: Plot!
+  firstBuilder: Bytes
+  createdAt: BigInt
+  layerCount: BigInt!
+  ownershipTransfers: BigInt!
+  aetherUses: BigInt!
+  historicScore: BigInt!
+  originFaction: String
+  genesisEra: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type PlotHistoryInitializedEvent @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  firstBuilder: Bytes!
+  faction: Int!
+  factionLabel: String
+  genesisEra: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type AetherUseRecordedEvent @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  totalAetherUses: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type LayerAddedEvent @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  newLayerCount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type OwnershipTransferRecordedEvent @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  transferCount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type CityHistoryOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type PlotStatusInfo @entity(immutable: false) {
+  id: ID!                  # plotId
+  plot: Plot!
+  lastActivityAt: BigInt!
+  lastMaintenanceAt: BigInt!
+  manualStatusOverride: String!
+  derivedStatus: String!
+  layerEligible: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type ManualStatusClearedEvent @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type PlotStatusUpdatedEvent @entity(immutable: true) {
+  id: ID!
+  plot: Plot!
+  oldStatus: Int!
+  oldStatusLabel: String!
+  newStatus: Int!
+  newStatusLabel: String!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type CityStatusOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type PlotDistrict @entity(immutable: false) {
+  id: ID!                     # plotId
+  plot: Plot!
+  kindRaw: String!
+  kindLabel: String!
+  factionRaw: String!
+  factionLabel: String!
+  bonusBps: String!
+  exists: Boolean!
+  isBorderline: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type DistrictAuthorizedCaller @entity(immutable: false) {
+  id: ID!                     # caller address
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CityDistrictsOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ValidationHooks @entity(immutable: false) {
+  id: ID!
+  cityStatus: String!
+  cityLand: String!
+  updatedAtBlock: String!
+  updatedAtTimestamp: String!
+}
+
+type CityValidationOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ComponentDefinition @entity(immutable: false) {
+  id: ID!
+  componentId: BigInt!
+  name: String!
+  category: BigInt!
+  rarityTier: BigInt!
+  techTier: BigInt!
+  enabled: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type ComponentAuthorizedConsumer @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type ComponentAuthorizedMinter @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type ComponentBaseMetadataURI @entity(immutable: false) {
+  id: ID!
+  uri: String!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type ComponentBalance @entity(immutable: false) {
+  id: ID!
+  account: Player!
+  component: ComponentDefinition!
+  amount: BigInt!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type ComponentMintEvent @entity(immutable: true) {
+  id: ID!
+  to: Bytes!
+  component: ComponentDefinition!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ComponentBurnEvent @entity(immutable: true) {
+  id: ID!
+  from: Bytes!
+  component: ComponentDefinition!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ComponentTransferSingleEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  componentId: BigInt!
+  value: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ComponentTransferBatchEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  ids: [BigInt!]!
+  values: [BigInt!]!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ComponentApprovalForAllEvent @entity(immutable: true) {
+  id: ID!
+  account: Bytes!
+  operator: Bytes!
+  approved: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type ComponentURIEvent @entity(immutable: true) {
+  id: ID!
+  value: String!
+  componentId: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type CityComponentsOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type BlueprintDefinition @entity(immutable: false) {
+  id: ID!
+  blueprintId: BigInt!
+  name: String!
+  rarityTier: BigInt!
+  techTier: BigInt!
+  factionLock: BigInt!
+  districtLock: BigInt!
+  enabled: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type BlueprintAuthorizedConsumer @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type BlueprintAuthorizedMinter @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type BlueprintBaseMetadataURI @entity(immutable: false) {
+  id: ID!
+  uri: String!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type BlueprintBalance @entity(immutable: false) {
+  id: ID!
+  account: Player!
+  blueprint: BlueprintDefinition!
+  amount: BigInt!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type BlueprintMintEvent @entity(immutable: true) {
+  id: ID!
+  to: Bytes!
+  blueprint: BlueprintDefinition!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type BlueprintBurnEvent @entity(immutable: true) {
+  id: ID!
+  from: Bytes!
+  blueprint: BlueprintDefinition!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type BlueprintTransferSingleEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  blueprintId: BigInt!
+  value: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type BlueprintTransferBatchEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  ids: [BigInt!]!
+  values: [BigInt!]!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type BlueprintApprovalForAllEvent @entity(immutable: true) {
+  id: ID!
+  account: Bytes!
+  operator: Bytes!
+  approved: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type BlueprintURIEvent @entity(immutable: true) {
+  id: ID!
+  value: String!
+  blueprintId: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type CityBlueprintsOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentDefinition @entity(immutable: false) {
+  id: ID!
+  enchantmentId: BigInt!
+  name: String!
+  category: BigInt!
+  rarityTier: BigInt!
+  maxLevel: BigInt!
+  enabled: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type EnchantmentAuthorizedCaller @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type EnchantmentBonusSet @entity(immutable: false) {
+  id: ID!
+  enchantment: EnchantmentDefinition!
+  level: BigInt!
+
+  minDamageBonus: BigInt!
+  maxDamageBonus: BigInt!
+  attackSpeedBonus: BigInt!
+  critChanceBpsBonus: BigInt!
+  critMultiplierBpsBonus: BigInt!
+  accuracyBpsBonus: BigInt!
+  rangeBonus: BigInt!
+  maxDurabilityBonus: BigInt!
+  armorPenBpsBonus: BigInt!
+  blockChanceBpsBonus: BigInt!
+  lifeStealBpsBonus: BigInt!
+  energyCostBonus: BigInt!
+  heatGenerationBonus: BigInt!
+  stabilityBonus: BigInt!
+  cooldownMsBonus: BigInt!
+  projectileSpeedBonus: BigInt!
+  aoeRadiusBonus: BigInt!
+  enchantmentSlotsBonus: BigInt!
+  materiaSlotsBonus: BigInt!
+
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CityEnchantmentsOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentItemDefinition @entity(immutable: false) {
+  id: ID!
+  itemId: BigInt!
+  enchantmentDefinitionId: BigInt!
+  level: BigInt!
+  rarityTier: BigInt!
+  burnOnUse: Boolean!
+  enabled: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type EnchantmentItemAuthorizedConsumer @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type EnchantmentItemAuthorizedMinter @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type EnchantmentItemBaseMetadataURISetEvent @entity(immutable: true) {
+  id: ID!
+  newBaseMetadataURI: String!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentItemMintedEvent @entity(immutable: true) {
+  id: ID!
+  to: Bytes!
+  itemId: BigInt!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentItemBurnedEvent @entity(immutable: true) {
+  id: ID!
+  from: Bytes!
+  itemId: BigInt!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentItemApprovalForAllEvent @entity(immutable: true) {
+  id: ID!
+  account: Bytes!
+  operator: Bytes!
+  approved: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentItemTransferSingleEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  tokenId: BigInt!
+  value: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentItemTransferBatchEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  ids: [BigInt!]!
+  values: [BigInt!]!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type EnchantmentItemURIEvent @entity(immutable: true) {
+  id: ID!
+  value: String!
+  tokenId: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type CityEnchantmentItemsOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type MateriaDefinition @entity(immutable: false) {
+  id: ID!
+  materiaId: BigInt!
+  name: String!
+  categoryRaw: String!
+  categoryLabel: String!
+  elementRaw: String!
+  elementLabel: String!
+  rarityTier: BigInt!
+  maxLevel: BigInt!
+  enabled: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+  bonuses: [MateriaBonus!]! @derivedFrom(field: "materia")
+}
+
+type MateriaBonus @entity(immutable: false) {
+  id: ID!
+  materia: MateriaDefinition!
+  materiaId: BigInt!
+  level: BigInt!
+
+  minDamageBonus: BigInt!
+  maxDamageBonus: BigInt!
+  attackSpeedBonus: BigInt!
+  critChanceBpsBonus: BigInt!
+  critMultiplierBpsBonus: BigInt!
+  accuracyBpsBonus: BigInt!
+  rangeBonus: BigInt!
+  maxDurabilityBonus: BigInt!
+  armorPenBpsBonus: BigInt!
+  blockChanceBpsBonus: BigInt!
+  lifeStealBpsBonus: BigInt!
+  energyCostBonus: BigInt!
+  heatGenerationBonus: BigInt!
+  stabilityBonus: BigInt!
+  cooldownMsBonus: BigInt!
+  projectileSpeedBonus: BigInt!
+  aoeRadiusBonus: BigInt!
+  enchantmentSlotsBonus: BigInt!
+  materiaSlotsBonus: BigInt!
+
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type MateriaAuthorizedCaller @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CityMateriaOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+
+type MateriaItemDefinition @entity(immutable: false) {
+  id: ID!
+  itemId: BigInt!
+  materiaDefinitionId: BigInt!
+  level: BigInt!
+  rarityTier: BigInt!
+  burnOnUse: Boolean!
+  enabled: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type MateriaItemAuthorizedConsumer @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type MateriaItemAuthorizedMinter @entity(immutable: false) {
+  id: ID!
+  allowed: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type MateriaItemApprovalForAllEvent @entity(immutable: true) {
+  id: ID!
+  account: Bytes!
+  operator: Bytes!
+  approved: Boolean!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type MateriaItemBaseMetadataURISetEvent @entity(immutable: true) {
+  id: ID!
+  newBaseMetadataURI: String!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type MateriaItemBurnedEvent @entity(immutable: true) {
+  id: ID!
+  from: Bytes!
+  itemId: BigInt!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type MateriaItemMintedEvent @entity(immutable: true) {
+  id: ID!
+  to: Bytes!
+  itemId: BigInt!
+  amount: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type MateriaItemTransferSingleEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  tokenId: BigInt!
+  value: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type MateriaItemTransferBatchEvent @entity(immutable: true) {
+  id: ID!
+  operator: Bytes!
+  from: Bytes!
+  to: Bytes!
+  ids: [BigInt!]!
+  values: [BigInt!]!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type MateriaItemURIEvent @entity(immutable: true) {
+  id: ID!
+  value: String!
+  tokenId: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type CityMateriaItemsOwnershipTransferredEvent @entity(immutable: true) {
+  id: ID!
+  previousOwner: Bytes!
+  newOwner: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
 }

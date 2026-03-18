@@ -19,6 +19,15 @@ dataSources:
         - Player
         - WeaponDefinition
         - WeaponInstance
+        - WeaponBonuses
+        - AuthorizedMinter
+        - BaseURI
+        - WeaponSockets
+        - WeaponsPaused
+        - OwnershipTransferredEvent
+        - TransferEvent
+        - ApprovalEvent
+        - ApprovalForAllEvent
       abis:
         - name: CityWeapons
           file: ./abis/CityWeapons.json
@@ -33,6 +42,24 @@ dataSources:
           handler: handleWeaponUpgradeLevelSet
         - event: WeaponDurabilitySet(indexed uint256,uint256)
           handler: handleWeaponDurabilitySet
+        - event: WeaponBonusesSet(indexed uint256)
+          handler: handleWeaponBonusesSet
+        - event: AuthorizedMinterSet(indexed address,bool)
+          handler: handleAuthorizedMinterSet
+        - event: BaseURISet(string)
+          handler: handleBaseURISet
+        - event: WeaponSocketsSet(indexed address)
+          handler: handleWeaponSocketsSet
+        - event: WeaponsPausedSet(bool)
+          handler: handleWeaponsPausedSet
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+        - event: Approval(indexed address,indexed address,indexed uint256)
+          handler: handleApproval
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
 
   - kind: ethereum
     name: CityCrafting
@@ -49,6 +76,13 @@ dataSources:
       entities:
         - RecipeDefinition
         - CraftEvent
+        - AuthorizedCaller
+        - CityBlueprints
+        - CityComponents
+        - CityWeaponsAddress
+        - CraftingPaused
+        - CraftingOwnershipTransferredEvent
+        - RecipeDiscoveredEvent
       abis:
         - name: CityCrafting
           file: ./abis/CityCrafting.json
@@ -59,6 +93,20 @@ dataSources:
           handler: handleCrafted
         - event: WeaponCrafted(indexed address,indexed uint256,indexed uint256,uint256,uint256)
           handler: handleWeaponCrafted
+        - event: AuthorizedCallerSet(indexed address,bool)
+          handler: handleAuthorizedCallerSet
+        - event: CityBlueprintsSet(indexed address)
+          handler: handleCityBlueprintsSet
+        - event: CityComponentsSet(indexed address)
+          handler: handleCityComponentsSet
+        - event: CityWeaponsSet(indexed address)
+          handler: handleCityWeaponsSet
+        - event: CraftingPausedSet(bool)
+          handler: handleCraftingPausedSet
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: RecipeDiscovered(indexed address,indexed uint256)
+          handler: handleRecipeDiscovered
 
   - kind: ethereum
     name: CityRegistry
@@ -75,6 +123,7 @@ dataSources:
       entities:
         - Player
         - Plot
+        - OwnershipTransferredEvent
       abis:
         - name: CityRegistry
           file: ./abis/CityRegistry.json
@@ -87,3 +136,461 @@ dataSources:
           handler: handlePersonalPlotReserved
         - event: CommunityPlotReserved(indexed uint256,indexed uint8)
           handler: handleCommunityPlotReserved
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+
+  - kind: ethereum
+    name: CityLand
+    network: base
+    source:
+      address: "0x0547a35c2Ff215004A2EBfe2Be5f3A8EeE6A5323"
+      abi: CityLand
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-land.ts
+      entities:
+        - Plot
+        - PlotQubiq
+        - AetherUse
+        - PlotCompletion
+        - QubiqContribution
+        - PlotStats
+        - OwnershipTransferredEvent
+      abis:
+        - name: CityLand
+          file: ./abis/CityLand.json
+      eventHandlers:
+        - event: AetherUsed(indexed uint256,indexed uint32,indexed uint32,address)
+          handler: handleAetherUsed
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: PlotCompleted(indexed uint256)
+          handler: handlePlotCompleted
+        - event: QubiqCompleted(indexed uint256,indexed uint32,indexed uint32,bool)
+          handler: handleQubiqCompleted
+        - event: QubiqContributed(indexed uint256,indexed uint32,indexed uint32,address,uint256,uint256,uint256)
+          handler: handleQubiqContributed
+
+  - kind: ethereum
+    name: CityConfig
+    network: base
+    source:
+      address: "0x565076216ec76E7Af61BafBE22D8EA7C1C8DF691"
+      abi: CityConfig
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-config.ts
+      entities:
+        - CityConfigState
+        - CityConfigAddressEntry
+        - CityConfigUintEntry
+        - ConfigInitializedEvent
+        - CoreAddressSetEvent
+        - UintConfigSetEvent
+        - ConfigOwnershipTransferredEvent
+      abis:
+        - name: CityConfig
+          file: ./abis/CityConfig.json
+      eventHandlers:
+        - event: ConfigInitialized(indexed address)
+          handler: handleConfigInitialized
+        - event: CoreAddressSet(indexed bytes32,indexed address)
+          handler: handleCoreAddressSet
+        - event: UintConfigSet(indexed bytes32,uint256)
+          handler: handleUintConfigSet
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+          
+  - kind: ethereum
+    name: CityHistory
+    network: base
+    source:
+      address: "0x6C83aC3E4C58c493e3116E31cF7e32935497Af3c"
+      abi: CityHistory
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-history.ts
+      entities:
+        - Plot
+        - PlotProvenance
+        - PlotHistoryInitializedEvent
+        - AetherUseRecordedEvent
+        - LayerAddedEvent
+        - OwnershipTransferRecordedEvent
+        - CityHistoryOwnershipTransferredEvent
+      abis:
+        - name: CityHistory
+          file: ./abis/CityHistory.json
+      eventHandlers:
+        - event: PlotHistoryInitialized(indexed uint256,indexed address,indexed uint8,bool)
+          handler: handlePlotHistoryInitialized
+        - event: AetherUseRecorded(indexed uint256,uint32)
+          handler: handleAetherUseRecorded
+        - event: LayerAdded(indexed uint256,uint32)
+          handler: handleLayerAdded
+        - event: OwnershipTransferRecorded(indexed uint256,uint32)
+          handler: handleOwnershipTransferRecorded
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+
+  - kind: ethereum
+    name: CityStatus
+    network: base
+    source:
+      address: "0x28AfE371044e9AcD4C99Bef3F5FbBe2431cF04C0"
+      abi: CityStatus
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-status.ts
+      entities:
+        - Plot
+        - PlotStatusInfo
+        - ManualStatusClearedEvent
+        - PlotStatusUpdatedEvent
+        - CityStatusOwnershipTransferredEvent
+      abis:
+        - name: CityStatus
+          file: ./abis/CityStatus.json
+      eventHandlers:
+        - event: ManualStatusCleared(indexed uint256)
+          handler: handleManualStatusCleared
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: PlotStatusUpdated(indexed uint256,uint8,uint8)
+          handler: handlePlotStatusUpdated
+
+  - kind: ethereum
+    name: CityDistricts
+    network: base
+    source:
+      address: "0xB3cFaeDA09FB5ee84C3c26F276980773197af113"
+      abi: CityDistricts
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-districts.ts
+      entities:
+        - Plot
+        - PlotDistrict
+        - DistrictAuthorizedCaller
+        - CityDistrictsOwnershipTransferredEvent
+      abis:
+        - name: CityDistricts
+          file: ./abis/CityDistricts.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      callHandlers:
+        - function: assignDistrict(uint256,uint8,uint8,uint32)
+          handler: handleAssignDistrict
+        - function: assignDistrictAuto(uint256)
+          handler: handleAssignDistrictAuto
+        - function: setAuthorizedCaller(address,bool)
+          handler: handleSetAuthorizedCaller
+
+  - kind: ethereum
+    name: CityValidation
+    network: base
+    source:
+      address: "0x77BBd6850C2780055c4C20008145E9E5dEC20332"
+      abi: CityValidation
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-validation.ts
+      entities:
+        - ValidationHooks
+        - CityValidationOwnershipTransferredEvent
+      abis:
+        - name: CityValidation
+          file: ./abis/CityValidation.json
+      eventHandlers:
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      callHandlers:
+        - function: setHooks(address,address)
+          handler: handleSetHooks
+
+  - kind: ethereum
+    name: CityComponents
+    network: base
+    source:
+      address: "0xae6fd8664Ba6E147bfb7bb1Ed4354F60Fc86854e"
+      abi: CityComponents
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-components.ts
+      entities:
+        - Player
+        - ComponentDefinition
+        - ComponentAuthorizedConsumer
+        - ComponentAuthorizedMinter
+        - ComponentBaseMetadataURI
+        - ComponentBalance
+        - ComponentMintEvent
+        - ComponentBurnEvent
+        - ComponentTransferSingleEvent
+        - ComponentTransferBatchEvent
+        - ComponentApprovalForAllEvent
+        - ComponentURIEvent
+        - CityComponentsOwnershipTransferredEvent
+      abis:
+        - name: CityComponents
+          file: ./abis/CityComponents.json
+      eventHandlers:
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+        - event: AuthorizedConsumerSet(indexed address,bool)
+          handler: handleAuthorizedConsumerSet
+        - event: AuthorizedMinterSet(indexed address,bool)
+          handler: handleAuthorizedMinterSet
+        - event: BaseMetadataURISet(string)
+          handler: handleBaseMetadataURISet
+        - event: ComponentBurned(indexed address,indexed uint256,uint256)
+          handler: handleComponentBurned
+        - event: ComponentDefinitionSet(indexed uint256,string,uint256,uint256,uint256,bool)
+          handler: handleComponentDefinitionSet
+        - event: ComponentMinted(indexed address,indexed uint256,uint256)
+          handler: handleComponentMinted
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
+          handler: handleTransferBatch
+        - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleTransferSingle
+        - event: URI(string,indexed uint256)
+          handler: handleURI
+
+  - kind: ethereum
+    name: CityBlueprints
+    network: base
+    source:
+      address: "0x9F6453783A8935f57D9E15560012C1e9cb3Ae684"
+      abi: CityBlueprints
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-blueprints.ts
+      entities:
+        - Player
+        - BlueprintDefinition
+        - BlueprintAuthorizedConsumer
+        - BlueprintAuthorizedMinter
+        - BlueprintBaseMetadataURI
+        - BlueprintBalance
+        - BlueprintMintEvent
+        - BlueprintBurnEvent
+        - BlueprintTransferSingleEvent
+        - BlueprintTransferBatchEvent
+        - BlueprintApprovalForAllEvent
+        - BlueprintURIEvent
+        - CityBlueprintsOwnershipTransferredEvent
+      abis:
+        - name: CityBlueprints
+          file: ./abis/CityBlueprints.json
+      eventHandlers:
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+        - event: AuthorizedConsumerSet(indexed address,bool)
+          handler: handleAuthorizedConsumerSet
+        - event: AuthorizedMinterSet(indexed address,bool)
+          handler: handleAuthorizedMinterSet
+        - event: BaseMetadataURISet(string)
+          handler: handleBaseMetadataURISet
+        - event: BlueprintBurned(indexed address,indexed uint256,uint256)
+          handler: handleBlueprintBurned
+        - event: BlueprintDefinitionSet(indexed uint256,string,uint256,uint256,uint256,uint256,bool)
+          handler: handleBlueprintDefinitionSet
+        - event: BlueprintMinted(indexed address,indexed uint256,uint256)
+          handler: handleBlueprintMinted
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
+          handler: handleTransferBatch
+        - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleTransferSingle
+        - event: URI(string,indexed uint256)
+          handler: handleURI
+
+  - kind: ethereum
+    name: CityEnchantments
+    network: base
+    source:
+      address: "0xEC99851ff472a90bA0f75727FC4a274F8FB19380"
+      abi: CityEnchantments
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-enchantments.ts
+      entities:
+        - EnchantmentDefinition
+        - EnchantmentAuthorizedCaller
+        - EnchantmentBonusSet
+        - CityEnchantmentsOwnershipTransferredEvent
+      abis:
+        - name: CityEnchantments
+          file: ./abis/CityEnchantments.json
+      eventHandlers:
+        - event: AuthorizedCallerSet(indexed address,bool)
+          handler: handleAuthorizedCallerSet
+        - event: EnchantmentBonusesSet(indexed uint256,indexed uint256)
+          handler: handleEnchantmentBonusesSet
+        - event: EnchantmentDefinitionSet(indexed uint256,string,uint8,uint256,uint256,bool)
+          handler: handleEnchantmentDefinitionSet
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+
+  - kind: ethereum
+    name: CityEnchantmentItems
+    network: base
+    source:
+      address: "0x23D0A8E95f2cFf7ae59f033d0B46eAa22CE80d56"
+      abi: CityEnchantmentItems
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-enchantment-items.ts
+      entities:
+        - EnchantmentItemDefinition
+        - EnchantmentItemAuthorizedConsumer
+        - EnchantmentItemAuthorizedMinter
+        - EnchantmentItemBaseMetadataURISetEvent
+        - EnchantmentItemMintedEvent
+        - EnchantmentItemBurnedEvent
+        - EnchantmentItemApprovalForAllEvent
+        - EnchantmentItemTransferSingleEvent
+        - EnchantmentItemTransferBatchEvent
+        - EnchantmentItemURIEvent
+        - CityEnchantmentItemsOwnershipTransferredEvent
+      abis:
+        - name: CityEnchantmentItems
+          file: ./abis/CityEnchantmentItems.json
+      eventHandlers:
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+        - event: AuthorizedConsumerSet(indexed address,bool)
+          handler: handleAuthorizedConsumerSet
+        - event: AuthorizedMinterSet(indexed address,bool)
+          handler: handleAuthorizedMinterSet
+        - event: BaseMetadataURISet(string)
+          handler: handleBaseMetadataURISet
+        - event: EnchantmentItemBurned(indexed address,indexed uint256,uint256)
+          handler: handleEnchantmentItemBurned
+        - event: EnchantmentItemDefinitionSet(indexed uint256,indexed uint256,uint256,uint256,bool,bool)
+          handler: handleEnchantmentItemDefinitionSet
+        - event: EnchantmentItemMinted(indexed address,indexed uint256,uint256)
+          handler: handleEnchantmentItemMinted
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+        - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
+          handler: handleTransferBatch
+        - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleTransferSingle
+        - event: URI(string,indexed uint256)
+          handler: handleURI
+
+  - kind: ethereum/contract
+    name: CityMateria
+    network: base
+    source:
+      address: "0xC3f75ce5539C888cdDE0Aa2E58bC33Be758a37a1"
+      abi: CityMateria
+      startBlock: 43495236
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - MateriaDefinition
+        - MateriaBonus
+        - MateriaAuthorizedCaller
+        - CityMateriaOwnershipTransferredEvent
+      abis:
+        - name: CityMateria
+          file: ./abis/CityMateria.json
+      eventHandlers:
+        - event: AuthorizedCallerSet(indexed address,bool)
+          handler: handleAuthorizedCallerSet
+        - event: MateriaDefinitionSet(indexed uint256,string,uint8,uint8,uint256,uint256,bool)
+          handler: handleMateriaDefinitionSet
+        - event: MateriaBonusesSet(indexed uint256,indexed uint256)
+          handler: handleMateriaBonusesSet
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/city-materia.ts
+
+  - kind: ethereum/contract
+    name: CityMateriaItems
+    network: base
+    source:
+      address: "0xd3258b6b0bAED28f7D90A808d3Cb39d8fF9eD080"
+      abi: CityMateriaItems
+      startBlock: 43495241
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - MateriaItemDefinition
+        - MateriaItemAuthorizedConsumer
+        - MateriaItemAuthorizedMinter
+        - MateriaItemApprovalForAllEvent
+        - MateriaItemBaseMetadataURISetEvent
+        - MateriaItemBurnedEvent
+        - MateriaItemMintedEvent
+        - MateriaItemTransferSingleEvent
+        - MateriaItemTransferBatchEvent
+        - MateriaItemURIEvent
+        - CityMateriaItemsOwnershipTransferredEvent
+      abis:
+        - name: CityMateriaItems
+          file: ./abis/CityMateriaItems.json
+      eventHandlers:
+        - event: AuthorizedConsumerSet(indexed address,bool)
+          handler: handleAuthorizedConsumerSet
+        - event: AuthorizedMinterSet(indexed address,bool)
+          handler: handleAuthorizedMinterSet
+        - event: BaseMetadataURISet(string)
+          handler: handleBaseMetadataURISet
+        - event: MateriaItemDefinitionSet(indexed uint256,indexed uint256,uint256,uint256,bool,bool)
+          handler: handleMateriaItemDefinitionSet
+        - event: MateriaItemMinted(indexed address,indexed uint256,uint256)
+          handler: handleMateriaItemMinted
+        - event: MateriaItemBurned(indexed address,indexed uint256,uint256)
+          handler: handleMateriaItemBurned
+        - event: ApprovalForAll(indexed address,indexed address,bool)
+          handler: handleApprovalForAll
+        - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleTransferSingle
+        - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
+          handler: handleTransferBatch
+        - event: URI(string,indexed uint256)
+          handler: handleURI
+        - event: OwnershipTransferred(indexed address,indexed address)
+          handler: handleOwnershipTransferred
+      file: ./src/city-materia-items.ts
