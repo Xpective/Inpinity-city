@@ -1,0 +1,44 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_24-d939ecd63520850cc92f5ce840be21b4992d6f41",
+  "solcVersion": "0.8.24",
+  "solcLongVersion": "0.8.24+commit.e11b9ed9",
+  "userSourceNameMap": {
+    "contracts/interfaces/ICityEnchantmentItems.sol": "project/contracts/interfaces/ICityEnchantmentItems.sol",
+    "contracts/interfaces/ICityMateriaItems.sol": "project/contracts/interfaces/ICityMateriaItems.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": [],
+      "viaIR": true
+    },
+    "sources": {
+      "project/contracts/interfaces/ICityEnchantmentItems.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.24;\n\ninterface ICityEnchantmentItems {\n    function mintEnchantmentItem(\n        address to,\n        uint256 itemId,\n        uint256 amount\n    ) external;\n\n    function burnEnchantmentItem(\n        address from,\n        uint256 itemId,\n        uint256 amount\n    ) external;\n\n    function getEnchantmentItemMeta(\n        uint256 itemId\n    )\n        external\n        view\n        returns (\n            uint256 enchantmentDefinitionId,\n            uint256 level,\n            uint256 rarityTier,\n            bool burnOnUse,\n            bool enabled\n        );\n}"
+      },
+      "project/contracts/interfaces/ICityMateriaItems.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.24;\n\ninterface ICityMateriaItems {\n    function mintMateriaItem(\n        address to,\n        uint256 itemId,\n        uint256 amount\n    ) external;\n\n    function burnMateriaItem(\n        address from,\n        uint256 itemId,\n        uint256 amount\n    ) external;\n\n    function getMateriaItemMeta(\n        uint256 itemId\n    )\n        external\n        view\n        returns (\n            uint256 materiaDefinitionId,\n            uint256 level,\n            uint256 rarityTier,\n            bool burnOnUse,\n            bool enabled\n        );\n}"
+      }
+    }
+  }
+}

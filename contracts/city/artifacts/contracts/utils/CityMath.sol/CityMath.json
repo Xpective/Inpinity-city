@@ -1,0 +1,13 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "CityMath",
+  "sourceName": "contracts/utils/CityMath.sol",
+  "abi": [],
+  "bytecode": "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212206fd43f081e9c3ac4e3181a4efadd3fc8cfe90cfecf8f740b430d3b7a6640fb8964736f6c63430008180033",
+  "deployedBytecode": "0x5f80fdfea26469706673582212206fd43f081e9c3ac4e3181a4efadd3fc8cfe90cfecf8f740b430d3b7a6640fb8964736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/utils/CityMath.sol",
+  "buildInfoId": "solc-0_8_24-276329d14ae1be4537cc6d289127051ca8ea930b"
+}

@@ -1,0 +1,13 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "LayerLogic",
+  "sourceName": "contracts/libraries/LayerLogic.sol",
+  "abi": [],
+  "bytecode": "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212206fb2f73bcf06ffc45e5eefeb2cf02c5286a18e519a7ce4ccbff8c4ed5275b54b64736f6c63430008180033",
+  "deployedBytecode": "0x5f80fdfea26469706673582212206fb2f73bcf06ffc45e5eefeb2cf02c5286a18e519a7ce4ccbff8c4ed5275b54b64736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/libraries/LayerLogic.sol",
+  "buildInfoId": "solc-0_8_24-276329d14ae1be4537cc6d289127051ca8ea930b"
+}

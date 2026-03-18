@@ -1,0 +1,88 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "ICityWeapons",
+  "sourceName": "contracts/interfaces/ICityWeapons.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "weaponDefinitionId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "rarityTier",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "frameTier",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "originPlotId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "originFaction",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "originDistrictKind",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "resonanceType",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "visualVariant",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "genesisEra",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "usedAether",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nonce",
+          "type": "uint256"
+        }
+      ],
+      "name": "mintWeapon",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/interfaces/ICityWeapons.sol",
+  "buildInfoId": "solc-0_8_24-90f08512514c10fea11d8b9e622040087f7e9bcc"
+}

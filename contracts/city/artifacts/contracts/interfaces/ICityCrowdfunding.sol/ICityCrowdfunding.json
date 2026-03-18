@@ -1,0 +1,100 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "ICityCrowdfunding",
+  "sourceName": "contracts/interfaces/ICityCrowdfunding.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "plotId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "oilAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lemonsAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "ironAmount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "goldAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "contributeToProject",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "plotId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getProjectRaised",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "oil",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lemons",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "iron",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "gold",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "plotId",
+          "type": "uint256"
+        }
+      ],
+      "name": "isProjectFunded",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/interfaces/ICityCrowdfunding.sol",
+  "buildInfoId": "solc-0_8_24-276329d14ae1be4537cc6d289127051ca8ea930b"
+}

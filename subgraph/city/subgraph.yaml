@@ -4,12 +4,69 @@ schema:
 
 dataSources:
   - kind: ethereum
+    name: CityWeapons
+    network: base
+    source:
+      address: "0x6b3cDe1DdACDFB5dC060f10A94Ea52b237E5131F"
+      abi: CityWeapons
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-weapons.ts
+      entities:
+        - Player
+        - WeaponDefinition
+        - WeaponInstance
+      abis:
+        - name: CityWeapons
+          file: ./abis/CityWeapons.json
+      eventHandlers:
+        - event: WeaponDefinitionSet(indexed uint256,string,uint8,uint8,uint256,bool)
+          handler: handleWeaponDefinitionSet
+        - event: WeaponMinted(indexed uint256,indexed address,indexed uint256,bytes32,bytes32)
+          handler: handleWeaponMinted
+        - event: WeaponMetadataRevisionSet(indexed uint256,uint256)
+          handler: handleWeaponMetadataRevisionSet
+        - event: WeaponUpgradeLevelSet(indexed uint256,uint256)
+          handler: handleWeaponUpgradeLevelSet
+        - event: WeaponDurabilitySet(indexed uint256,uint256)
+          handler: handleWeaponDurabilitySet
+
+  - kind: ethereum
+    name: CityCrafting
+    network: base
+    source:
+      address: "0x5cC5e3a0455b83620759D2eD6712A5aFc45F9eCF"
+      abi: CityCrafting
+      startBlock: 43495244
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/city-crafting.ts
+      entities:
+        - RecipeDefinition
+        - CraftEvent
+      abis:
+        - name: CityCrafting
+          file: ./abis/CityCrafting.json
+      eventHandlers:
+        - event: RecipeSet(indexed uint256,uint8,uint256,uint256,bool)
+          handler: handleRecipeSet
+        - event: Crafted(indexed address,indexed uint256,uint8,uint256,uint256)
+          handler: handleCrafted
+        - event: WeaponCrafted(indexed address,indexed uint256,indexed uint256,uint256,uint256)
+          handler: handleWeaponCrafted
+
+  - kind: ethereum
     name: CityRegistry
     network: base
     source:
-      address: "0x0000000000000000000000000000000000000000"
+      address: "0x5d3269813Fea0C0F487A21cBf9992b95008558BF"
       abi: CityRegistry
-      startBlock: 0
+      startBlock: 43495244
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

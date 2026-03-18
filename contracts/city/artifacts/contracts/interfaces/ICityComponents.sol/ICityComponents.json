@@ -1,0 +1,37 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "ICityComponents",
+  "sourceName": "contracts/interfaces/ICityComponents.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "componentId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "mintComponent",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/interfaces/ICityComponents.sol",
+  "buildInfoId": "solc-0_8_24-90f08512514c10fea11d8b9e622040087f7e9bcc"
+}

@@ -1,0 +1,13 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "SlotLogic",
+  "sourceName": "contracts/libraries/SlotLogic.sol",
+  "abi": [],
+  "bytecode": "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212204100189b77c6f1db1e59922a8ddbd136d06122caea08748acdc5179bde68f48f64736f6c63430008180033",
+  "deployedBytecode": "0x5f80fdfea26469706673582212204100189b77c6f1db1e59922a8ddbd136d06122caea08748acdc5179bde68f48f64736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/libraries/SlotLogic.sol",
+  "buildInfoId": "solc-0_8_24-276329d14ae1be4537cc6d289127051ca8ea930b"
+}

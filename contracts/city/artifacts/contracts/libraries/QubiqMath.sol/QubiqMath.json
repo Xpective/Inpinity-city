@@ -1,0 +1,13 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "QubiqMath",
+  "sourceName": "contracts/libraries/QubiqMath.sol",
+  "abi": [],
+  "bytecode": "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea264697066735822122071d3274a5d4f0b3d758da24c219eedf63d19865cfd1fb2b758ad33a5fe66f6c664736f6c63430008180033",
+  "deployedBytecode": "0x5f80fdfea264697066735822122071d3274a5d4f0b3d758da24c219eedf63d19865cfd1fb2b758ad33a5fe66f6c664736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/libraries/QubiqMath.sol",
+  "buildInfoId": "solc-0_8_24-276329d14ae1be4537cc6d289127051ca8ea930b"
+}

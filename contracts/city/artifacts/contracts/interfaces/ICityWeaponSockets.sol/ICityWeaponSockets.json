@@ -1,0 +1,130 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "ICityWeaponSockets",
+  "sourceName": "contracts/interfaces/ICityWeaponSockets.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "tokenId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTotalBonuses",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "int256",
+              "name": "minDamageBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "maxDamageBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "attackSpeedBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "critChanceBpsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "critMultiplierBpsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "accuracyBpsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "rangeBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "maxDurabilityBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "armorPenBpsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "blockChanceBpsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "lifeStealBpsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "energyCostBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "heatGenerationBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "stabilityBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "cooldownMsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "projectileSpeedBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "aoeRadiusBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "enchantmentSlotsBonus",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "materiaSlotsBonus",
+              "type": "int256"
+            }
+          ],
+          "internalType": "struct ICityWeaponSockets.TotalBonuses",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/interfaces/ICityWeaponSockets.sol",
+  "buildInfoId": "solc-0_8_24-535551d58c37853673c9d8b9b9df580f8a71fee3"
+}

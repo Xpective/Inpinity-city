@@ -1,0 +1,13 @@
+{
+  "_format": "hh3-artifact-1",
+  "contractName": "CityTypes",
+  "sourceName": "contracts/libraries/CityTypes.sol",
+  "abi": [],
+  "bytecode": "0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212205e66695697bc59e38a6dd6a8b2d87332a9c9e5d80e40ce6cf210b0d9e0947ef364736f6c63430008180033",
+  "deployedBytecode": "0x5f80fdfea26469706673582212205e66695697bc59e38a6dd6a8b2d87332a9c9e5d80e40ce6cf210b0d9e0947ef364736f6c63430008180033",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "immutableReferences": {},
+  "inputSourceName": "project/contracts/libraries/CityTypes.sol",
+  "buildInfoId": "solc-0_8_24-276329d14ae1be4537cc6d289127051ca8ea930b"
+}

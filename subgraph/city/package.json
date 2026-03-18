@@ -1,0 +1,15 @@
+{
+    "name": "inpinity-city-subgraph",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+      "codegen": "graph codegen",
+      "build": "graph build"
+    },
+    "devDependencies": {
+      "@graphprotocol/graph-cli": "^0.98.1",
+      "@graphprotocol/graph-ts": "^0.38.2",
+      "assemblyscript": "^0.27.34",
+      "matchstick-as": "^0.6.0"
+    }
+  }

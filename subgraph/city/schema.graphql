@@ -1,89 +1,69 @@
-type Player @entity {
+type Player @entity(immutable: false) {
   id: ID!
   cityKeyTokenId: BigInt
   faction: String
   personalPlotCount: Int!
-  createdPlots: [Plot!]! @derivedFrom(field: "owner")
+  craftedWeapons: [WeaponInstance!]! @derivedFrom(field: "owner")
 }
 
-type Plot @entity {
+type Plot @entity(immutable: false) {
   id: ID!
   plotId: BigInt!
   owner: Player
   plotType: String!
   faction: String!
-  status: String!
-  width: Int!
-  height: Int!
   createdAt: BigInt!
   exists: Boolean!
-
-  districtKind: String
-  districtBonusBps: Int
-
-  completionBps: Int
-  completedQubiqCount: Int
-  aetherUses: Int
-
-  firstBuilder: Bytes
-  genesisEra: Boolean
-  layerCount: Int
-  ownershipTransfers: Int
-  historicScore: Int
-
-  qubiqs: [Qubiq!]! @derivedFrom(field: "plot")
-  contributions: [Contribution!]! @derivedFrom(field: "plot")
 }
 
-type Qubiq @entity {
+type WeaponDefinition @entity(immutable: false) {
   id: ID!
-  plot: Plot!
-  x: Int!
-  y: Int!
-  completed: Boolean!
-  usedAether: Boolean!
-  completedAt: BigInt
-  lastContributor: Bytes
+  weaponDefinitionId: BigInt!
+  name: String!
+  classId: Int!
+  damageTypeId: Int!
+  techTier: BigInt!
+  enabled: Boolean!
+  createdAtBlock: BigInt!
+  createdAtTimestamp: BigInt!
 }
 
-type Contribution @entity {
+type WeaponInstance @entity(immutable: false) {
   id: ID!
-  plot: Plot!
-  contributor: Bytes!
-  x: Int!
-  y: Int!
-  oil: BigInt!
-  lemons: BigInt!
-  iron: BigInt!
+  tokenId: BigInt!
+  owner: Player!
+  weaponDefinition: WeaponDefinition!
+  metadataRevision: BigInt!
+  upgradeLevel: BigInt!
+  durability: BigInt!
+  craftSeed: Bytes!
+  provenanceHash: Bytes!
+  txHash: Bytes!
+  blockNumber: BigInt!
+}
+
+type RecipeDefinition @entity(immutable: false) {
+  id: ID!
+  recipeId: BigInt!
+  outputKind: Int!
+  outputId: BigInt!
+  outputAmount: BigInt!
+  enabled: Boolean!
+  updatedAtBlock: BigInt!
+  updatedAtTimestamp: BigInt!
+}
+
+type CraftEvent @entity(immutable: true) {
+  id: ID!
+  user: Bytes!
+  recipeId: BigInt!
+  outputKind: Int!
+  outputId: BigInt!
+  outputAmount: BigInt!
+  tokenId: BigInt
+  weaponDefinitionId: BigInt
+  craftNonce: BigInt
+  txHash: Bytes!
   blockNumber: BigInt!
   timestamp: BigInt!
-  txHash: Bytes!
-}
-
-type PlotHistoryEvent @entity {
-  id: ID!
-  plot: Plot!
-  eventType: String!
-  value: BigInt
-  timestamp: BigInt!
-  txHash: Bytes!
-}
-
-type DistrictAssignment @entity {
-  id: ID!
-  plot: Plot!
-  districtKind: String!
-  faction: String!
-  bonusBps: Int!
-  timestamp: BigInt!
-  txHash: Bytes!
-}
-
-type StatusEvent @entity {
-  id: ID!
-  plot: Plot!
-  oldStatus: String
-  newStatus: String!
-  timestamp: BigInt!
-  txHash: Bytes!
 }
