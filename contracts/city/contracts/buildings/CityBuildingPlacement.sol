@@ -11,7 +11,6 @@ import "../libraries/CityBuildingTypes.sol";
                          EXTERNAL INTERFACES
 //////////////////////////////////////////////////////////////*/
 
-/// @notice Minimal interface to the personal building NFT layer.
 interface ICityBuildingNFTV1Like {
     function ownerOf(uint256 tokenId) external view returns (address);
 
@@ -30,10 +29,6 @@ interface ICityBuildingNFTV1Like {
     function setPlaced(uint256 buildingId, bool placed) external;
 }
 
-/// @notice External validator/policy hook for placement.
-/// @dev This avoids hard-coding unstable core signatures here.
-///      The policy contract can read Registry/Land/Status/Districts/Validation
-///      and decide whether placement is allowed.
 interface ICityBuildingPlacementPolicy {
     function validatePersonalPlacement(
         address owner,
@@ -58,11 +53,6 @@ interface ICityBuildingPlacementPolicy {
                         CITY BUILDING PLACEMENT
 //////////////////////////////////////////////////////////////*/
 
-/// @title CityBuildingPlacement
-/// @notice Placement truth layer for personal buildings.
-/// @dev Keeps plotId <-> buildingId mappings canonical for V1.
-///      Business rules are delegated to a policy/validator contract.
-///      This keeps the placement layer stable even if city core contracts evolve.
 contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                                  ROLES
@@ -92,10 +82,8 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
     error InvalidBuildingCategory();
     error InvalidBuildingType();
     error BuildingArchived();
-    error BuildingStateNotPlaceable();
     error BuildingStateNotUnplaced();
     error PlacementPolicyRejected(bytes32 reasonCode);
-    error StateAlreadySet();
     error InvalidMigrationConfig();
     error MigrationTargetNotSet();
     error MigrationClosed();
@@ -175,29 +163,16 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
     ICityBuildingNFTV1Like public buildingNFT;
     ICityBuildingPlacementPolicy public placementPolicy;
 
-    /// @notice Optional references for observability and future tooling.
-    /// @dev Not used directly for validation in this contract.
     address public cityRegistry;
     address public cityLand;
     address public cityStatus;
     address public cityDistricts;
     address public cityValidation;
 
-    /// @notice plotId => buildingId
     mapping(uint256 => uint256) public buildingOnPlot;
-
-    /// @notice buildingId => plotId
     mapping(uint256 => uint256) public plotOfBuilding;
-
-    /// @notice buildingId => placement details
     mapping(uint256 => CityBuildingTypes.BuildingPlacement) private _placementOfBuilding;
-
-    /// @notice owner => placed personal building count
     mapping(address => uint256) public placedBuildingCountByOwner;
-
-    /*//////////////////////////////////////////////////////////////
-                              MIGRATION STATE
-    //////////////////////////////////////////////////////////////*/
 
     mapping(uint256 => bool) public preparedForMigration;
     mapping(uint256 => uint64) public preparedForMigrationAt;
@@ -379,8 +354,6 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         _unplace(buildingId, plotId, msg.sender, true, reasonCode);
     }
 
-    /// @notice Repairs mapping mismatches between plotOfBuilding, buildingOnPlot and NFT placed flag.
-    /// @dev Use carefully; intended for admin recovery.
     function repairPlacementState(
         uint256 buildingId,
         uint256 newPlotId,
@@ -482,8 +455,6 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         emit PlacementUnpreparedForMigration(buildingId, uint64(block.timestamp));
     }
 
-    /// @notice Archives the placement layer after successful V2 migration elsewhere.
-    /// @dev Intended to be called after NFT migration succeeded.
     function archivePlacementToV2(
         uint256 buildingId
     )
@@ -588,7 +559,9 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         return
             plotOfBuilding[buildingId] != 0 &&
             !preparedForMigration[buildingId] &&
-            !archivedToV2[buildingId];
+            !archivedToV2[buildingId] &&
+            !buildingNFT.isMigrationPrepared(buildingId) &&
+            !buildingNFT.isArchived(buildingId);
     }
 
     function getPlacementSummary(
@@ -666,7 +639,6 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         placement.plotId = 0;
         placement.placedAt = 0;
         placement.placedBy = address(0);
-        // keep lastPlacedAt as historical trace
 
         if (placedBuildingCountByOwner[owner] > 0) {
             placedBuildingCountByOwner[owner] -= 1;
@@ -706,8 +678,6 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
 
         CityBuildingTypes.BuildingState currentState = buildingNFT.getBuildingState(buildingId);
 
-        // Normaler Placement-Flow darf nur mit sauberem Unplaced-State arbeiten.
-        // Alles andere wird über repairPlacementState() behoben.
         if (currentState != CityBuildingTypes.BuildingState.Unplaced) {
             revert BuildingStateNotUnplaced();
         }

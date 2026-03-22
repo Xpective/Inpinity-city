@@ -7,7 +7,10 @@ import "./interfaces/ICityRegistryLike.sol";
 import "./interfaces/ICityLandLike.sol";
 import "./interfaces/ICityDistrictsLike.sol";
 
-contract CityPlotInfoAdapter is AccessControl {
+/// @title CityMintPlotAdapter
+/// @notice Adapter for player-facing personal building mint checks.
+/// @dev Reads live city plot data and returns normalized mint-eligibility info.
+contract CityMintPlotAdapter is AccessControl {
     bytes32 public constant ADAPTER_ADMIN_ROLE = keccak256("ADAPTER_ADMIN_ROLE");
 
     error ZeroAddress();
@@ -23,7 +26,6 @@ contract CityPlotInfoAdapter is AccessControl {
     ICityLandLike public land;
     ICityDistrictsLike public districts;
 
-    /// @dev Laut eurem Core-Pattern ist Personal = 1.
     uint8 internal constant PLOT_TYPE_PERSONAL = 1;
 
     constructor(
@@ -75,15 +77,20 @@ contract CityPlotInfoAdapter is AccessControl {
         emit DistrictsSet(districts_, msg.sender);
     }
 
-    function getPlotPlacementInfo(
+    /// @notice Returns normalized plot data for player mint eligibility.
+    /// @dev V1 eligible = exists && personalPlot && completed.
+    ///      Additional status restrictions can be layered later in PersonalBuildings or policy.
+    function getMintPlotInfo(
         uint256 plotId
     )
         external
         view
         returns (
+            address owner,
             bool exists,
             bool completed,
             bool personalPlot,
+            bool eligible,
             uint8 districtKind,
             uint8 faction
         )
@@ -92,8 +99,16 @@ contract CityPlotInfoAdapter is AccessControl {
         ICityDistrictsLike.DistrictData memory district = districts.getDistrict(plotId);
 
         exists = core.exists;
-        completed = exists && land.isPlotFullyCompleted(plotId);
-        personalPlot = exists && core.plotType == PLOT_TYPE_PERSONAL;
+        if (!exists) {
+            return (address(0), false, false, false, false, 0, 0);
+        }
+
+        owner = core.owner;
+        personalPlot = core.plotType == PLOT_TYPE_PERSONAL;
+        completed = land.isPlotFullyCompleted(plotId);
+
+        eligible = personalPlot && completed;
+
         districtKind = district.kind;
         faction = core.faction;
     }

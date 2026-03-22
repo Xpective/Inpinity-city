@@ -19,6 +19,7 @@ contract CityPlotOwnerAdapter is AccessControl {
         if (registry_.code.length == 0) revert InvalidRegistry();
 
         registry = ICityRegistryLike(registry_);
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
         _grantRole(ADAPTER_ADMIN_ROLE, admin_);
     }
@@ -32,6 +33,7 @@ contract CityPlotOwnerAdapter is AccessControl {
     }
 
     function getPlotOwner(uint256 plotId) external view returns (address owner) {
-        return registry.ownerOfPlot(plotId);
+        ICityRegistryLike.PlotCore memory core = registry.getPlotCore(plotId);
+        return core.owner;
     }
 }

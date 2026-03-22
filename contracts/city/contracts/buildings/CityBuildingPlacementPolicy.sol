@@ -22,7 +22,6 @@ interface ICityBuildingNFTV1PolicyRead {
 }
 
 /// @notice Adapter that resolves plot owner.
-/// @dev Use a thin adapter if your live Registry/Land contracts use different signatures.
 interface ICityPlotOwnerAdapter {
     function getPlotOwner(uint256 plotId) external view returns (address owner);
 }
@@ -63,9 +62,8 @@ interface ICityPlotStatusAdapter {
 
 /// @title CityBuildingPlacementPolicy
 /// @notice Policy/validator contract for personal building placement.
-/// @dev CityBuildingPlacement delegates the actual business rules here.
-///      Adapter-based so core city contracts can evolve without rewriting
-///      the placement truth layer.
+/// @dev This is the personal-placement module behind the router.
+///      Community / Borderline / Nexus should later get sibling policy contracts.
 contract CityBuildingPlacementPolicy is AccessControl, Pausable {
     /*//////////////////////////////////////////////////////////////
                                  ROLES
@@ -114,33 +112,19 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
     ICityPlotInfoAdapter public plotInfoAdapter;
     ICityPlotStatusAdapter public plotStatusAdapter;
 
-    /// @notice Require the plot owner to match the building owner.
     bool public requireOwnerMatch = true;
-
-    /// @notice Require the plot to exist.
     bool public requirePlotExists = true;
-
-    /// @notice Require the plot to be fully completed.
     bool public requirePlotCompleted = true;
-
-    /// @notice Require the plot to be a personal plot.
     bool public requirePersonalPlot = true;
 
-    /// @notice Whether district allowlist is enforced.
     bool public enforceDistrictAllowlist = false;
-
-    /// @notice Whether faction allowlist is enforced.
     bool public enforceFactionAllowlist = false;
 
-    /// @notice Placement blocking by plot lifecycle/status.
     bool public blockDormant = false;
     bool public blockDecayed = true;
     bool public blockLayerEligible = true;
 
-    /// @notice districtKind => allowed
     mapping(uint8 => bool) public allowedDistrictKinds;
-
-    /// @notice faction => allowed
     mapping(uint8 => bool) public allowedFactions;
 
     /*//////////////////////////////////////////////////////////////
@@ -383,39 +367,94 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
         plotCompleted = completed_;
         personalPlot = personalPlot_;
         plotEligible = false;
+
         districtAllowed = !enforceDistrictAllowlist;
         factionAllowed = !enforceFactionAllowlist;
         ownerMatches = !requireOwnerMatch;
 
         if (requirePlotExists && !exists_) {
-            return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("PLOT_NOT_FOUND"));
+            return _composeResult(
+                false,
+                ownerMatches,
+                plotCompleted,
+                false,
+                personalPlot,
+                districtAllowed,
+                factionAllowed,
+                _rc("PLOT_NOT_FOUND")
+            );
         }
 
         if (requirePlotCompleted && !completed_) {
-            return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("PLOT_NOT_COMPLETED"));
+            return _composeResult(
+                false,
+                ownerMatches,
+                plotCompleted,
+                false,
+                personalPlot,
+                districtAllowed,
+                factionAllowed,
+                _rc("PLOT_NOT_COMPLETED")
+            );
         }
 
         if (requirePersonalPlot && !personalPlot_) {
-            return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("NOT_PERSONAL_PLOT"));
+            return _composeResult(
+                false,
+                ownerMatches,
+                plotCompleted,
+                false,
+                personalPlot,
+                districtAllowed,
+                factionAllowed,
+                _rc("NOT_PERSONAL_PLOT")
+            );
         }
 
         if (requireOwnerMatch) {
             if (address(plotOwnerAdapter) == address(0)) {
-                return _composeResult(false, false, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("OWNER_ADAPTER_NOT_SET"));
+                return _composeResult(
+                    false,
+                    false,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    districtAllowed,
+                    factionAllowed,
+                    _rc("OWNER_ADAPTER_NOT_SET")
+                );
             }
 
             address plotOwner = plotOwnerAdapter.getPlotOwner(plotId);
             ownerMatches = (plotOwner == owner);
 
             if (!ownerMatches) {
-                return _composeResult(false, false, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("PLOT_OWNER_MISMATCH"));
+                return _composeResult(
+                    false,
+                    false,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    districtAllowed,
+                    factionAllowed,
+                    _rc("PLOT_OWNER_MISMATCH")
+                );
             }
         }
 
         if (enforceDistrictAllowlist) {
             districtAllowed = allowedDistrictKinds[districtKind_];
             if (!districtAllowed) {
-                return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, false, factionAllowed, _rc("DISTRICT_NOT_ALLOWED"));
+                return _composeResult(
+                    false,
+                    ownerMatches,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    false,
+                    factionAllowed,
+                    _rc("DISTRICT_NOT_ALLOWED")
+                );
             }
         } else {
             districtAllowed = true;
@@ -424,7 +463,16 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
         if (enforceFactionAllowlist) {
             factionAllowed = allowedFactions[faction_];
             if (!factionAllowed) {
-                return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, false, _rc("FACTION_NOT_ALLOWED"));
+                return _composeResult(
+                    false,
+                    ownerMatches,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    districtAllowed,
+                    false,
+                    _rc("FACTION_NOT_ALLOWED")
+                );
             }
         } else {
             factionAllowed = true;
@@ -432,22 +480,61 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
 
         if (blockDormant || blockDecayed || blockLayerEligible) {
             if (address(plotStatusAdapter) == address(0)) {
-                return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("STATUS_ADAPTER_NOT_SET"));
+                return _composeResult(
+                    false,
+                    ownerMatches,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    districtAllowed,
+                    factionAllowed,
+                    _rc("STATUS_ADAPTER_NOT_SET")
+                );
             }
 
-            (bool dormant_, bool decayed_, bool layerEligible_) =
-                plotStatusAdapter.getPlotStatusFlags(plotId);
+            (
+                bool dormant_,
+                bool decayed_,
+                bool layerEligible_
+            ) = plotStatusAdapter.getPlotStatusFlags(plotId);
 
             if (blockDormant && dormant_) {
-                return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("PLOT_DORMANT"));
+                return _composeResult(
+                    false,
+                    ownerMatches,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    districtAllowed,
+                    factionAllowed,
+                    _rc("PLOT_DORMANT")
+                );
             }
 
             if (blockDecayed && decayed_) {
-                return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("PLOT_DECAYED"));
+                return _composeResult(
+                    false,
+                    ownerMatches,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    districtAllowed,
+                    factionAllowed,
+                    _rc("PLOT_DECAYED")
+                );
             }
 
             if (blockLayerEligible && layerEligible_) {
-                return _composeResult(false, ownerMatches, plotCompleted, false, personalPlot, districtAllowed, factionAllowed, _rc("PLOT_LAYER_ELIGIBLE_BLOCKED"));
+                return _composeResult(
+                    false,
+                    ownerMatches,
+                    plotCompleted,
+                    false,
+                    personalPlot,
+                    districtAllowed,
+                    factionAllowed,
+                    _rc("PLOT_LAYER_ELIGIBLE_BLOCKED")
+                );
             }
         }
 

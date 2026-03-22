@@ -11,14 +11,25 @@ contract CityPlotStatusAdapter is AccessControl {
     error InvalidStatus();
 
     event StatusSet(address indexed status, address indexed executor);
+    event DerivedStatusCodesSet(
+        uint8 dormantCode,
+        uint8 decayedCode,
+        address indexed executor
+    );
 
     ICityStatusLike public status;
+
+    /// @dev Default-Werte. Falls eure echte Enum anders ist,
+    /// kann der Admin sie später umstellen.
+    uint8 public dormantStatusCode = 2;
+    uint8 public decayedStatusCode = 3;
 
     constructor(address status_, address admin_) {
         if (status_ == address(0) || admin_ == address(0)) revert ZeroAddress();
         if (status_.code.length == 0) revert InvalidStatus();
 
         status = ICityStatusLike(status_);
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
         _grantRole(ADAPTER_ADMIN_ROLE, admin_);
     }
@@ -29,6 +40,16 @@ contract CityPlotStatusAdapter is AccessControl {
 
         status = ICityStatusLike(status_);
         emit StatusSet(status_, msg.sender);
+    }
+
+    function setDerivedStatusCodes(
+        uint8 dormantCode_,
+        uint8 decayedCode_
+    ) external onlyRole(ADAPTER_ADMIN_ROLE) {
+        dormantStatusCode = dormantCode_;
+        decayedStatusCode = decayedCode_;
+
+        emit DerivedStatusCodesSet(dormantCode_, decayedCode_, msg.sender);
     }
 
     function getPlotStatusFlags(
@@ -42,8 +63,10 @@ contract CityPlotStatusAdapter is AccessControl {
             bool layerEligible
         )
     {
-        dormant = status.isPlotDormant(plotId);
-        decayed = status.isPlotDecayed(plotId);
-        layerEligible = status.isPlotLayerEligibleBlocked(plotId);
+        uint8 derived = status.getDerivedStatus(plotId);
+
+        dormant = derived == dormantStatusCode;
+        decayed = derived == decayedStatusCode;
+        layerEligible = status.isLayerEligible(plotId);
     }
 }

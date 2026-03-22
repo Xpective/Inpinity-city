@@ -108,22 +108,28 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
     }
 
     /// @dev Reserved for later integration.
+    /// @dev Can be set to address(0) to intentionally clear the slot.
     function setCommunityPolicy(address policy_) external onlyRole(ROUTER_ADMIN_ROLE) {
         if (policy_ != address(0) && policy_.code.length == 0) revert InvalidPolicy();
+
         communityPolicy = policy_;
         emit CommunityPolicySet(policy_, msg.sender);
     }
 
     /// @dev Reserved for later integration.
+    /// @dev Can be set to address(0) to intentionally clear the slot.
     function setBorderlinePolicy(address policy_) external onlyRole(ROUTER_ADMIN_ROLE) {
         if (policy_ != address(0) && policy_.code.length == 0) revert InvalidPolicy();
+
         borderlinePolicy = policy_;
         emit BorderlinePolicySet(policy_, msg.sender);
     }
 
     /// @dev Reserved for later integration.
+    /// @dev Can be set to address(0) to intentionally clear the slot.
     function setNexusPolicy(address policy_) external onlyRole(ROUTER_ADMIN_ROLE) {
         if (policy_ != address(0) && policy_.code.length == 0) revert InvalidPolicy();
+
         nexusPolicy = policy_;
         emit NexusPolicySet(policy_, msg.sender);
     }
@@ -152,9 +158,11 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
         )
     {
         if (paused()) revert RouterPaused();
-        if (personalPlacementPolicy == address(0)) revert PersonalPolicyNotSet();
 
-        return ICityPersonalPlacementPolicy(personalPlacementPolicy).validatePersonalPlacement(
+        address policy = personalPlacementPolicy;
+        if (policy == address(0)) revert PersonalPolicyNotSet();
+
+        return ICityPersonalPlacementPolicy(policy).validatePersonalPlacement(
             owner,
             plotId,
             buildingId
@@ -164,6 +172,22 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
     /*//////////////////////////////////////////////////////////////
                                   READS
     //////////////////////////////////////////////////////////////*/
+
+    function hasPersonalPolicy() external view returns (bool) {
+        return personalPlacementPolicy != address(0);
+    }
+
+    function hasCommunityPolicy() external view returns (bool) {
+        return communityPolicy != address(0);
+    }
+
+    function hasBorderlinePolicy() external view returns (bool) {
+        return borderlinePolicy != address(0);
+    }
+
+    function hasNexusPolicy() external view returns (bool) {
+        return nexusPolicy != address(0);
+    }
 
     function getRouterSummary()
         external

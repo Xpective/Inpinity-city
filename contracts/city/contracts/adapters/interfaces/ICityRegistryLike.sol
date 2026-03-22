@@ -1,8 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @notice Minimal registry-like interface for plot owner resolution.
-/// @dev Adjust later if your live Registry exposes a different read.
 interface ICityRegistryLike {
-    function ownerOfPlot(uint256 plotId) external view returns (address);
+    struct PlotCore {
+        uint256 id;
+        uint8 plotType;
+        uint8 faction;
+        uint8 status;
+        address owner;
+        uint32 width;
+        uint32 height;
+        uint64 createdAt;
+        bool exists;
+    }
+
+    function getPlotCore(uint256 plotId) external view returns (PlotCore memory);
 }
