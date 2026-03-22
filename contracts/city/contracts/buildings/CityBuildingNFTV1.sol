@@ -52,6 +52,14 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable, IERC4906 {
     bytes32 public constant MIGRATION_ADMIN_ROLE = keccak256("MIGRATION_ADMIN_ROLE");
 
     /*//////////////////////////////////////////////////////////////
+                                CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    uint64 public constant MIGRATION_PREP_DELAY = 1 days;
+    uint32 public constant CONTRACT_VERSION = 1;
+    uint32 internal constant DEFAULT_VERSION_TAG = 1;
+
+    /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
 
@@ -220,9 +228,6 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable, IERC4906 {
     address public migrationTarget;
     bool public migrationOpen;
 
-    uint64 public constant MIGRATION_PREP_DELAY = 1 days;
-    uint32 public constant CONTRACT_VERSION = CityBuildingTypes.VERSION_TAG_V1;
-
     mapping(uint256 => uint64) public lastUpgradeAt;
     mapping(uint256 => uint64) public lastTransferredAt;
     mapping(uint256 => uint64) public lastMeaningfulUseAt;
@@ -302,7 +307,6 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable, IERC4906 {
     }
 
     /// @notice Sets the V2 receiver target and opens/closes migration.
-    /// @dev No probe-call is performed here; compatibility must be verified offchain or operationally.
     /// @dev target may be zero only when open == false.
     function setMigrationTarget(address target, bool open) external onlyRole(MIGRATION_ADMIN_ROLE) {
         if (open && target == address(0)) revert InvalidMigrationConfig();
@@ -340,7 +344,7 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable, IERC4906 {
 
         _buildingMeta[buildingId] = CityBuildingTypes.BuildingMeta({
             customName: "",
-            versionTag: versionTag == 0 ? CityBuildingTypes.VERSION_TAG_V1 : versionTag,
+            versionTag: versionTag == 0 ? DEFAULT_VERSION_TAG : versionTag,
             totalUses: 0,
             totalTransfers: 0,
             totalUpgrades: 0,
