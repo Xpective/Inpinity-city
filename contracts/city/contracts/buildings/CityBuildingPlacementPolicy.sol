@@ -5,21 +5,11 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "../libraries/CityBuildingTypes.sol";
+import "../interfaces/ICityBuildingNFTV1Like.sol";
 
 /*//////////////////////////////////////////////////////////////
                      EXTERNAL READ INTERFACES
 //////////////////////////////////////////////////////////////*/
-
-/// @notice Minimal read interface to the personal building NFT layer.
-interface ICityBuildingNFTV1PolicyRead {
-    function getBuildingCore(
-        uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingCore memory);
-
-    function isArchived(uint256 buildingId) external view returns (bool);
-
-    function isMigrationPrepared(uint256 buildingId) external view returns (bool);
-}
 
 /// @notice Adapter that resolves plot owner.
 interface ICityPlotOwnerAdapter {
@@ -107,7 +97,7 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
                                  STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    ICityBuildingNFTV1PolicyRead public buildingNFT;
+    ICityBuildingNFTV1Like public buildingNFT;
     ICityPlotOwnerAdapter public plotOwnerAdapter;
     ICityPlotInfoAdapter public plotInfoAdapter;
     ICityPlotStatusAdapter public plotStatusAdapter;
@@ -151,7 +141,7 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
             revert InvalidStatusAdapter();
         }
 
-        buildingNFT = ICityBuildingNFTV1PolicyRead(buildingNFT_);
+        buildingNFT = ICityBuildingNFTV1Like(buildingNFT_);
         plotOwnerAdapter = ICityPlotOwnerAdapter(plotOwnerAdapter_);
         plotInfoAdapter = ICityPlotInfoAdapter(plotInfoAdapter_);
         plotStatusAdapter = ICityPlotStatusAdapter(plotStatusAdapter_);
@@ -176,7 +166,7 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
         if (buildingNFT_ == address(0)) revert ZeroAddress();
         if (buildingNFT_.code.length == 0) revert InvalidBuildingNFT();
 
-        buildingNFT = ICityBuildingNFTV1PolicyRead(buildingNFT_);
+        buildingNFT = ICityBuildingNFTV1Like(buildingNFT_);
         emit BuildingNFTSet(buildingNFT_, msg.sender);
     }
 
@@ -322,25 +312,14 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
             bytes32 reasonCode
         )
     {
-        if (paused()) {
-            return _fail("PAUSED");
-        }
+        if (paused()) return _fail("PAUSED");
+        if (owner == address(0)) return _fail("OWNER_ZERO");
+        if (plotId == 0) return _fail("PLOT_ZERO");
 
-        if (owner == address(0)) {
-            return _fail("OWNER_ZERO");
-        }
+        if (address(buildingNFT) == address(0)) return _fail("BUILDING_NFT_NOT_SET");
 
-        if (address(buildingNFT) == address(0)) {
-            return _fail("BUILDING_NFT_NOT_SET");
-        }
-
-        if (buildingNFT.isArchived(buildingId)) {
-            return _fail("BUILDING_ARCHIVED");
-        }
-
-        if (buildingNFT.isMigrationPrepared(buildingId)) {
-            return _fail("BUILDING_PREPARED");
-        }
+        if (buildingNFT.isArchived(buildingId)) return _fail("BUILDING_ARCHIVED");
+        if (buildingNFT.isMigrationPrepared(buildingId)) return _fail("BUILDING_PREPARED");
 
         CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
 
