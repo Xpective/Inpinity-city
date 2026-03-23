@@ -75,15 +75,20 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
     error ZeroAddress();
     error InvalidBuildingContract();
     error InvalidPolicyContract();
+    error InvalidPlotId();
+
     error BuildingAlreadyPlaced();
     error BuildingNotPlaced();
     error PlotAlreadyOccupied();
     error NotBuildingOwner();
+
     error InvalidBuildingCategory();
     error InvalidBuildingType();
+
     error BuildingArchived();
     error BuildingStateNotUnplaced();
     error PlacementPolicyRejected(bytes32 reasonCode);
+
     error InvalidMigrationConfig();
     error MigrationTargetNotSet();
     error MigrationClosed();
@@ -293,6 +298,8 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         notPrepared(buildingId)
         notArchivedPlacement(buildingId)
     {
+        if (plotId == 0) revert InvalidPlotId();
+
         _requireNftNotPrepared(buildingId);
         _validateBuildingPlaceable(buildingId);
 
@@ -310,7 +317,12 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
             bytes32 reasonCode
         ) = placementPolicy.validatePersonalPlacement(msg.sender, plotId, buildingId);
 
-        ownerMatches; plotCompleted; plotEligible; personalPlot; districtAllowed; factionAllowed;
+        ownerMatches;
+        plotCompleted;
+        plotEligible;
+        personalPlot;
+        districtAllowed;
+        factionAllowed;
 
         if (!allowed) revert PlacementPolicyRejected(reasonCode);
 
@@ -369,6 +381,9 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
             delete plotOfBuilding[buildingId];
 
             CityBuildingTypes.BuildingPlacement storage cleared = _placementOfBuilding[buildingId];
+            if (cleared.placedAt != 0) {
+                cleared.lastPlacedAt = cleared.placedAt;
+            }
             cleared.plotId = 0;
             cleared.placedAt = 0;
             cleared.placedBy = address(0);
@@ -385,11 +400,12 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
             plotOfBuilding[buildingId] = newPlotId;
 
             CityBuildingTypes.BuildingPlacement storage placement = _placementOfBuilding[buildingId];
-            uint64 oldPlacedAt = placement.placedAt;
+            uint64 ts = uint64(block.timestamp);
+            uint64 previousPlacedAt = placement.placedAt != 0 ? placement.placedAt : placement.lastPlacedAt;
 
             placement.plotId = newPlotId;
-            placement.lastPlacedAt = oldPlacedAt == 0 ? uint64(block.timestamp) : oldPlacedAt;
-            placement.placedAt = uint64(block.timestamp);
+            placement.lastPlacedAt = previousPlacedAt == 0 ? ts : previousPlacedAt;
+            placement.placedAt = ts;
             placement.placedBy = msg.sender;
 
             if (syncNftPlacedFlag) {
@@ -472,9 +488,7 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         }
 
         uint256 oldPlotId = plotOfBuilding[buildingId];
-        if (oldPlotId != 0) {
-            revert CannotPrepareWhilePlaced();
-        }
+        if (oldPlotId != 0) revert CannotPrepareWhilePlaced();
 
         archivedToV2[buildingId] = true;
         preparedForMigration[buildingId] = false;
@@ -520,6 +534,9 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
             bytes32 reasonCode
         )
     {
+        if (plotId == 0) {
+            return (false, false, false, false, false, false, false, keccak256("INVALID_PLOT"));
+        }
         if (archivedToV2[buildingId]) {
             return (false, false, false, false, false, false, false, keccak256("ARCHIVED"));
         }
@@ -600,27 +617,24 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         uint256 plotId,
         address owner
     ) internal {
+        uint64 ts = uint64(block.timestamp);
+
         buildingOnPlot[plotId] = buildingId;
         plotOfBuilding[buildingId] = plotId;
 
         CityBuildingTypes.BuildingPlacement storage placement = _placementOfBuilding[buildingId];
-        uint64 oldPlacedAt = placement.placedAt;
+        uint64 previousPlacedAt = placement.placedAt != 0 ? placement.placedAt : placement.lastPlacedAt;
 
         placement.plotId = plotId;
-        placement.lastPlacedAt = oldPlacedAt == 0 ? uint64(block.timestamp) : oldPlacedAt;
-        placement.placedAt = uint64(block.timestamp);
+        placement.lastPlacedAt = previousPlacedAt == 0 ? ts : previousPlacedAt;
+        placement.placedAt = ts;
         placement.placedBy = owner;
 
         placedBuildingCountByOwner[owner] += 1;
 
         buildingNFT.setPlaced(buildingId, true);
 
-        emit BuildingPlaced(
-            buildingId,
-            plotId,
-            owner,
-            uint64(block.timestamp)
-        );
+        emit BuildingPlaced(buildingId, plotId, owner, ts);
     }
 
     function _unplace(
@@ -636,6 +650,9 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         delete plotOfBuilding[buildingId];
 
         CityBuildingTypes.BuildingPlacement storage placement = _placementOfBuilding[buildingId];
+        if (placement.placedAt != 0) {
+            placement.lastPlacedAt = placement.placedAt;
+        }
         placement.plotId = 0;
         placement.placedAt = 0;
         placement.placedBy = address(0);
@@ -677,7 +694,6 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         }
 
         CityBuildingTypes.BuildingState currentState = buildingNFT.getBuildingState(buildingId);
-
         if (currentState != CityBuildingTypes.BuildingState.Unplaced) {
             revert BuildingStateNotUnplaced();
         }

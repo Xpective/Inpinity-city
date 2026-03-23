@@ -124,6 +124,207 @@ interface IPersonalBuildingMintPlotAdapter {
         );
 }
 
+interface ICityBuildingFunctionRegistry {
+    struct FunctionProfile {
+        CityBuildingTypes.PersonalBuildingType buildingType;
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint8 evolutionTier;
+        uint8 visualTier;
+        uint8 utilityTier;
+        uint8 craftTier;
+        uint8 techTier;
+        uint8 defenseTier;
+        uint8 marketTier;
+        uint8 vaultTier;
+        bool vaultEligible;
+        bool marketEligible;
+        bool craftingEligible;
+        bool researchEligible;
+        bool defenseEligible;
+        bool prestigeEligible;
+    }
+
+    struct ResidenceProfile {
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint8 showcaseSlots;
+        uint8 trophySlots;
+        uint16 prestigePresentationBps;
+        bool legacyFlag;
+        bool galleryEligible;
+        bool trophyHallEligible;
+    }
+
+    struct FarmingHubProfile {
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint16 farmingBoostBps;
+        uint16 boostDurationBps;
+        uint16 claimWindowBonusBps;
+        uint16 farmChainBonusBps;
+    }
+
+    struct ForgeProfile {
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint8 craftingAccessTier;
+        uint8 recipeTier;
+        uint16 craftCostReductionBps;
+        uint16 craftProvenanceBonusBps;
+        uint16 outputQualityBps;
+        bool creatorBranchEligible;
+    }
+
+    struct WarehouseProfile {
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint8 vaultTier;
+        uint16 vaultCapBps;
+        uint16 storageCapBps;
+        uint16 logisticsBonusBps;
+        uint16 protectedShareBps;
+        uint16 raidableShareBps;
+        bool vaultEnabledEligible;
+        bool repairPrepEligible;
+        bool rebelsPrepEligible;
+    }
+
+    struct MarketStallProfile {
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint16 listingCap;
+        uint256 categoryMask;
+        uint16 marketFeeReductionBps;
+        uint16 premiumVisibilityBps;
+        bool provenancePremiumFlag;
+    }
+
+    struct GuardTowerProfile {
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint16 defenseBps;
+        uint16 warehouseProtectionBps;
+        uint16 raidMitigationBps;
+        uint8 radarTier;
+        uint8 shieldTier;
+        uint16 mercenarySynergyBps;
+    }
+
+    struct ResearchLabProfile {
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        uint8 techTier;
+        uint256 discoveryMask;
+        uint8 blueprintUnlockTier;
+        bool enchantPrepFlag;
+        bool materiaPrepFlag;
+        uint16 forgeSynergyBps;
+    }
+
+    function getFunctionProfile(
+        uint256 buildingId
+    ) external view returns (FunctionProfile memory);
+
+    function getResidenceProfile(
+        uint256 buildingId
+    ) external view returns (ResidenceProfile memory);
+
+    function getFarmingHubProfile(
+        uint256 buildingId
+    ) external view returns (FarmingHubProfile memory);
+
+    function getForgeProfile(
+        uint256 buildingId
+    ) external view returns (ForgeProfile memory);
+
+    function getWarehouseProfile(
+        uint256 buildingId
+    ) external view returns (WarehouseProfile memory);
+
+    function getMarketStallProfile(
+        uint256 buildingId
+    ) external view returns (MarketStallProfile memory);
+
+    function getGuardTowerProfile(
+        uint256 buildingId
+    ) external view returns (GuardTowerProfile memory);
+
+    function getResearchLabProfile(
+        uint256 buildingId
+    ) external view returns (ResearchLabProfile memory);
+}
+
+interface ICityBuildingVault {
+    struct WarehouseVaultProfile {
+        bool vaultEnabled;
+        bool raidEnabled;
+        bool repairRequired;
+        bool emergencyLocked;
+        uint8 vaultTier;
+        uint8 defenseTier;
+        uint8 decayState;
+        uint8 repairState;
+        uint32 vaultCapBps;
+        uint32 defenseBps;
+        uint32 raidMitigationBps;
+        uint32 damageBps;
+        uint64 activatedAt;
+        uint64 lastVaultActionAt;
+        uint64 lastDecayCheckAt;
+        uint64 lastRepairAt;
+        uint64 lastRaidAt;
+    }
+
+    struct VaultResourceState {
+        uint256 stored;
+        uint256 reserved;
+        uint256 protectedAmount;
+        uint256 raidableAmount;
+    }
+
+    function getWarehouseVaultProfile(
+        uint256 buildingId
+    ) external view returns (WarehouseVaultProfile memory);
+
+    function getWarehouseVaultResourceState(
+        uint256 buildingId,
+        uint8 resourceId
+    ) external view returns (VaultResourceState memory);
+
+    function isWarehouseVaultEnabled(
+        uint256 buildingId
+    ) external view returns (bool);
+
+    function getWarehouseVaultCapBps(
+        uint256 buildingId
+    ) external view returns (uint32);
+
+    function getWarehouseVaultDefenseProfile(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint8 defenseTier,
+            uint32 defenseBps,
+            uint32 raidMitigationBps,
+            uint32 damageBps
+        );
+
+    function getWarehouseVaultTotals(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint256 totalStored,
+            uint256 totalReserved,
+            uint256 totalProtected,
+            uint256 totalRaidable
+        );
+}
+
 /*//////////////////////////////////////////////////////////////
                          PERSONAL BUILDINGS
 //////////////////////////////////////////////////////////////*/
@@ -142,7 +343,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     uint8 public constant RESOURCE_SLOT_COUNT = 10;
-    uint32 public constant DEFAULT_VERSION_TAG = CityBuildingTypes.VERSION_TAG_V1;
+    uint32 public constant DEFAULT_VERSION_TAG = 1;
     uint256 public constant MAX_BATCH_SET = 100;
 
     /*//////////////////////////////////////////////////////////////
@@ -157,6 +358,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     error InvalidTechAdapter();
     error InvalidStatusHookAdapter();
     error InvalidMintPlotAdapter();
+    error InvalidFunctionRegistry();
+    error InvalidVault();
 
     error InvalidBuildingCategory();
     error InvalidBuildingType();
@@ -164,6 +367,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     error InvalidSpecialization();
     error InvalidVersionTag();
     error InvalidConfig();
+    error InvalidResourceId();
     error MaxLevelReached();
 
     error NotBuildingOwner();
@@ -190,6 +394,9 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     error NoIdsProvided();
     error BatchLengthMismatch();
     error BatchTooLarge(uint256 provided, uint256 maxAllowed);
+    error FunctionRegistryNotSet();
+    error VaultNotSet();
+    error NotWarehouseBuilding();
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -202,6 +409,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     event TechAdapterSet(address indexed adapter, address indexed executor);
     event StatusHookAdapterSet(address indexed adapter, address indexed executor);
     event MintPlotAdapterSet(address indexed adapter, address indexed executor);
+    event FunctionRegistrySet(address indexed registry, address indexed executor);
+    event VaultSet(address indexed vault, address indexed executor);
 
     event MintCostConfigured(
         CityBuildingTypes.PersonalBuildingType indexed buildingType,
@@ -285,6 +494,9 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     IPersonalBuildingTechAdapter public techAdapter;
     IPersonalBuildingStatusHookAdapter public statusHookAdapter;
     IPersonalBuildingMintPlotAdapter public mintPlotAdapter;
+
+    ICityBuildingFunctionRegistry public functionRegistry;
+    ICityBuildingVault public vault;
 
     struct MintCostConfig {
         uint256[10] resourceAmounts;
@@ -442,6 +654,28 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         emit MintPlotAdapterSet(adapter_, msg.sender);
     }
 
+    function setFunctionRegistry(address registry_) external onlyRole(LOGIC_ADMIN_ROLE) {
+        if (registry_ == address(0)) {
+            functionRegistry = ICityBuildingFunctionRegistry(address(0));
+        } else {
+            if (registry_.code.length == 0) revert InvalidFunctionRegistry();
+            functionRegistry = ICityBuildingFunctionRegistry(registry_);
+        }
+
+        emit FunctionRegistrySet(registry_, msg.sender);
+    }
+
+    function setVault(address vault_) external onlyRole(LOGIC_ADMIN_ROLE) {
+        if (vault_ == address(0)) {
+            vault = ICityBuildingVault(address(0));
+        } else {
+            if (vault_.code.length == 0) revert InvalidVault();
+            vault = ICityBuildingVault(vault_);
+        }
+
+        emit VaultSet(vault_, msg.sender);
+    }
+
     /*//////////////////////////////////////////////////////////////
                              CONFIG SETTERS
     //////////////////////////////////////////////////////////////*/
@@ -596,6 +830,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
         if (address(mintPlotAdapter) == address(0)) revert MintAdapterNotSet();
         if (plotMintUsed[plotId]) revert PlotMintAlreadyUsed();
+        if (plotId == 0) revert PlotNotFound();
 
         (
             address plotOwner,
@@ -674,7 +909,10 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         if (core.level >= CityBuildingTypes.MAX_BUILDING_LEVEL) revert MaxLevelReached();
 
         CityBuildingTypes.BuildingState state_ = buildingNFT.getBuildingState(buildingId);
-        if (state_ == CityBuildingTypes.BuildingState.None || state_ == CityBuildingTypes.BuildingState.Archived) {
+        if (
+            state_ == CityBuildingTypes.BuildingState.None ||
+            state_ == CityBuildingTypes.BuildingState.Archived
+        ) {
             revert BuildingStateNotUpgradeable();
         }
 
@@ -684,8 +922,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
 
         uint64 lastExec = lastUpgradeExecutionAt[buildingId];
         if (cfg.cooldown > 0 && lastExec > 0) {
-            uint64 readyAt = lastExec + cfg.cooldown;
-            if (block.timestamp < readyAt) revert UpgradeCooldownActive(readyAt);
+            uint64 readyAt_ = lastExec + cfg.cooldown;
+            if (block.timestamp < readyAt_) revert UpgradeCooldownActive(readyAt_);
         }
 
         if (address(techAdapter) != address(0)) {
@@ -747,7 +985,10 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         if (core.specialization == specialization) revert NoStateChange();
 
         CityBuildingTypes.BuildingState state_ = buildingNFT.getBuildingState(buildingId);
-        if (state_ == CityBuildingTypes.BuildingState.None || state_ == CityBuildingTypes.BuildingState.Archived) {
+        if (
+            state_ == CityBuildingTypes.BuildingState.None ||
+            state_ == CityBuildingTypes.BuildingState.Archived
+        ) {
             revert BuildingStateNotSpecializable();
         }
 
@@ -1080,6 +1321,147 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         return _specializationConfigs[uint8(specialization)];
     }
 
+    function getBuildingFunctionProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.FunctionProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getFunctionProfile(buildingId);
+    }
+
+    function getResidenceProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.ResidenceProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getResidenceProfile(buildingId);
+    }
+
+    function getFarmingHubProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.FarmingHubProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getFarmingHubProfile(buildingId);
+    }
+
+    function getForgeProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.ForgeProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getForgeProfile(buildingId);
+    }
+
+    function getWarehouseProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.WarehouseProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getWarehouseProfile(buildingId);
+    }
+
+    function getMarketStallProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.MarketStallProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getMarketStallProfile(buildingId);
+    }
+
+    function getGuardTowerProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.GuardTowerProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getGuardTowerProfile(buildingId);
+    }
+
+    function getResearchLabProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingFunctionRegistry.ResearchLabProfile memory) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+        return functionRegistry.getResearchLabProfile(buildingId);
+    }
+
+    function getWarehouseVaultProfile(
+        uint256 buildingId
+    ) external view returns (ICityBuildingVault.WarehouseVaultProfile memory) {
+        if (address(vault) == address(0)) revert VaultNotSet();
+
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            revert NotWarehouseBuilding();
+        }
+
+        return vault.getWarehouseVaultProfile(buildingId);
+    }
+
+    function getWarehouseVaultResourceState(
+        uint256 buildingId,
+        uint8 resourceId
+    ) external view returns (ICityBuildingVault.VaultResourceState memory) {
+        if (address(vault) == address(0)) revert VaultNotSet();
+        if (resourceId >= RESOURCE_SLOT_COUNT) revert InvalidResourceId();
+
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            revert NotWarehouseBuilding();
+        }
+
+        return vault.getWarehouseVaultResourceState(buildingId, resourceId);
+    }
+
+    function isWarehouseVaultEnabled(
+        uint256 buildingId
+    ) external view returns (bool) {
+        if (address(vault) == address(0)) revert VaultNotSet();
+
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            revert NotWarehouseBuilding();
+        }
+
+        return vault.isWarehouseVaultEnabled(buildingId);
+    }
+
+    function getWarehouseVaultDefenseProfile(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint8 defenseTier,
+            uint32 defenseBps,
+            uint32 raidMitigationBps,
+            uint32 damageBps
+        )
+    {
+        if (address(vault) == address(0)) revert VaultNotSet();
+
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            revert NotWarehouseBuilding();
+        }
+
+        return vault.getWarehouseVaultDefenseProfile(buildingId);
+    }
+
+    function getWarehouseVaultTotals(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint256 totalStored,
+            uint256 totalReserved,
+            uint256 totalProtected,
+            uint256 totalRaidable
+        )
+    {
+        if (address(vault) == address(0)) revert VaultNotSet();
+
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            revert NotWarehouseBuilding();
+        }
+
+        return vault.getWarehouseVaultTotals(buildingId);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                INTERNALS
     //////////////////////////////////////////////////////////////*/
@@ -1098,13 +1480,19 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         uint256[10] memory amounts,
         bytes32 reason
     ) internal {
-        if (address(resourceAdapter) == address(0)) {
-            for (uint256 i = 0; i < RESOURCE_SLOT_COUNT; i++) {
-                if (amounts[i] != 0) revert InvalidConfig();
+        bool hasCost;
+        for (uint256 i = 0; i < RESOURCE_SLOT_COUNT; i++) {
+            if (amounts[i] != 0) {
+                hasCost = true;
+                break;
             }
+        }
+
+        if (!hasCost) {
             return;
         }
 
+        if (address(resourceAdapter) == address(0)) revert InvalidConfig();
         resourceAdapter.burnResourceBundle(from, amounts, reason);
     }
 

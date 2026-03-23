@@ -4,30 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
-/*//////////////////////////////////////////////////////////////
-                         ROUTER INTERFACES
-//////////////////////////////////////////////////////////////*/
-
-/// @notice Common personal-placement policy interface used by CityBuildingPlacement.
-interface ICityPersonalPlacementPolicy {
-    function validatePersonalPlacement(
-        address owner,
-        uint256 plotId,
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            bool allowed,
-            bool ownerMatches,
-            bool plotCompleted,
-            bool plotEligible,
-            bool personalPlot,
-            bool districtAllowed,
-            bool factionAllowed,
-            bytes32 reasonCode
-        );
-}
+import "../interfaces/ICityBuildingPlacementPolicy.sol";
 
 /*//////////////////////////////////////////////////////////////
                     CITY BUILDING POLICY ROUTER
@@ -69,7 +46,7 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Active policy for personal building placement.
-    address public personalPlacementPolicy;
+    ICityBuildingPlacementPolicy public personalPlacementPolicy;
 
     /// @notice Reserved for future contracts.
     address public communityPolicy;
@@ -103,7 +80,7 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
         if (policy_ == address(0)) revert ZeroAddress();
         if (policy_.code.length == 0) revert InvalidPolicy();
 
-        personalPlacementPolicy = policy_;
+        personalPlacementPolicy = ICityBuildingPlacementPolicy(policy_);
         emit PersonalPlacementPolicySet(policy_, msg.sender);
     }
 
@@ -159,14 +136,10 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
     {
         if (paused()) revert RouterPaused();
 
-        address policy = personalPlacementPolicy;
-        if (policy == address(0)) revert PersonalPolicyNotSet();
+        ICityBuildingPlacementPolicy policy = personalPlacementPolicy;
+        if (address(policy) == address(0)) revert PersonalPolicyNotSet();
 
-        return ICityPersonalPlacementPolicy(policy).validatePersonalPlacement(
-            owner,
-            plotId,
-            buildingId
-        );
+        return policy.validatePersonalPlacement(owner, plotId, buildingId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -174,7 +147,7 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     function hasPersonalPolicy() external view returns (bool) {
-        return personalPlacementPolicy != address(0);
+        return address(personalPlacementPolicy) != address(0);
     }
 
     function hasCommunityPolicy() external view returns (bool) {
@@ -201,7 +174,7 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
         )
     {
         return (
-            personalPlacementPolicy,
+            address(personalPlacementPolicy),
             communityPolicy,
             borderlinePolicy,
             nexusPolicy,

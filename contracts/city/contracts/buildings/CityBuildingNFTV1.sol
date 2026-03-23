@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../libraries/CityBuildingTypes.sol";
 
@@ -26,6 +27,10 @@ interface ICityBuildingNFTV1PersonalLogic {
     function getBuildingMeta(
         uint256 buildingId
     ) external view returns (CityBuildingTypes.BuildingMeta memory);
+
+    function getBuildingState(
+        uint256 buildingId
+    ) external view returns (CityBuildingTypes.BuildingState);
 
     function isArchived(uint256 buildingId) external view returns (bool);
 
@@ -67,6 +72,7 @@ interface ICityBuildingPlacementPersonalRead {
 }
 
 /// @notice Resource adapter for ResourceToken / city resource burning.
+/// @dev PersonalBuildings must receive CALLER_ROLE on the adapter.
 interface IPersonalBuildingResourceAdapter {
     function burnResourceBundle(
         address from,
@@ -75,7 +81,8 @@ interface IPersonalBuildingResourceAdapter {
     ) external;
 }
 
-/// @notice Optional PIT/Pitrone fee adapter.
+/// @notice PIT / Pitrone fee adapter.
+/// @dev PersonalBuildings must receive CALLER_ROLE on the adapter.
 interface IPersonalBuildingPitAdapter {
     function collectPitFee(
         address from,
@@ -131,15 +138,26 @@ interface IPersonalBuildingMintPlotAdapter {
 
 /// @title PersonalBuildings
 /// @notice Gameplay logic layer for personal buildings:
-///         - player-facing mint by owned plot
-///         - upgrade costs / cooldowns
-///         - specialization costs
-///         - optional PIT / tech / status hooks
-///         - set / synergy reads
-/// @dev CityBuildingNFTV1 remains the asset layer.
-///      CityBuildingPlacement remains placement truth.
-///      This contract must receive MINTER_ROLE, UPGRADER_ROLE and USAGE_ROLE on the NFT contract.
-contract PersonalBuildings is AccessControl, Pausable {
+///         - player-facing mint by owned completed personal plot
+///         - configurable mint / upgrade / specialization costs
+///         - resource burning via adapter
+///         - PIT fee collection via adapter
+///         - optional tech-gating via adapter
+///         - optional plot activity touch via status hook adapter
+///         - read helpers for quotes / set progress / synergies
+///
+/// @dev This contract sits above:
+///      - CityBuildingNFTV1     (asset / identity layer)
+///      - CityBuildingPlacement (placement truth layer)
+///
+///      Required role grants after deploy:
+///      - On CityBuildingNFTV1:
+///          MINTER_ROLE, UPGRADER_ROLE, USAGE_ROLE
+///      - On CityResourceAdapter:
+///          CALLER_ROLE
+///      - On CityPitAdapter:
+///          CALLER_ROLE
+contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
@@ -149,10 +167,12 @@ contract PersonalBuildings is AccessControl, Pausable {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /*//////////////////////////////////////////////////////////////
-                                 CONSTANTS
+                               CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
     uint8 public constant RESOURCE_SLOT_COUNT = 10;
+    uint32 public constant DEFAULT_VERSION_TAG = CityBuildingTypes.VERSION_TAG_V1;
+    uint256 public constant DEFAULT_MAX_BATCH_SET = 100;
 
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
@@ -170,11 +190,18 @@ contract PersonalBuildings is AccessControl, Pausable {
     error InvalidBuildingCategory();
     error InvalidBuildingType();
     error InvalidLevel();
+    error InvalidSpecialization();
+    error InvalidVersionTag();
     error InvalidConfig();
     error MaxLevelReached();
+    error NoStateChange();
+
     error NotBuildingOwner();
     error BuildingArchived();
     error BuildingPreparedForMigration();
+    error BuildingStateNotUpgradeable();
+    error BuildingStateNotSpecializable();
+
     error UpgradeCooldownActive(uint64 readyAt);
     error UpgradeNotConfigured();
     error SpecializationNotConfigured();
@@ -188,8 +215,11 @@ contract PersonalBuildings is AccessControl, Pausable {
     error PlotNotEligibleForMint();
     error PlotOwnerMismatch();
     error PlotMintAlreadyUsed();
+    error InvalidPlotId();
 
     error NoIdsProvided();
+    error BatchLengthMismatch();
+    error BatchTooLarge(uint256 provided, uint256 maxAllowed);
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -203,12 +233,15 @@ contract PersonalBuildings is AccessControl, Pausable {
     event StatusHookAdapterSet(address indexed adapter, address indexed executor);
     event MintPlotAdapterSet(address indexed adapter, address indexed executor);
 
+    event MaxBatchSetUpdated(uint256 oldValue, uint256 newValue, address indexed executor);
+
     event MintCostConfigured(
         CityBuildingTypes.PersonalBuildingType indexed buildingType,
         uint256[10] resourceAmounts,
         uint256 pitFee,
         uint32 prestigeReward,
         uint32 historyReward,
+        bool configured,
         address indexed executor
     );
 
@@ -220,6 +253,7 @@ contract PersonalBuildings is AccessControl, Pausable {
         uint64 cooldown,
         uint32 prestigeReward,
         uint32 historyReward,
+        bool configured,
         address indexed executor
     );
 
@@ -229,6 +263,20 @@ contract PersonalBuildings is AccessControl, Pausable {
         uint256 pitFee,
         uint32 prestigeReward,
         uint32 historyReward,
+        bool configured,
+        address indexed executor
+    );
+
+    event PlotMintEntitlementUpdated(
+        uint256 indexed plotId,
+        bool used,
+        uint256 indexed buildingId,
+        address indexed executor
+    );
+
+    event LastUpgradeExecutionAtUpdated(
+        uint256 indexed buildingId,
+        uint64 lastExecutionAt,
         address indexed executor
     );
 
@@ -269,6 +317,8 @@ contract PersonalBuildings is AccessControl, Pausable {
     IPersonalBuildingTechAdapter public techAdapter;
     IPersonalBuildingStatusHookAdapter public statusHookAdapter;
     IPersonalBuildingMintPlotAdapter public mintPlotAdapter;
+
+    uint256 public maxBatchSet = DEFAULT_MAX_BATCH_SET;
 
     struct MintCostConfig {
         uint256[10] resourceAmounts;
@@ -436,12 +486,26 @@ contract PersonalBuildings is AccessControl, Pausable {
         emit MintPlotAdapterSet(adapter_, msg.sender);
     }
 
+    function setMaxBatchSet(uint256 newValue) external onlyRole(CONFIG_ROLE) {
+        if (newValue == 0) revert InvalidConfig();
+
+        uint256 oldValue = maxBatchSet;
+        maxBatchSet = newValue;
+
+        emit MaxBatchSetUpdated(oldValue, newValue, msg.sender);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             CONFIG SETTERS
+    //////////////////////////////////////////////////////////////*/
+
     function setMintCostConfig(
         CityBuildingTypes.PersonalBuildingType buildingType,
         uint256[10] calldata resourceAmounts,
         uint256 pitFee,
         uint32 prestigeReward,
-        uint32 historyReward
+        uint32 historyReward,
+        bool configured
     ) external onlyRole(CONFIG_ROLE) {
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
 
@@ -450,7 +514,7 @@ contract PersonalBuildings is AccessControl, Pausable {
             pitFee: pitFee,
             prestigeReward: prestigeReward,
             historyReward: historyReward,
-            configured: true
+            configured: configured
         });
 
         emit MintCostConfigured(
@@ -459,6 +523,7 @@ contract PersonalBuildings is AccessControl, Pausable {
             pitFee,
             prestigeReward,
             historyReward,
+            configured,
             msg.sender
         );
     }
@@ -470,10 +535,11 @@ contract PersonalBuildings is AccessControl, Pausable {
         uint256 pitFee,
         uint64 cooldown,
         uint32 prestigeReward,
-        uint32 historyReward
+        uint32 historyReward,
+        bool configured
     ) external onlyRole(CONFIG_ROLE) {
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
-        if (!CityBuildingTypes.isValidLevel(targetLevel) || targetLevel == 1) revert InvalidLevel();
+        if (!CityBuildingTypes.isValidLevel(targetLevel) || targetLevel <= 1) revert InvalidLevel();
 
         _upgradeConfigs[uint8(buildingType)][targetLevel] = UpgradeCostConfig({
             resourceAmounts: resourceAmounts,
@@ -481,7 +547,7 @@ contract PersonalBuildings is AccessControl, Pausable {
             cooldown: cooldown,
             prestigeReward: prestigeReward,
             historyReward: historyReward,
-            configured: true
+            configured: configured
         });
 
         emit UpgradeCostConfigured(
@@ -492,6 +558,7 @@ contract PersonalBuildings is AccessControl, Pausable {
             cooldown,
             prestigeReward,
             historyReward,
+            configured,
             msg.sender
         );
     }
@@ -501,16 +568,19 @@ contract PersonalBuildings is AccessControl, Pausable {
         uint256[10] calldata resourceAmounts,
         uint256 pitFee,
         uint32 prestigeReward,
-        uint32 historyReward
+        uint32 historyReward,
+        bool configured
     ) external onlyRole(CONFIG_ROLE) {
-        if (specialization == CityBuildingTypes.BuildingSpecialization.None) revert InvalidConfig();
+        if (specialization == CityBuildingTypes.BuildingSpecialization.None) {
+            revert InvalidSpecialization();
+        }
 
         _specializationConfigs[uint8(specialization)] = SpecializationCostConfig({
             resourceAmounts: resourceAmounts,
             pitFee: pitFee,
             prestigeReward: prestigeReward,
             historyReward: historyReward,
-            configured: true
+            configured: configured
         });
 
         emit SpecializationCostConfigured(
@@ -519,8 +589,58 @@ contract PersonalBuildings is AccessControl, Pausable {
             pitFee,
             prestigeReward,
             historyReward,
+            configured,
             msg.sender
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                           OPERATOR / RECOVERY
+    //////////////////////////////////////////////////////////////*/
+
+    function setPlotMintUsage(
+        uint256 plotId,
+        bool used,
+        uint256 buildingId
+    ) external onlyRole(OPERATOR_ROLE) {
+        if (plotId == 0) revert InvalidPlotId();
+
+        plotMintUsed[plotId] = used;
+        mintedBuildingIdByPlot[plotId] = used ? buildingId : 0;
+
+        emit PlotMintEntitlementUpdated(plotId, used, mintedBuildingIdByPlot[plotId], msg.sender);
+    }
+
+    function batchSetPlotMintUsage(
+        uint256[] calldata plotIds,
+        bool[] calldata usedFlags,
+        uint256[] calldata buildingIds
+    ) external onlyRole(OPERATOR_ROLE) {
+        uint256 len = plotIds.length;
+        if (len != usedFlags.length || len != buildingIds.length) revert BatchLengthMismatch();
+        if (len > maxBatchSet) revert BatchTooLarge(len, maxBatchSet);
+
+        for (uint256 i = 0; i < len; i++) {
+            if (plotIds[i] == 0) revert InvalidPlotId();
+
+            plotMintUsed[plotIds[i]] = usedFlags[i];
+            mintedBuildingIdByPlot[plotIds[i]] = usedFlags[i] ? buildingIds[i] : 0;
+
+            emit PlotMintEntitlementUpdated(
+                plotIds[i],
+                usedFlags[i],
+                mintedBuildingIdByPlot[plotIds[i]],
+                msg.sender
+            );
+        }
+    }
+
+    function setLastUpgradeExecutionAt(
+        uint256 buildingId,
+        uint64 ts
+    ) external onlyRole(OPERATOR_ROLE) {
+        lastUpgradeExecutionAt[buildingId] = ts;
+        emit LastUpgradeExecutionAtUpdated(buildingId, ts, msg.sender);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -529,15 +649,16 @@ contract PersonalBuildings is AccessControl, Pausable {
 
     /// @notice Player-facing mint: a player who owns a valid personal plot may mint one building using that plot as entitlement.
     /// @dev This does NOT auto-place the building. Placement remains in CityBuildingPlacement.
-    ///      To enable this flow, grant MINTER_ROLE on CityBuildingNFTV1 to this contract.
     function mintPersonalBuildingForOwnedPlot(
         uint256 plotId,
         CityBuildingTypes.PersonalBuildingType buildingType,
         uint32 versionTag
-    ) external whenNotPaused returns (uint256 buildingId) {
+    ) external whenNotPaused nonReentrant returns (uint256 buildingId) {
+        if (plotId == 0) revert InvalidPlotId();
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
         if (address(mintPlotAdapter) == address(0)) revert MintAdapterNotSet();
         if (plotMintUsed[plotId]) revert PlotMintAlreadyUsed();
+        if (versionTag > 0 && versionTag != DEFAULT_VERSION_TAG) revert InvalidVersionTag();
 
         (
             address plotOwner,
@@ -549,7 +670,6 @@ contract PersonalBuildings is AccessControl, Pausable {
             uint8 faction
         ) = mintPlotAdapter.getMintPlotInfo(plotId);
 
-        // silence warnings but keep future expansion open
         districtKind;
         faction;
 
@@ -562,13 +682,15 @@ contract PersonalBuildings is AccessControl, Pausable {
         MintCostConfig memory cfg = _mintConfigs[uint8(buildingType)];
         if (!cfg.configured) revert MintNotConfigured();
 
-        _consumeResources(msg.sender, cfg.resourceAmounts, keccak256("PERSONAL_BUILDING_MINT"));
-        _collectPitFee(msg.sender, cfg.pitFee, keccak256("PERSONAL_BUILDING_MINT"));
+        bytes32 reason = _mintReason(plotId, buildingType);
+
+        _consumeResources(msg.sender, cfg.resourceAmounts, reason);
+        _collectPitFee(msg.sender, cfg.pitFee, reason);
 
         buildingId = buildingNFT.mintBuilding(
             msg.sender,
             buildingType,
-            versionTag == 0 ? CityBuildingTypes.VERSION_TAG_V1 : versionTag
+            versionTag == 0 ? DEFAULT_VERSION_TAG : versionTag
         );
 
         plotMintUsed[plotId] = true;
@@ -597,7 +719,7 @@ contract PersonalBuildings is AccessControl, Pausable {
                            USER ACTIONS
     //////////////////////////////////////////////////////////////*/
 
-    function upgradeBuilding(uint256 buildingId) external whenNotPaused {
+    function upgradeBuilding(uint256 buildingId) external whenNotPaused nonReentrant {
         _requireBuildingOwner(buildingId);
         _requireBuildingMutable(buildingId);
 
@@ -608,7 +730,14 @@ contract PersonalBuildings is AccessControl, Pausable {
         if (!CityBuildingTypes.isValidLevel(core.level)) revert InvalidLevel();
         if (core.level >= CityBuildingTypes.MAX_BUILDING_LEVEL) revert MaxLevelReached();
 
-        uint8 targetLevel = core.level + 1;
+        CityBuildingTypes.BuildingState state_ = buildingNFT.getBuildingState(buildingId);
+        if (state_ == CityBuildingTypes.BuildingState.None || state_ == CityBuildingTypes.BuildingState.Archived) {
+            revert BuildingStateNotUpgradeable();
+        }
+
+        uint8 oldLevel = core.level;
+        uint8 targetLevel = oldLevel + 1;
+
         UpgradeCostConfig memory cfg = _upgradeConfigs[uint8(core.buildingType)][targetLevel];
         if (!cfg.configured) revert UpgradeNotConfigured();
 
@@ -628,8 +757,10 @@ contract PersonalBuildings is AccessControl, Pausable {
             if (!allowed) revert TechRequirementFailed(reasonCode);
         }
 
-        _consumeResources(msg.sender, cfg.resourceAmounts, keccak256("PERSONAL_BUILDING_UPGRADE"));
-        _collectPitFee(msg.sender, cfg.pitFee, keccak256("PERSONAL_BUILDING_UPGRADE"));
+        bytes32 reason = _upgradeReason(buildingId, targetLevel);
+
+        _consumeResources(msg.sender, cfg.resourceAmounts, reason);
+        _collectPitFee(msg.sender, cfg.pitFee, reason);
 
         buildingNFT.upgradeBuilding(buildingId, targetLevel);
         lastUpgradeExecutionAt[buildingId] = uint64(block.timestamp);
@@ -647,7 +778,7 @@ contract PersonalBuildings is AccessControl, Pausable {
         emit BuildingUpgradedThroughLogic(
             buildingId,
             core.buildingType,
-            core.level,
+            oldLevel,
             targetLevel,
             msg.sender,
             uint64(block.timestamp)
@@ -657,14 +788,27 @@ contract PersonalBuildings is AccessControl, Pausable {
     function specializeBuilding(
         uint256 buildingId,
         CityBuildingTypes.BuildingSpecialization specialization
-    ) external whenNotPaused {
+    ) external whenNotPaused nonReentrant {
         _requireBuildingOwner(buildingId);
         _requireBuildingMutable(buildingId);
+
+        if (specialization == CityBuildingTypes.BuildingSpecialization.None) {
+            revert InvalidSpecialization();
+        }
 
         CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
 
         if (core.category != CityBuildingTypes.BuildingCategory.Personal) revert InvalidBuildingCategory();
         if (!CityBuildingTypes.isValidBaseType(core.buildingType)) revert InvalidBuildingType();
+        if (!CityBuildingTypes.canChooseSpecialization(core.buildingType, core.level, specialization)) {
+            revert InvalidSpecialization();
+        }
+        if (core.specialization == specialization) revert NoStateChange();
+
+        CityBuildingTypes.BuildingState state_ = buildingNFT.getBuildingState(buildingId);
+        if (state_ == CityBuildingTypes.BuildingState.None || state_ == CityBuildingTypes.BuildingState.Archived) {
+            revert BuildingStateNotSpecializable();
+        }
 
         SpecializationCostConfig memory cfg = _specializationConfigs[uint8(specialization)];
         if (!cfg.configured) revert SpecializationNotConfigured();
@@ -679,8 +823,10 @@ contract PersonalBuildings is AccessControl, Pausable {
             if (!allowed) revert TechRequirementFailed(reasonCode);
         }
 
-        _consumeResources(msg.sender, cfg.resourceAmounts, keccak256("PERSONAL_BUILDING_SPECIALIZE"));
-        _collectPitFee(msg.sender, cfg.pitFee, keccak256("PERSONAL_BUILDING_SPECIALIZE"));
+        bytes32 reason = _specializationReason(buildingId, specialization);
+
+        _consumeResources(msg.sender, cfg.resourceAmounts, reason);
+        _collectPitFee(msg.sender, cfg.pitFee, reason);
 
         buildingNFT.specializeBuilding(buildingId, specialization);
 
@@ -717,7 +863,8 @@ contract PersonalBuildings is AccessControl, Pausable {
             uint256 pitFee,
             uint32 prestigeReward,
             uint32 historyReward,
-            bool configured
+            bool configured,
+            uint32 defaultVersionTag
         )
     {
         MintCostConfig memory cfg = _mintConfigs[uint8(buildingType)];
@@ -726,7 +873,8 @@ contract PersonalBuildings is AccessControl, Pausable {
             cfg.pitFee,
             cfg.prestigeReward,
             cfg.historyReward,
-            cfg.configured
+            cfg.configured,
+            DEFAULT_VERSION_TAG
         );
     }
 
@@ -742,6 +890,8 @@ contract PersonalBuildings is AccessControl, Pausable {
             uint256[10] memory resourceAmounts,
             uint256 pitFee,
             uint64 cooldown,
+            uint64 lastExec,
+            uint64 readyAt,
             uint32 prestigeReward,
             uint32 historyReward,
             bool configured
@@ -763,6 +913,8 @@ contract PersonalBuildings is AccessControl, Pausable {
                 0,
                 0,
                 0,
+                0,
+                0,
                 false
             );
         }
@@ -770,6 +922,27 @@ contract PersonalBuildings is AccessControl, Pausable {
         targetLevel = currentLevel + 1;
 
         UpgradeCostConfig memory cfg = _upgradeConfigs[uint8(buildingType)][targetLevel];
+        if (!cfg.configured) {
+            return (
+                buildingType,
+                currentLevel,
+                targetLevel,
+                resourceAmounts,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                false
+            );
+        }
+
+        lastExec = lastUpgradeExecutionAt[buildingId];
+        readyAt = cfg.cooldown == 0
+            ? uint64(block.timestamp)
+            : (lastExec == 0 ? uint64(block.timestamp) : lastExec + cfg.cooldown);
+
         return (
             buildingType,
             currentLevel,
@@ -777,6 +950,8 @@ contract PersonalBuildings is AccessControl, Pausable {
             cfg.resourceAmounts,
             cfg.pitFee,
             cfg.cooldown,
+            lastExec,
+            readyAt,
             cfg.prestigeReward,
             cfg.historyReward,
             cfg.configured
@@ -806,6 +981,41 @@ contract PersonalBuildings is AccessControl, Pausable {
         );
     }
 
+    function getMintEntitlementStatus(
+        uint256 plotId
+    )
+        external
+        view
+        returns (
+            bool used,
+            uint256 mintedBuildingId,
+            address owner,
+            bool exists,
+            bool completed,
+            bool personalPlot,
+            bool eligible,
+            uint8 districtKind,
+            uint8 faction
+        )
+    {
+        used = plotMintUsed[plotId];
+        mintedBuildingId = mintedBuildingIdByPlot[plotId];
+
+        if (address(mintPlotAdapter) == address(0)) {
+            return (used, mintedBuildingId, address(0), false, false, false, false, 0, 0);
+        }
+
+        (
+            owner,
+            exists,
+            completed,
+            personalPlot,
+            eligible,
+            districtKind,
+            faction
+        ) = mintPlotAdapter.getMintPlotInfo(plotId);
+    }
+
     struct PersonalSetProgress {
         bool hasResidence;
         bool hasFarmingHub;
@@ -824,10 +1034,14 @@ contract PersonalBuildings is AccessControl, Pausable {
     ) external view returns (PersonalSetProgress memory progress) {
         if (buildingIds.length == 0) revert NoIdsProvided();
 
-        for (uint256 i = 0; i < buildingIds.length; i++) {
-            if (buildingNFT.ownerOf(buildingIds[i]) != owner) continue;
+        uint256 len = buildingIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            uint256 buildingId = buildingIds[i];
 
-            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingIds[i]);
+            if (buildingNFT.ownerOf(buildingId) != owner) continue;
+            if (buildingNFT.isArchived(buildingId)) continue;
+
+            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
             if (core.category != CityBuildingTypes.BuildingCategory.Personal) continue;
 
             if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Residence && !progress.hasResidence) {
@@ -874,6 +1088,8 @@ contract PersonalBuildings is AccessControl, Pausable {
         bool residenceResearch;
         bool forgeWarehouse;
         bool forgeMarket;
+        bool warehouseGuardCore;
+        bool tradeFortressCore;
         bool fullSet;
     }
 
@@ -892,10 +1108,14 @@ contract PersonalBuildings is AccessControl, Pausable {
         bool hasGuardTower;
         bool hasResearchLab;
 
-        for (uint256 i = 0; i < buildingIds.length; i++) {
-            if (buildingNFT.ownerOf(buildingIds[i]) != owner) continue;
+        uint256 len = buildingIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            uint256 buildingId = buildingIds[i];
 
-            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingIds[i]);
+            if (buildingNFT.ownerOf(buildingId) != owner) continue;
+            if (buildingNFT.isArchived(buildingId)) continue;
+
+            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
             if (core.category != CityBuildingTypes.BuildingCategory.Personal) continue;
             if (core.level < minimumLevel) continue;
 
@@ -917,6 +1137,8 @@ contract PersonalBuildings is AccessControl, Pausable {
         s.residenceResearch = hasResidence && hasResearchLab;
         s.forgeWarehouse = hasForge && hasWarehouse;
         s.forgeMarket = hasForge && hasMarketStall;
+        s.warehouseGuardCore = hasWarehouse && hasGuardTower;
+        s.tradeFortressCore = hasWarehouse && hasMarketStall && hasGuardTower;
         s.fullSet =
             hasResidence &&
             hasFarmingHub &&
@@ -945,6 +1167,25 @@ contract PersonalBuildings is AccessControl, Pausable {
         return placement.getPlacementSummary(buildingId);
     }
 
+    function getMintCostConfig(
+        CityBuildingTypes.PersonalBuildingType buildingType
+    ) external view returns (MintCostConfig memory) {
+        return _mintConfigs[uint8(buildingType)];
+    }
+
+    function getUpgradeCostConfig(
+        CityBuildingTypes.PersonalBuildingType buildingType,
+        uint8 targetLevel
+    ) external view returns (UpgradeCostConfig memory) {
+        return _upgradeConfigs[uint8(buildingType)][targetLevel];
+    }
+
+    function getSpecializationCostConfig(
+        CityBuildingTypes.BuildingSpecialization specialization
+    ) external view returns (SpecializationCostConfig memory) {
+        return _specializationConfigs[uint8(specialization)];
+    }
+
     /*//////////////////////////////////////////////////////////////
                                INTERNALS
     //////////////////////////////////////////////////////////////*/
@@ -963,12 +1204,18 @@ contract PersonalBuildings is AccessControl, Pausable {
         uint256[10] memory amounts,
         bytes32 reason
     ) internal {
-        if (address(resourceAdapter) == address(0)) {
-            for (uint256 i = 0; i < RESOURCE_SLOT_COUNT; i++) {
-                if (amounts[i] != 0) revert InvalidConfig();
+        bool hasCost = false;
+
+        for (uint256 i = 0; i < RESOURCE_SLOT_COUNT; i++) {
+            if (amounts[i] != 0) {
+                hasCost = true;
+                break;
             }
-            return;
         }
+
+        if (!hasCost) return;
+
+        if (address(resourceAdapter) == address(0)) revert InvalidConfig();
 
         resourceAdapter.burnResourceBundle(from, amounts, reason);
     }
@@ -986,6 +1233,8 @@ contract PersonalBuildings is AccessControl, Pausable {
 
     function _touchPlotActivityIfPossible(uint256 plotId) internal {
         if (address(statusHookAdapter) == address(0)) return;
+        if (plotId == 0) return;
+
         statusHookAdapter.touchPlotActivity(plotId);
     }
 
@@ -999,8 +1248,10 @@ contract PersonalBuildings is AccessControl, Pausable {
             ,
             ,
             ,
-            
+            address placedBy
         ) = placement.getPlacementSummary(buildingId);
+
+        placedBy;
 
         if (placed && plotId != 0) {
             statusHookAdapter.touchPlotActivity(plotId);
@@ -1088,5 +1339,32 @@ contract PersonalBuildings is AccessControl, Pausable {
         ) {
             buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.ShowcaseOpen, 1);
         }
+    }
+
+    function _mintReason(
+        uint256 plotId,
+        CityBuildingTypes.PersonalBuildingType buildingType
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked("PERSONAL_BUILDING_MINT", plotId, uint8(buildingType))
+        );
+    }
+
+    function _upgradeReason(
+        uint256 buildingId,
+        uint8 newLevel
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked("PERSONAL_BUILDING_UPGRADE", buildingId, newLevel)
+        );
+    }
+
+    function _specializationReason(
+        uint256 buildingId,
+        CityBuildingTypes.BuildingSpecialization specialization
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked("PERSONAL_BUILDING_SPECIALIZE", buildingId, uint8(specialization))
+        );
     }
 }
