@@ -82,7 +82,9 @@ contract CityBuildingPolicyRouter is
         _unpause();
     }
 
-    function setPersonalPlacementPolicy(address policy_) external onlyRole(ROUTER_ADMIN_ROLE) {
+    function setPersonalPlacementPolicy(
+        address policy_
+    ) external onlyRole(ROUTER_ADMIN_ROLE) {
         if (policy_ == address(0)) revert ZeroAddress();
         if (policy_.code.length == 0) revert InvalidPolicy();
 
@@ -92,7 +94,9 @@ contract CityBuildingPolicyRouter is
 
     /// @dev Reserved for later integration.
     /// @dev Can be set to address(0) to intentionally clear the slot.
-    function setCommunityPolicy(address policy_) external onlyRole(ROUTER_ADMIN_ROLE) {
+    function setCommunityPolicy(
+        address policy_
+    ) external onlyRole(ROUTER_ADMIN_ROLE) {
         if (policy_ != address(0) && policy_.code.length == 0) revert InvalidPolicy();
 
         communityPolicy = policy_;
@@ -101,7 +105,9 @@ contract CityBuildingPolicyRouter is
 
     /// @dev Reserved for later integration.
     /// @dev Can be set to address(0) to intentionally clear the slot.
-    function setBorderlinePolicy(address policy_) external onlyRole(ROUTER_ADMIN_ROLE) {
+    function setBorderlinePolicy(
+        address policy_
+    ) external onlyRole(ROUTER_ADMIN_ROLE) {
         if (policy_ != address(0) && policy_.code.length == 0) revert InvalidPolicy();
 
         borderlinePolicy = policy_;
@@ -110,7 +116,9 @@ contract CityBuildingPolicyRouter is
 
     /// @dev Reserved for later integration.
     /// @dev Can be set to address(0) to intentionally clear the slot.
-    function setNexusPolicy(address policy_) external onlyRole(ROUTER_ADMIN_ROLE) {
+    function setNexusPolicy(
+        address policy_
+    ) external onlyRole(ROUTER_ADMIN_ROLE) {
         if (policy_ != address(0) && policy_.code.length == 0) revert InvalidPolicy();
 
         nexusPolicy = policy_;
@@ -121,7 +129,7 @@ contract CityBuildingPolicyRouter is
                          PERSONAL ROUTING
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Called by CityBuildingPlacement for personal building validation.
+    /// @notice Called by placement / orchestration layers for personal building validation.
     function validatePersonalPlacement(
         address owner,
         uint256 plotId,
@@ -187,5 +195,17 @@ contract CityBuildingPolicyRouter is
             nexusPolicy,
             paused()
         );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                           INTERFACE SUPPORT
+    //////////////////////////////////////////////////////////////*/
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(AccessControl) returns (bool) {
+        return
+            interfaceId == type(ICityBuildingPlacementPolicy).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 }
