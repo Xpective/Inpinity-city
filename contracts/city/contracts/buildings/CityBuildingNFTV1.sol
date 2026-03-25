@@ -287,6 +287,16 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         _baseTokenUri = baseTokenUri_;
     }
 
+    modifier onlyCreatorOrOriginalMinter(uint256 buildingId) {
+        _requireMintedBuilding(buildingId);
+
+        if (
+            msg.sender != _identityExt[buildingId].creator &&
+            msg.sender != _buildingCore[buildingId].firstOwner
+        ) revert Unauthorized();
+        _;
+    }
+
     /*//////////////////////////////////////////////////////////////
                                   ADMIN
     //////////////////////////////////////////////////////////////*/
@@ -766,6 +776,41 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         _requireMintedBuilding(buildingId);
         _requireOwnerOrManager(buildingId);
 
+        CityBuildingTypes.BuildingCore memory core = _buildingCore[buildingId];
+        if (!CityBuildingTypes.supportsCustomName(core.buildingType)) {
+            revert InvalidBuildingType();
+        }
+        if (!CityBuildingTypes.isNameLengthValid(customName)) {
+            revert InvalidNameLength();
+        }
+
+        _buildingMeta[buildingId].customName = customName;
+
+        emit BuildingCustomNameSet(buildingId, customName, msg.sender);
+    }
+
+    function setCreatorImageURI(
+        uint256 buildingId,
+        string calldata imageURI
+    ) external whenNotPaused onlyCreatorOrOriginalMinter(buildingId) {
+        _identityExt[buildingId].imageURI = imageURI;
+
+        emit BuildingImageURISet(buildingId, imageURI, msg.sender);
+    }
+
+    function setCreatorMetadataURI(
+        uint256 buildingId,
+        string calldata metadataURI
+    ) external whenNotPaused onlyCreatorOrOriginalMinter(buildingId) {
+        _identityExt[buildingId].metadataURI = metadataURI;
+
+        emit BuildingMetadataURISet(buildingId, metadataURI, msg.sender);
+    }
+
+    function setCreatorCustomName(
+        uint256 buildingId,
+        string calldata customName
+    ) external whenNotPaused onlyCreatorOrOriginalMinter(buildingId) {
         CityBuildingTypes.BuildingCore memory core = _buildingCore[buildingId];
         if (!CityBuildingTypes.supportsCustomName(core.buildingType)) {
             revert InvalidBuildingType();
