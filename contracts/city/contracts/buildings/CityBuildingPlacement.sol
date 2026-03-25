@@ -12,6 +12,15 @@ import "../interfaces/ICityBuildingNFTV1Like.sol";
 import "../interfaces/ICityPersonalPlacementPolicy.sol";
 
 /*//////////////////////////////////////////////////////////////
+                    OPTIONAL CORE READ INTERFACES
+//////////////////////////////////////////////////////////////*/
+
+interface ICityDistrictsPlacementRead {
+    function districtKindOfPlot(uint256 plotId) external view returns (uint8);
+    function factionOfPlot(uint256 plotId) external view returns (uint8);
+}
+
+/*//////////////////////////////////////////////////////////////
                         CITY BUILDING PLACEMENT
 //////////////////////////////////////////////////////////////*/
 
@@ -123,6 +132,21 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         uint64 archivedAt
     );
 
+    event FirstPlacementCaptured(
+        uint256 indexed buildingId,
+        uint256 indexed firstPlacedPlotId,
+        uint8 firstPlacedFaction,
+        uint8 firstPlacedDistrictKind,
+        uint64 firstPlacedAt,
+        address indexed executor
+    );
+
+    event LastUnplacedAtUpdated(
+        uint256 indexed buildingId,
+        uint64 lastUnplacedAt,
+        address indexed executor
+    );
+
     /*//////////////////////////////////////////////////////////////
                                  STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -146,8 +170,34 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
     mapping(uint256 => uint32) public migrationPreparationNonce;
     mapping(uint256 => bool) public archivedToV2;
 
+    // Provenance / placement-history layer
+    mapping(uint256 => uint256) public firstPlacedPlotId;
+    mapping(uint256 => uint8) public firstPlacedFaction;
+    mapping(uint256 => uint8) public firstPlacedDistrictKind;
+    mapping(uint256 => uint64) public firstPlacedAt;
+    mapping(uint256 => uint64) public lastUnplacedAt;
+
     bool public migrationOpen;
     address public migrationTarget;
+
+    /*//////////////////////////////////////////////////////////////
+                               READ STRUCTS
+    //////////////////////////////////////////////////////////////*/
+
+    struct PlacementProvenance {
+        uint256 currentPlotId;
+        uint256 firstPlotId;
+        uint8 firstFaction;
+        uint8 firstDistrictKind;
+        uint64 firstPlacedTimestamp;
+        uint64 currentPlacedAt;
+        uint64 lastPlacedAt;
+        uint64 lastUnplacedTimestamp;
+        address currentPlacedBy;
+        bool currentlyPlaced;
+        bool placementPreparedForMigration;
+        bool placementArchivedToV2;
+    }
 
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
@@ -350,6 +400,9 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
             cleared.placedAt = 0;
             cleared.placedBy = address(0);
 
+            lastUnplacedAt[buildingId] = uint64(block.timestamp);
+            emit LastUnplacedAtUpdated(buildingId, uint64(block.timestamp), msg.sender);
+
             if (syncNftPlacedFlag) {
                 buildingNFT.setPlaced(buildingId, false);
             }
@@ -369,6 +422,8 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
             placement.lastPlacedAt = previousPlacedAt == 0 ? ts : previousPlacedAt;
             placement.placedAt = ts;
             placement.placedBy = msg.sender;
+
+            _captureFirstPlacementIfNeeded(buildingId, newPlotId, ts);
 
             if (syncNftPlacedFlag) {
                 buildingNFT.setPlaced(buildingId, true);
@@ -570,6 +625,47 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         );
     }
 
+    function getPlacementProvenance(
+        uint256 buildingId
+    ) external view returns (PlacementProvenance memory p) {
+        CityBuildingTypes.BuildingPlacement memory placement_ = _placementOfBuilding[buildingId];
+
+        p = PlacementProvenance({
+            currentPlotId: placement_.plotId,
+            firstPlotId: firstPlacedPlotId[buildingId],
+            firstFaction: firstPlacedFaction[buildingId],
+            firstDistrictKind: firstPlacedDistrictKind[buildingId],
+            firstPlacedTimestamp: firstPlacedAt[buildingId],
+            currentPlacedAt: placement_.placedAt,
+            lastPlacedAt: placement_.lastPlacedAt,
+            lastUnplacedTimestamp: lastUnplacedAt[buildingId],
+            currentPlacedBy: placement_.placedBy,
+            currentlyPlaced: placement_.plotId != 0,
+            placementPreparedForMigration: preparedForMigration[buildingId],
+            placementArchivedToV2: archivedToV2[buildingId]
+        });
+    }
+
+    function getFirstPlacementSnapshot(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint256 firstPlotId,
+            uint8 firstFaction,
+            uint8 firstDistrictKind,
+            uint64 firstPlacedTimestamp
+        )
+    {
+        return (
+            firstPlacedPlotId[buildingId],
+            firstPlacedFaction[buildingId],
+            firstPlacedDistrictKind[buildingId],
+            firstPlacedAt[buildingId]
+        );
+    }
+
     /*//////////////////////////////////////////////////////////////
                                INTERNALS
     //////////////////////////////////////////////////////////////*/
@@ -591,6 +687,8 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         placement.lastPlacedAt = previousPlacedAt == 0 ? ts : previousPlacedAt;
         placement.placedAt = ts;
         placement.placedBy = owner;
+
+        _captureFirstPlacementIfNeeded(buildingId, plotId, ts);
 
         placedBuildingCountByOwner[owner] += 1;
 
@@ -619,6 +717,9 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
         placement.placedAt = 0;
         placement.placedBy = address(0);
 
+        lastUnplacedAt[buildingId] = uint64(block.timestamp);
+        emit LastUnplacedAtUpdated(buildingId, uint64(block.timestamp), executor);
+
         if (placedBuildingCountByOwner[owner] > 0) {
             placedBuildingCountByOwner[owner] -= 1;
         }
@@ -640,6 +741,48 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
                 owner,
                 uint64(block.timestamp)
             );
+        }
+    }
+
+    function _captureFirstPlacementIfNeeded(
+        uint256 buildingId,
+        uint256 plotId,
+        uint64 ts
+    ) internal {
+        if (firstPlacedAt[buildingId] != 0) return;
+
+        firstPlacedPlotId[buildingId] = plotId;
+        firstPlacedAt[buildingId] = ts;
+        firstPlacedFaction[buildingId] = _readPlotFaction(plotId);
+        firstPlacedDistrictKind[buildingId] = _readPlotDistrictKind(plotId);
+
+        emit FirstPlacementCaptured(
+            buildingId,
+            plotId,
+            firstPlacedFaction[buildingId],
+            firstPlacedDistrictKind[buildingId],
+            ts,
+            msg.sender
+        );
+    }
+
+    function _readPlotFaction(uint256 plotId) internal view returns (uint8 faction) {
+        if (cityDistricts == address(0)) return 0;
+
+        try ICityDistrictsPlacementRead(cityDistricts).factionOfPlot(plotId) returns (uint8 v) {
+            return v;
+        } catch {
+            return 0;
+        }
+    }
+
+    function _readPlotDistrictKind(uint256 plotId) internal view returns (uint8 districtKind) {
+        if (cityDistricts == address(0)) return 0;
+
+        try ICityDistrictsPlacementRead(cityDistricts).districtKindOfPlot(plotId) returns (uint8 v) {
+            return v;
+        } catch {
+            return 0;
         }
     }
 
