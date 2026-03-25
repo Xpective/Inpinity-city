@@ -1,10 +1,12 @@
+/* FILE: contracts/city/contracts/adapters/CityPlacementCoreAdapter.sol */
+/* TYPE: core placement adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
-import "../../interfaces/buildings/ICityPlacementCoreAdapter.sol";
+import "../interfaces/ICityPlacementCoreAdapter.sol";
 
 interface ICityRegistryLike {
     function ownerOfPlot(uint256 plotId) external view returns (address);
@@ -44,6 +46,11 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
     bytes32 public constant ADAPTER_ADMIN_ROLE = keccak256("ADAPTER_ADMIN_ROLE");
 
     error ZeroAddress();
+    error InvalidRegistry();
+    error InvalidLand();
+    error InvalidStatus();
+    error InvalidDistricts();
+    error InvalidValidation();
 
     event CoreContractsSet(
         address indexed registry,
@@ -68,14 +75,15 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
         address validation_,
         address admin_
     ) {
-        if (
-            registry_ == address(0) ||
-            land_ == address(0) ||
-            status_ == address(0) ||
-            districts_ == address(0) ||
-            validation_ == address(0) ||
-            admin_ == address(0)
-        ) revert ZeroAddress();
+        if (admin_ == address(0)) revert ZeroAddress();
+
+        _validateCoreContracts(
+            registry_,
+            land_,
+            status_,
+            districts_,
+            validation_
+        );
 
         cityRegistry = registry_;
         cityLand = land_;
@@ -102,13 +110,13 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
         address districts_,
         address validation_
     ) external onlyRole(ADAPTER_ADMIN_ROLE) {
-        if (
-            registry_ == address(0) ||
-            land_ == address(0) ||
-            status_ == address(0) ||
-            districts_ == address(0) ||
-            validation_ == address(0)
-        ) revert ZeroAddress();
+        _validateCoreContracts(
+            registry_,
+            land_,
+            status_,
+            districts_,
+            validation_
+        );
 
         cityRegistry = registry_;
         cityLand = land_;
@@ -126,26 +134,26 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
         );
     }
 
-    function isPersonalPlot(uint256 plotId) external view whenNotPaused returns (bool) {
+    function isPersonalPlot(uint256 plotId) external view override whenNotPaused returns (bool) {
         return ICityRegistryLike(cityRegistry).isPersonalPlot(plotId);
     }
 
-    function isPlotOwner(address user, uint256 plotId) external view whenNotPaused returns (bool) {
+    function isPlotOwner(address user, uint256 plotId) external view override whenNotPaused returns (bool) {
         return ICityRegistryLike(cityRegistry).ownerOfPlot(plotId) == user;
     }
 
-    function isPlotCompleted(uint256 plotId) external view whenNotPaused returns (bool) {
+    function isPlotCompleted(uint256 plotId) external view override whenNotPaused returns (bool) {
         return ICityLandLike(cityLand).isPlotFullyCompleted(plotId);
     }
 
-    function isPlotEligibleForPlacement(uint256 plotId) external view whenNotPaused returns (bool) {
+    function isPlotEligibleForPlacement(uint256 plotId) external view override whenNotPaused returns (bool) {
         return ICityStatusLike(cityStatus).isPlotEligibleForBuilding(plotId);
     }
 
     function isDistrictAllowedForPersonalBuilding(
         uint256 plotId,
         uint8 buildingType
-    ) external view whenNotPaused returns (bool) {
+    ) external view override whenNotPaused returns (bool) {
         return ICityValidationLike(cityValidation).isDistrictAllowedForPersonalBuilding(
             plotId,
             buildingType
@@ -156,7 +164,7 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
         address user,
         uint256 plotId,
         uint8 buildingType
-    ) external view whenNotPaused returns (bool) {
+    ) external view override whenNotPaused returns (bool) {
         return ICityValidationLike(cityValidation).isFactionAllowedForPersonalBuilding(
             user,
             plotId,
@@ -164,15 +172,29 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
         );
     }
 
-    function getPlotFaction(uint256 plotId) external view whenNotPaused returns (uint8) {
+    function getPlotFaction(uint256 plotId) external view override whenNotPaused returns (uint8) {
         return ICityDistrictsLike(cityDistricts).factionOfPlot(plotId);
     }
 
-    function getPlotDistrictKind(uint256 plotId) external view whenNotPaused returns (uint8) {
+    function getPlotDistrictKind(uint256 plotId) external view override whenNotPaused returns (uint8) {
         return ICityDistrictsLike(cityDistricts).districtKindOfPlot(plotId);
     }
 
-    function getPlotOwner(uint256 plotId) external view whenNotPaused returns (address) {
+    function getPlotOwner(uint256 plotId) external view override whenNotPaused returns (address) {
         return ICityRegistryLike(cityRegistry).ownerOfPlot(plotId);
+    }
+
+    function _validateCoreContracts(
+        address registry_,
+        address land_,
+        address status_,
+        address districts_,
+        address validation_
+    ) internal pure {
+        if (registry_ == address(0)) revert ZeroAddress();
+        if (land_ == address(0)) revert ZeroAddress();
+        if (status_ == address(0)) revert ZeroAddress();
+        if (districts_ == address(0)) revert ZeroAddress();
+        if (validation_ == address(0)) revert ZeroAddress();
     }
 }

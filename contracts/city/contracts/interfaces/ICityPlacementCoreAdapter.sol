@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/interfaces/ICityPlacementCoreAdapter.sol */
+/* TYPE: stable core placement adapter interface — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 

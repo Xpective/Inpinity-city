@@ -1,10 +1,13 @@
+/* FILE: contracts/city/contracts/interfaces/ICityBuildingNFTV1Like.sol */
+/* TYPE: minimal NFT write/read interface for placement + logic layers — NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../../libraries/CityBuildingTypes.sol";
+import "../libraries/CityBuildingTypes.sol";
 
 /// @title ICityBuildingNFTV1Like
-/// @notice Minimales Schreib-/Leseinterface für Placement- und Logic-Contracts.
+/// @notice Minimal write/read interface for placement and logic contracts.
+/// @dev Matches the asset-layer responsibilities of CityBuildingNFTV1.
 interface ICityBuildingNFTV1Like {
     function ownerOf(uint256 tokenId) external view returns (address);
 

@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/buildings/CityBuildingPlacement.sol */
+/* TYPE: placement truth layer — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -6,48 +8,8 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../libraries/CityBuildingTypes.sol";
-
-/*//////////////////////////////////////////////////////////////
-                         EXTERNAL INTERFACES
-//////////////////////////////////////////////////////////////*/
-
-interface ICityBuildingNFTV1Like {
-    function ownerOf(uint256 tokenId) external view returns (address);
-
-    function getBuildingCore(
-        uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingCore memory);
-
-    function getBuildingState(
-        uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingState);
-
-    function isArchived(uint256 buildingId) external view returns (bool);
-
-    function isMigrationPrepared(uint256 buildingId) external view returns (bool);
-
-    function setPlaced(uint256 buildingId, bool placed) external;
-}
-
-interface ICityBuildingPlacementPolicy {
-    function validatePersonalPlacement(
-        address owner,
-        uint256 plotId,
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            bool allowed,
-            bool ownerMatches,
-            bool plotCompleted,
-            bool plotEligible,
-            bool personalPlot,
-            bool districtAllowed,
-            bool factionAllowed,
-            bytes32 reasonCode
-        );
-}
+import "../interfaces/ICityBuildingNFTV1Like.sol";
+import "../interfaces/ICityPersonalPlacementPolicy.sol";
 
 /*//////////////////////////////////////////////////////////////
                         CITY BUILDING PLACEMENT

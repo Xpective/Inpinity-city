@@ -3,16 +3,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/*
-    IMPORTANT:
-    - This file is the NFT / asset layer for Personal Buildings V1.
-    - This file is NOT the gameplay orchestrator.
-    - This file is NOT PlacementPolicy.
-    - This file is NOT FunctionRegistry.
-    - This file is NOT Vault logic.
-    - This file is NOT mint-through-owned-plot logic.
-*/
-
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
@@ -20,27 +10,25 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "../libraries/CityBuildingTypes.sol";
 
+/*//////////////////////////////////////////////////////////////
+                    CITY BUILDING NFT V1
+//////////////////////////////////////////////////////////////*/
+
+/// @title CityBuildingNFTV1
+/// @notice ERC721 asset layer for Inpinity City buildings.
+/// @dev This file is strictly the NFT / identity / provenance / usage / prestige layer.
+///      It does NOT perform plot entitlement checks, mint quotes, vault logic,
+///      placement validation, function registry logic, or gameplay orchestration.
 contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
-    /*//////////////////////////////////////////////////////////////
-                         FILE ROLE / RESPONSIBILITY
-    //////////////////////////////////////////////////////////////*/
-    /* TYPE: NFT / ASSET LAYER
-       Responsibility:
-       - tradable building asset IDs
-       - identity / visual / provenance core
-       - core/meta/state reads
-       - usage / prestige / history counters
-       - placed / archived / migrationPrepared flags
-       - upgrade + specialization state mutation
-       - future URI/image extensibility
-       - transfer blocking while placed
-    */
+    using CityBuildingTypes for CityBuildingTypes.BuildingUsageStats;
 
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
+
+    bytes32 public constant NFT_ADMIN_ROLE = keccak256("NFT_ADMIN_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant BUILDING_MANAGER_ROLE = keccak256("BUILDING_MANAGER_ROLE");
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 public constant PLACEMENT_ROLE = keccak256("PLACEMENT_ROLE");
     bytes32 public constant METADATA_ROLE = keccak256("METADATA_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -48,31 +36,28 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
     /*//////////////////////////////////////////////////////////////
                                  ERRORS
     //////////////////////////////////////////////////////////////*/
+
     error ZeroAddress();
+    error InvalidTokenId();
     error InvalidBuildingType();
+    error InvalidBuildingCategory();
     error InvalidLevel();
     error InvalidSpecialization();
     error InvalidVersionTag();
     error InvalidState();
+    error InvalidFactionVariant();
     error InvalidNameLength();
-    error InvalidTokenId();
-    error AlreadyPlaced();
-    error NotPlaced();
     error BuildingArchived();
     error BuildingPreparedForMigration();
     error TransferBlockedWhilePlaced(uint256 buildingId);
+    error TransferBlockedWhileMigrationPrepared(uint256 buildingId);
     error NoStateChange();
+    error Unauthorized();
 
     /*//////////////////////////////////////////////////////////////
-                                CONSTANTS
+                                EVENTS
     //////////////////////////////////////////////////////////////*/
-    uint32 public constant DEFAULT_VERSION_TAG = CityBuildingTypes.VERSION_TAG_V1;
-    uint256 public constant MAX_CUSTOM_NAME_LENGTH = 64;
 
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
-    //////////////////////////////////////////////////////////////*/
-    /* TYPE: NFT / ASSET EVENTS */
     event BuildingMinted(
         uint256 indexed buildingId,
         address indexed to,
@@ -81,21 +66,28 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         uint64 mintedAt
     );
 
-    event BuildingPlacedStateSet(
+    event BuildingStateSet(
+        uint256 indexed buildingId,
+        CityBuildingTypes.BuildingState state,
+        address indexed executor,
+        uint64 updatedAt
+    );
+
+    event BuildingPlacedSet(
         uint256 indexed buildingId,
         bool placed,
         address indexed executor,
         uint64 updatedAt
     );
 
-    event BuildingArchivedStateSet(
+    event BuildingArchivedSet(
         uint256 indexed buildingId,
         bool archived,
         address indexed executor,
         uint64 updatedAt
     );
 
-    event BuildingMigrationPreparedStateSet(
+    event BuildingMigrationPreparedSet(
         uint256 indexed buildingId,
         bool prepared,
         address indexed executor,
@@ -118,23 +110,30 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         uint64 updatedAt
     );
 
+    event BuildingFactionVariantSet(
+        uint256 indexed buildingId,
+        CityBuildingTypes.FactionVariant oldVariant,
+        CityBuildingTypes.FactionVariant newVariant,
+        address indexed executor
+    );
+
     event BuildingCustomNameSet(
         uint256 indexed buildingId,
         string customName,
         address indexed executor
     );
 
-    event BuildingPrestigeUpdated(
+    event BuildingPrestigeAdded(
         uint256 indexed buildingId,
-        uint32 oldValue,
-        uint32 newValue,
+        uint32 amount,
+        uint32 newPrestigeScore,
         address indexed executor
     );
 
-    event BuildingHistoryUpdated(
+    event BuildingHistoryAdded(
         uint256 indexed buildingId,
-        uint32 oldValue,
-        uint32 newValue,
+        uint32 amount,
+        uint32 newHistoryScore,
         address indexed executor
     );
 
@@ -142,8 +141,7 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         uint256 indexed buildingId,
         CityBuildingTypes.BuildingUsageType indexed usageType,
         uint32 amount,
-        uint32 newTypeTotal,
-        uint32 newGlobalTotal,
+        uint32 newTotalUses,
         address indexed executor
     );
 
@@ -165,36 +163,50 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         address indexed executor
     );
 
+    event BuildingIdentityExtendedSet(
+        uint256 indexed buildingId,
+        uint256 dnaSeed,
+        uint32 visualVariant,
+        address indexed executor
+    );
+
+    event BuildingProvenanceCoreSet(
+        uint256 indexed buildingId,
+        uint8 originFaction,
+        uint8 originDistrictKind,
+        uint8 resonanceType,
+        uint32 founderEra,
+        uint32 genesisEra,
+        address indexed executor
+    );
+
+    event ChronicleEntryRecorded(
+        uint256 indexed buildingId,
+        uint256 indexed index,
+        CityBuildingTypes.ChronicleEventType eventType,
+        address indexed actor,
+        uint64 timestamp
+    );
+
     /*//////////////////////////////////////////////////////////////
-                            INTERNAL STORAGE
+                                 STORAGE
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: internal NFT storage — NOT gameplay orchestration */
 
-    struct BuildingCoreData {
-        CityBuildingTypes.BuildingCategory category;
-        CityBuildingTypes.PersonalBuildingType buildingType;
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-    }
+    uint256 private _nextBuildingId = 1;
+    string private _baseTokenUri;
 
-    struct BuildingMetaData {
-        string customName;
-        uint32 versionTag;
-        uint32 totalUses;
-        uint32 totalTransfers;
-        uint32 totalUpgrades;
-        uint32 prestigeScore;
-        uint32 historyScore;
-    }
+    mapping(uint256 => CityBuildingTypes.BuildingCore) private _buildingCore;
+    mapping(uint256 => CityBuildingTypes.BuildingMeta) private _buildingMeta;
+    mapping(uint256 => CityBuildingTypes.BuildingState) private _buildingState;
+    mapping(uint256 => bool) private _placed;
+    mapping(uint256 => bool) private _archived;
+    mapping(uint256 => bool) private _migrationPrepared;
 
-    struct BuildingStateData {
-        CityBuildingTypes.BuildingState state;
-        bool placed;
-        bool archived;
-        bool migrationPrepared;
-    }
+    mapping(uint256 => CityBuildingTypes.BuildingUsageStats) private _usageStats;
+    mapping(uint256 => CityBuildingTypes.BuildingHistoryCounters) private _historyCounters;
+    mapping(uint256 => CityBuildingTypes.ChronicleEntry[]) private _chronicles;
 
-    struct BuildingIdentityData {
+    struct BuildingIdentityExtension {
         uint256 dnaSeed;
         uint32 visualVariant;
         uint8 originFaction;
@@ -202,30 +214,16 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         uint8 resonanceType;
         uint32 founderEra;
         uint32 genesisEra;
-        uint64 mintedAt;
         address creator;
-        address originalMinter;
-    }
-
-    struct BuildingUriData {
         string imageURI;
         string metadataURI;
     }
 
-    mapping(uint256 => BuildingCoreData) private _buildingCore;
-    mapping(uint256 => BuildingMetaData) private _buildingMeta;
-    mapping(uint256 => BuildingStateData) private _buildingStateData;
-    mapping(uint256 => BuildingIdentityData) private _buildingIdentity;
-    mapping(uint256 => BuildingUriData) private _buildingUris;
-    mapping(uint256 => mapping(uint8 => uint32)) private _usageByType;
-
-    uint256 private _nextBuildingId = 1;
-    string private _baseTokenUri;
+    mapping(uint256 => BuildingIdentityExtension) private _identityExt;
 
     /*//////////////////////////////////////////////////////////////
-                             EXTERNAL READ STRUCTS
+                              READ STRUCTS
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: frontend / adapter / migration-friendly read models */
 
     struct BuildingIdentityView {
         uint256 buildingId;
@@ -245,6 +243,7 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         uint32 visualVariant;
         uint8 level;
         CityBuildingTypes.BuildingSpecialization specialization;
+        CityBuildingTypes.FactionVariant factionVariant;
         bool placed;
         bool archived;
         bool migrationPrepared;
@@ -256,6 +255,7 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
     struct ProvenanceCoreView {
         uint8 originFaction;
         uint8 originDistrictKind;
+        uint8 resonanceType;
         uint32 founderEra;
         uint32 genesisEra;
         address creator;
@@ -269,16 +269,17 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: NFT / ASSET CONSTRUCTOR */
+
     constructor(
         address admin_,
         string memory baseTokenUri_
-    ) ERC721("Inpinity City Building", "ICBUILD") {
+    ) ERC721("Inpinity City Buildings", "ICBUILD") {
         if (admin_ == address(0)) revert ZeroAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
+        _grantRole(NFT_ADMIN_ROLE, admin_);
         _grantRole(MINTER_ROLE, admin_);
-        _grantRole(BUILDING_MANAGER_ROLE, admin_);
+        _grantRole(MANAGER_ROLE, admin_);
         _grantRole(PLACEMENT_ROLE, admin_);
         _grantRole(METADATA_ROLE, admin_);
         _grantRole(PAUSER_ROLE, admin_);
@@ -287,9 +288,9 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                               PAUSE CONTROL
+                                  ADMIN
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: NFT / ASSET CONTROL */
+
     function pause() external onlyRole(PAUSER_ROLE) {
         _pause();
     }
@@ -298,10 +299,18 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         _unpause();
     }
 
+    function setBaseTokenURI(
+        string calldata newBaseTokenUri
+    ) external onlyRole(METADATA_ROLE) {
+        string memory oldValue = _baseTokenUri;
+        _baseTokenUri = newBaseTokenUri;
+        emit BaseTokenURISet(oldValue, newBaseTokenUri, msg.sender);
+    }
+
     /*//////////////////////////////////////////////////////////////
-                                  MINT
+                                   MINT
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: NFT minting only — NOT plot entitlement logic */
+
     function mintBuilding(
         address to,
         CityBuildingTypes.PersonalBuildingType buildingType,
@@ -310,20 +319,29 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         if (to == address(0)) revert ZeroAddress();
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
 
-        uint32 effectiveVersionTag = versionTag == 0 ? DEFAULT_VERSION_TAG : versionTag;
-        if (effectiveVersionTag == 0) revert InvalidVersionTag();
+        uint32 effectiveVersionTag = versionTag == 0
+            ? CityBuildingTypes.VERSION_TAG_V1
+            : versionTag;
+
+        if (
+            effectiveVersionTag != CityBuildingTypes.VERSION_TAG_V1 &&
+            effectiveVersionTag != CityBuildingTypes.VERSION_TAG_V2
+        ) revert InvalidVersionTag();
 
         buildingId = _nextBuildingId++;
         _safeMint(to, buildingId);
 
-        _buildingCore[buildingId] = BuildingCoreData({
+        _buildingCore[buildingId] = CityBuildingTypes.BuildingCore({
             category: CityBuildingTypes.BuildingCategory.Personal,
             buildingType: buildingType,
             level: 1,
-            specialization: CityBuildingTypes.BuildingSpecialization.None
+            specialization: CityBuildingTypes.BuildingSpecialization.None,
+            factionVariant: CityBuildingTypes.FactionVariant.None,
+            mintedAt: uint64(block.timestamp),
+            firstOwner: to
         });
 
-        _buildingMeta[buildingId] = BuildingMetaData({
+        _buildingMeta[buildingId] = CityBuildingTypes.BuildingMeta({
             customName: "",
             versionTag: effectiveVersionTag,
             totalUses: 0,
@@ -333,25 +351,23 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
             historyScore: 0
         });
 
-        _buildingStateData[buildingId] = BuildingStateData({
-            state: CityBuildingTypes.BuildingState.Unplaced,
-            placed: false,
-            archived: false,
-            migrationPrepared: false
-        });
+        _buildingState[buildingId] = CityBuildingTypes.BuildingState.Unplaced;
+        _placed[buildingId] = false;
+        _archived[buildingId] = false;
+        _migrationPrepared[buildingId] = false;
 
-        _buildingIdentity[buildingId] = BuildingIdentityData({
-            dnaSeed: _deriveDnaSeed(buildingId, to, buildingType),
-            visualVariant: _deriveVisualVariant(buildingId, buildingType),
-            originFaction: 0,
-            originDistrictKind: 0,
-            resonanceType: 0,
-            founderEra: 0,
-            genesisEra: 0,
-            mintedAt: uint64(block.timestamp),
-            creator: msg.sender,
-            originalMinter: to
-        });
+        _identityExt[buildingId].creator = msg.sender;
+        _identityExt[buildingId].dnaSeed = _deriveDnaSeed(buildingId, to, buildingType);
+        _identityExt[buildingId].visualVariant = _deriveVisualVariant(buildingId, buildingType);
+
+        _pushChronicle(
+            buildingId,
+            CityBuildingTypes.ChronicleEventType.Mint,
+            1,
+            uint32(uint8(buildingType)),
+            msg.sender,
+            bytes32(0)
+        );
 
         emit BuildingMinted(
             buildingId,
@@ -363,176 +379,268 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                          CORE / META / STATE READS
+                                  READS
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: NFT canonical reads */
 
     function getBuildingCore(
         uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingCore memory core) {
+    ) external view returns (CityBuildingTypes.BuildingCore memory) {
         _requireMintedBuilding(buildingId);
-
-        BuildingCoreData memory d = _buildingCore[buildingId];
-        BuildingIdentityData memory i = _buildingIdentity[buildingId];
-        BuildingStateData memory s = _buildingStateData[buildingId];
-
-        /*
-            ASSUMPTION:
-            This constructor shape assumes CityBuildingTypes.BuildingCore contains
-            at least the fields used elsewhere in the project:
-            category, buildingType, level, specialization, mintedAt, firstOwner, placed.
-            If CityBuildingTypes.BuildingCore in the repo contains extra fields,
-            align this return mapping to the actual library definition.
-        */
-        core = CityBuildingTypes.BuildingCore({
-            category: d.category,
-            buildingType: d.buildingType,
-            level: d.level,
-            specialization: d.specialization,
-            mintedAt: i.mintedAt,
-            firstOwner: i.originalMinter,
-            placed: s.placed
-        });
+        return _buildingCore[buildingId];
     }
 
     function getBuildingMeta(
         uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingMeta memory meta) {
+    ) external view returns (CityBuildingTypes.BuildingMeta memory) {
         _requireMintedBuilding(buildingId);
-
-        BuildingMetaData memory d = _buildingMeta[buildingId];
-
-        /*
-            ASSUMPTION:
-            This constructor shape assumes CityBuildingTypes.BuildingMeta contains
-            the fields used by the project notes:
-            customName, versionTag, totalUses, totalTransfers,
-            totalUpgrades, prestigeScore, historyScore.
-        */
-        meta = CityBuildingTypes.BuildingMeta({
-            customName: d.customName,
-            versionTag: d.versionTag,
-            totalUses: d.totalUses,
-            totalTransfers: d.totalTransfers,
-            totalUpgrades: d.totalUpgrades,
-            prestigeScore: d.prestigeScore,
-            historyScore: d.historyScore
-        });
+        return _buildingMeta[buildingId];
     }
 
     function getBuildingState(
         uint256 buildingId
     ) external view returns (CityBuildingTypes.BuildingState) {
         _requireMintedBuilding(buildingId);
-        return _buildingStateData[buildingId].state;
+        return _buildingState[buildingId];
     }
 
     function isArchived(uint256 buildingId) external view returns (bool) {
         _requireMintedBuilding(buildingId);
-        return _buildingStateData[buildingId].archived;
+        return _archived[buildingId];
     }
 
     function isMigrationPrepared(uint256 buildingId) external view returns (bool) {
         _requireMintedBuilding(buildingId);
-        return _buildingStateData[buildingId].migrationPrepared;
+        return _migrationPrepared[buildingId];
     }
 
-    /*//////////////////////////////////////////////////////////////
-                        NEW IDENTITY / VISUAL / PROVENANCE READS
-    //////////////////////////////////////////////////////////////*/
-    /* TYPE: stable read layer for frontend / placement / V2 migration */
+    function isPlaced(uint256 buildingId) external view returns (bool) {
+        _requireMintedBuilding(buildingId);
+        return _placed[buildingId];
+    }
 
     function getBuildingIdentity(
         uint256 buildingId
-    ) external view returns (BuildingIdentityView memory view_) {
+    ) external view returns (BuildingIdentityView memory v) {
         _requireMintedBuilding(buildingId);
 
-        BuildingCoreData memory c = _buildingCore[buildingId];
-        BuildingMetaData memory m = _buildingMeta[buildingId];
-        BuildingIdentityData memory i = _buildingIdentity[buildingId];
+        CityBuildingTypes.BuildingCore memory core = _buildingCore[buildingId];
+        CityBuildingTypes.BuildingMeta memory meta = _buildingMeta[buildingId];
+        BuildingIdentityExtension memory ext = _identityExt[buildingId];
 
-        view_ = BuildingIdentityView({
+        v = BuildingIdentityView({
             buildingId: buildingId,
-            category: c.category,
-            buildingType: c.buildingType,
-            versionTag: m.versionTag,
-            dnaSeed: i.dnaSeed,
-            visualVariant: i.visualVariant,
-            customName: m.customName,
-            resonanceType: i.resonanceType,
-            mintedAt: i.mintedAt,
-            creator: i.creator,
-            originalMinter: i.originalMinter
+            category: core.category,
+            buildingType: core.buildingType,
+            versionTag: meta.versionTag,
+            dnaSeed: ext.dnaSeed,
+            visualVariant: ext.visualVariant,
+            customName: meta.customName,
+            resonanceType: ext.resonanceType,
+            mintedAt: core.mintedAt,
+            creator: ext.creator,
+            originalMinter: core.firstOwner
         });
     }
 
     function getVisualState(
         uint256 buildingId
-    ) external view returns (VisualStateView memory view_) {
+    ) external view returns (VisualStateView memory v) {
         _requireMintedBuilding(buildingId);
 
-        BuildingCoreData memory c = _buildingCore[buildingId];
-        BuildingStateData memory s = _buildingStateData[buildingId];
-        BuildingIdentityData memory i = _buildingIdentity[buildingId];
-        BuildingUriData memory u = _buildingUris[buildingId];
+        CityBuildingTypes.BuildingCore memory core = _buildingCore[buildingId];
+        BuildingIdentityExtension memory ext = _identityExt[buildingId];
 
-        view_ = VisualStateView({
-            visualVariant: i.visualVariant,
-            level: c.level,
-            specialization: c.specialization,
-            placed: s.placed,
-            archived: s.archived,
-            migrationPrepared: s.migrationPrepared,
-            state: s.state,
-            imageURI: u.imageURI,
-            metadataURI: u.metadataURI
+        v = VisualStateView({
+            visualVariant: ext.visualVariant,
+            level: core.level,
+            specialization: core.specialization,
+            factionVariant: core.factionVariant,
+            placed: _placed[buildingId],
+            archived: _archived[buildingId],
+            migrationPrepared: _migrationPrepared[buildingId],
+            state: _buildingState[buildingId],
+            imageURI: ext.imageURI,
+            metadataURI: ext.metadataURI
         });
     }
 
     function getProvenanceCore(
         uint256 buildingId
-    ) external view returns (ProvenanceCoreView memory view_) {
+    ) external view returns (ProvenanceCoreView memory v) {
         _requireMintedBuilding(buildingId);
 
-        BuildingIdentityData memory i = _buildingIdentity[buildingId];
-        BuildingMetaData memory m = _buildingMeta[buildingId];
+        CityBuildingTypes.BuildingCore memory core = _buildingCore[buildingId];
+        CityBuildingTypes.BuildingMeta memory meta = _buildingMeta[buildingId];
+        BuildingIdentityExtension memory ext = _identityExt[buildingId];
 
-        view_ = ProvenanceCoreView({
-            originFaction: i.originFaction,
-            originDistrictKind: i.originDistrictKind,
-            founderEra: i.founderEra,
-            genesisEra: i.genesisEra,
-            creator: i.creator,
-            originalMinter: i.originalMinter,
-            mintedAt: i.mintedAt,
-            versionTag: m.versionTag,
-            prestigeScore: m.prestigeScore,
-            historyScore: m.historyScore
+        v = ProvenanceCoreView({
+            originFaction: ext.originFaction,
+            originDistrictKind: ext.originDistrictKind,
+            resonanceType: ext.resonanceType,
+            founderEra: ext.founderEra,
+            genesisEra: ext.genesisEra,
+            creator: ext.creator,
+            originalMinter: core.firstOwner,
+            mintedAt: core.mintedAt,
+            versionTag: meta.versionTag,
+            prestigeScore: meta.prestigeScore,
+            historyScore: meta.historyScore
         });
     }
 
+    function getBuildingUsageStats(
+        uint256 buildingId
+    ) external view returns (CityBuildingTypes.BuildingUsageStats memory) {
+        _requireMintedBuilding(buildingId);
+        return _usageStats[buildingId];
+    }
+
+    function getBuildingHistoryCounters(
+        uint256 buildingId
+    ) external view returns (CityBuildingTypes.BuildingHistoryCounters memory) {
+        _requireMintedBuilding(buildingId);
+        return _historyCounters[buildingId];
+    }
+
+    function getChronicleCount(uint256 buildingId) external view returns (uint256) {
+        _requireMintedBuilding(buildingId);
+        return _chronicles[buildingId].length;
+    }
+
+    function getChronicleEntry(
+        uint256 buildingId,
+        uint256 index
+    ) external view returns (CityBuildingTypes.ChronicleEntry memory) {
+        _requireMintedBuilding(buildingId);
+        return _chronicles[buildingId][index];
+    }
+
+    function getImageURI(uint256 buildingId) external view returns (string memory) {
+        _requireMintedBuilding(buildingId);
+        return _identityExt[buildingId].imageURI;
+    }
+
+    function getMetadataURI(uint256 buildingId) external view returns (string memory) {
+        _requireMintedBuilding(buildingId);
+        return _identityExt[buildingId].metadataURI;
+    }
+
+    function tokenURI(uint256 buildingId) public view override returns (string memory) {
+        _requireMintedBuilding(buildingId);
+
+        string memory explicitMetadataUri = _identityExt[buildingId].metadataURI;
+        if (bytes(explicitMetadataUri).length > 0) {
+            return explicitMetadataUri;
+        }
+
+        if (bytes(_baseTokenUri).length == 0) {
+            return "";
+        }
+
+        return string(
+            abi.encodePacked(_baseTokenUri, Strings.toString(buildingId), ".json")
+        );
+    }
+
     /*//////////////////////////////////////////////////////////////
-                              STATE MUTATIONS
+                            STATE MUTATIONS
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: asset-state mutation — NOT gameplay orchestration */
 
     function setPlaced(
         uint256 buildingId,
-        bool placed
+        bool placed_
     ) external onlyRole(PLACEMENT_ROLE) whenNotPaused {
         _requireMutableBuilding(buildingId);
 
-        BuildingStateData storage s = _buildingStateData[buildingId];
-        if (s.placed == placed) revert NoStateChange();
+        if (_placed[buildingId] == placed_) revert NoStateChange();
 
-        s.placed = placed;
-        s.state = placed
+        _placed[buildingId] = placed_;
+        _buildingState[buildingId] = placed_
             ? CityBuildingTypes.BuildingState.PlacedActive
             : CityBuildingTypes.BuildingState.Unplaced;
 
-        emit BuildingPlacedStateSet(
+        _pushChronicle(
             buildingId,
-            placed,
+            placed_
+                ? CityBuildingTypes.ChronicleEventType.Place
+                : CityBuildingTypes.ChronicleEventType.Unplace,
+            placed_ ? 1 : 0,
+            0,
+            msg.sender,
+            bytes32(0)
+        );
+
+        emit BuildingPlacedSet(
+            buildingId,
+            placed_,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+
+        emit BuildingStateSet(
+            buildingId,
+            _buildingState[buildingId],
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function setArchived(
+        uint256 buildingId,
+        bool archived_
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+        if (_archived[buildingId] == archived_) revert NoStateChange();
+
+        _archived[buildingId] = archived_;
+        _buildingState[buildingId] = archived_
+            ? CityBuildingTypes.BuildingState.Archived
+            : (_placed[buildingId]
+                ? CityBuildingTypes.BuildingState.PlacedActive
+                : CityBuildingTypes.BuildingState.Unplaced);
+
+        if (archived_) {
+            _historyCounters[buildingId].migrations += 1;
+            _pushChronicle(
+                buildingId,
+                CityBuildingTypes.ChronicleEventType.ArchiveMigration,
+                1,
+                0,
+                msg.sender,
+                bytes32(0)
+            );
+        }
+
+        emit BuildingArchivedSet(
+            buildingId,
+            archived_,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+
+        emit BuildingStateSet(
+            buildingId,
+            _buildingState[buildingId],
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function setMigrationPrepared(
+        uint256 buildingId,
+        bool prepared
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+        if (_migrationPrepared[buildingId] == prepared) revert NoStateChange();
+
+        _migrationPrepared[buildingId] = prepared;
+        if (prepared) {
+            _historyCounters[buildingId].migrations += 1;
+        }
+
+        emit BuildingMigrationPreparedSet(
+            buildingId,
+            prepared,
             msg.sender,
             uint64(block.timestamp)
         );
@@ -541,17 +649,28 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
     function upgradeBuilding(
         uint256 buildingId,
         uint8 newLevel
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMutableBuilding(buildingId);
         if (!CityBuildingTypes.isValidLevel(newLevel)) revert InvalidLevel();
 
-        BuildingCoreData storage c = _buildingCore[buildingId];
-        uint8 oldLevel = c.level;
+        CityBuildingTypes.BuildingCore storage core = _buildingCore[buildingId];
+        if (core.category != CityBuildingTypes.BuildingCategory.Personal) {
+            revert InvalidBuildingCategory();
+        }
+        if (newLevel <= core.level) revert NoStateChange();
 
-        if (newLevel <= oldLevel) revert NoStateChange();
-
-        c.level = newLevel;
+        uint8 oldLevel = core.level;
+        core.level = newLevel;
         _buildingMeta[buildingId].totalUpgrades += 1;
+
+        _pushChronicle(
+            buildingId,
+            CityBuildingTypes.ChronicleEventType.Upgrade,
+            oldLevel,
+            newLevel,
+            msg.sender,
+            bytes32(0)
+        );
 
         emit BuildingUpgraded(
             buildingId,
@@ -565,17 +684,37 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
     function specializeBuilding(
         uint256 buildingId,
         CityBuildingTypes.BuildingSpecialization newSpecialization
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMutableBuilding(buildingId);
-        if (newSpecialization == CityBuildingTypes.BuildingSpecialization.None) {
-            revert InvalidSpecialization();
+
+        CityBuildingTypes.BuildingCore storage core = _buildingCore[buildingId];
+
+        if (core.category != CityBuildingTypes.BuildingCategory.Personal) {
+            revert InvalidBuildingCategory();
         }
 
-        BuildingCoreData storage c = _buildingCore[buildingId];
-        CityBuildingTypes.BuildingSpecialization oldSpecialization = c.specialization;
+        if (
+            !CityBuildingTypes.canChooseSpecialization(
+                core.buildingType,
+                core.level,
+                newSpecialization
+            )
+        ) revert InvalidSpecialization();
+
+        CityBuildingTypes.BuildingSpecialization oldSpecialization = core.specialization;
         if (oldSpecialization == newSpecialization) revert NoStateChange();
 
-        c.specialization = newSpecialization;
+        core.specialization = newSpecialization;
+        _historyCounters[buildingId].specializationChanges += 1;
+
+        _pushChronicle(
+            buildingId,
+            CityBuildingTypes.ChronicleEventType.Specialize,
+            uint32(uint8(oldSpecialization)),
+            uint32(uint8(newSpecialization)),
+            msg.sender,
+            bytes32(0)
+        );
 
         emit BuildingSpecialized(
             buildingId,
@@ -586,229 +725,223 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         );
     }
 
-    function setArchived(
+    function setFactionVariant(
         uint256 buildingId,
-        bool archived
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
-        _requireMintedBuilding(buildingId);
+        CityBuildingTypes.FactionVariant factionVariant
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
+        _requireMutableBuilding(buildingId);
 
-        BuildingStateData storage s = _buildingStateData[buildingId];
-        if (s.archived == archived) revert NoStateChange();
+        CityBuildingTypes.BuildingCore storage core = _buildingCore[buildingId];
 
-        s.archived = archived;
-        s.state = archived
-            ? CityBuildingTypes.BuildingState.Archived
-            : (s.placed ? CityBuildingTypes.BuildingState.PlacedActive : CityBuildingTypes.BuildingState.Unplaced);
+        if (!CityBuildingTypes.canHaveFactionVariant(core.buildingType)) {
+            revert InvalidFactionVariant();
+        }
 
-        emit BuildingArchivedStateSet(
+        CityBuildingTypes.FactionVariant oldVariant = core.factionVariant;
+        if (oldVariant == factionVariant) revert NoStateChange();
+
+        core.factionVariant = factionVariant;
+
+        _pushChronicle(
             buildingId,
-            archived,
+            CityBuildingTypes.ChronicleEventType.FactionVariantSet,
+            uint32(uint8(oldVariant)),
+            uint32(uint8(factionVariant)),
             msg.sender,
-            uint64(block.timestamp)
+            bytes32(0)
+        );
+
+        emit BuildingFactionVariantSet(
+            buildingId,
+            oldVariant,
+            factionVariant,
+            msg.sender
         );
     }
 
-    function setMigrationPrepared(
-        uint256 buildingId,
-        bool prepared
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
-        _requireMintedBuilding(buildingId);
-
-        BuildingStateData storage s = _buildingStateData[buildingId];
-        if (s.migrationPrepared == prepared) revert NoStateChange();
-
-        s.migrationPrepared = prepared;
-
-        emit BuildingMigrationPreparedStateSet(
-            buildingId,
-            prepared,
-            msg.sender,
-            uint64(block.timestamp)
-        );
-    }
-
-    function setBuildingCustomName(
+    function setCustomName(
         uint256 buildingId,
         string calldata customName
     ) external whenNotPaused {
         _requireMintedBuilding(buildingId);
         _requireOwnerOrManager(buildingId);
 
-        if (bytes(customName).length > MAX_CUSTOM_NAME_LENGTH) revert InvalidNameLength();
+        CityBuildingTypes.BuildingCore memory core = _buildingCore[buildingId];
+        if (!CityBuildingTypes.supportsCustomName(core.buildingType)) {
+            revert InvalidBuildingType();
+        }
+        if (!CityBuildingTypes.isNameLengthValid(customName)) {
+            revert InvalidNameLength();
+        }
 
         _buildingMeta[buildingId].customName = customName;
+
         emit BuildingCustomNameSet(buildingId, customName, msg.sender);
     }
 
     function addPrestigeScore(
         uint256 buildingId,
         uint32 amount
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
 
-        BuildingMetaData storage m = _buildingMeta[buildingId];
-        uint32 oldValue = m.prestigeScore;
-        uint32 newValue = oldValue + amount;
-        m.prestigeScore = newValue;
+        CityBuildingTypes.BuildingMeta storage meta = _buildingMeta[buildingId];
+        meta.prestigeScore += amount;
 
-        emit BuildingPrestigeUpdated(buildingId, oldValue, newValue, msg.sender);
+        emit BuildingPrestigeAdded(
+            buildingId,
+            amount,
+            meta.prestigeScore,
+            msg.sender
+        );
     }
 
     function addHistoryScore(
         uint256 buildingId,
         uint32 amount
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
 
-        BuildingMetaData storage m = _buildingMeta[buildingId];
-        uint32 oldValue = m.historyScore;
-        uint32 newValue = oldValue + amount;
-        m.historyScore = newValue;
+        CityBuildingTypes.BuildingMeta storage meta = _buildingMeta[buildingId];
+        meta.historyScore += amount;
 
-        emit BuildingHistoryUpdated(buildingId, oldValue, newValue, msg.sender);
+        emit BuildingHistoryAdded(
+            buildingId,
+            amount,
+            meta.historyScore,
+            msg.sender
+        );
     }
 
     function recordUsage(
         uint256 buildingId,
         CityBuildingTypes.BuildingUsageType usageType,
         uint32 amount
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
 
-        uint8 usageKey = uint8(usageType);
-
-        BuildingMetaData storage m = _buildingMeta[buildingId];
-        m.totalUses += amount;
-        _usageByType[buildingId][usageKey] += amount;
+        CityBuildingTypes.BuildingMeta storage meta = _buildingMeta[buildingId];
+        meta.totalUses += amount;
+        _usageStats[buildingId].incrementUsage(usageType, amount);
 
         emit BuildingUsageRecorded(
             buildingId,
             usageType,
             amount,
-            _usageByType[buildingId][usageKey],
-            m.totalUses,
+            meta.totalUses,
             msg.sender
         );
     }
 
     /*//////////////////////////////////////////////////////////////
-                         OPTIONAL IDENTITY / PROVENANCE SETTERS
+                      IDENTITY / VISUAL / PROVENANCE SETTERS
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: manager-side provenance/visual enrichment for V1/V2 readiness */
 
-    function setIdentityTraits(
+    function setIdentityExtension(
         uint256 buildingId,
         uint256 dnaSeed,
-        uint32 visualVariant,
+        uint32 visualVariant
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+
+        _identityExt[buildingId].dnaSeed = dnaSeed;
+        _identityExt[buildingId].visualVariant = visualVariant;
+
+        emit BuildingIdentityExtendedSet(
+            buildingId,
+            dnaSeed,
+            visualVariant,
+            msg.sender
+        );
+    }
+
+    function setProvenanceCore(
+        uint256 buildingId,
         uint8 originFaction,
         uint8 originDistrictKind,
         uint8 resonanceType,
         uint32 founderEra,
         uint32 genesisEra
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
 
-        BuildingIdentityData storage i = _buildingIdentity[buildingId];
-        i.dnaSeed = dnaSeed;
-        i.visualVariant = visualVariant;
-        i.originFaction = originFaction;
-        i.originDistrictKind = originDistrictKind;
-        i.resonanceType = resonanceType;
-        i.founderEra = founderEra;
-        i.genesisEra = genesisEra;
+        BuildingIdentityExtension storage ext = _identityExt[buildingId];
+        ext.originFaction = originFaction;
+        ext.originDistrictKind = originDistrictKind;
+        ext.resonanceType = resonanceType;
+        ext.founderEra = founderEra;
+        ext.genesisEra = genesisEra;
+
+        emit BuildingProvenanceCoreSet(
+            buildingId,
+            originFaction,
+            originDistrictKind,
+            resonanceType,
+            founderEra,
+            genesisEra,
+            msg.sender
+        );
     }
 
     function setVersionTag(
         uint256 buildingId,
         uint32 versionTag
-    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
-        if (versionTag == 0) revert InvalidVersionTag();
+        if (
+            versionTag != CityBuildingTypes.VERSION_TAG_V1 &&
+            versionTag != CityBuildingTypes.VERSION_TAG_V2
+        ) revert InvalidVersionTag();
 
         _buildingMeta[buildingId].versionTag = versionTag;
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                             METADATA / URI
-    //////////////////////////////////////////////////////////////*/
-    /* TYPE: metadata layer — still NFT layer, not gameplay logic */
-
-    function setBaseTokenURI(
-        string calldata newBaseTokenUri
-    ) external onlyRole(METADATA_ROLE) {
-        string memory oldValue = _baseTokenUri;
-        _baseTokenUri = newBaseTokenUri;
-        emit BaseTokenURISet(oldValue, newBaseTokenUri, msg.sender);
     }
 
     function setImageURI(
         uint256 buildingId,
         string calldata imageURI
-    ) external onlyRole(METADATA_ROLE) {
+    ) external onlyRole(METADATA_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
-        _buildingUris[buildingId].imageURI = imageURI;
+        _identityExt[buildingId].imageURI = imageURI;
+
         emit BuildingImageURISet(buildingId, imageURI, msg.sender);
     }
 
     function setMetadataURI(
         uint256 buildingId,
         string calldata metadataURI
-    ) external onlyRole(METADATA_ROLE) {
+    ) external onlyRole(METADATA_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
-        _buildingUris[buildingId].metadataURI = metadataURI;
+        _identityExt[buildingId].metadataURI = metadataURI;
+
         emit BuildingMetadataURISet(buildingId, metadataURI, msg.sender);
     }
 
-    function getImageURI(uint256 buildingId) external view returns (string memory) {
-        _requireMintedBuilding(buildingId);
-        return _buildingUris[buildingId].imageURI;
-    }
-
-    function getMetadataURI(uint256 buildingId) external view returns (string memory) {
-        _requireMintedBuilding(buildingId);
-        return _buildingUris[buildingId].metadataURI;
-    }
-
-    function tokenURI(uint256 buildingId) public view override returns (string memory) {
-        _requireMintedBuilding(buildingId);
-
-        string memory explicitMetadataUri = _buildingUris[buildingId].metadataURI;
-        if (bytes(explicitMetadataUri).length > 0) {
-            return explicitMetadataUri;
-        }
-
-        if (bytes(_baseTokenUri).length == 0) {
-            return "";
-        }
-
-        return string(abi.encodePacked(_baseTokenUri, Strings.toString(buildingId), ".json"));
-    }
-
     /*//////////////////////////////////////////////////////////////
-                              EXTRA READS
+                            CHRONICLE HELPERS
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: utility reads for frontend / migration / analytics */
 
-    function getUsageCount(
+    function recordChronicleEntry(
         uint256 buildingId,
-        CityBuildingTypes.BuildingUsageType usageType
-    ) external view returns (uint32) {
+        CityBuildingTypes.ChronicleEventType eventType,
+        uint32 eventData1,
+        uint32 eventData2,
+        address actor,
+        bytes32 extraData
+    ) external onlyRole(MANAGER_ROLE) whenNotPaused {
         _requireMintedBuilding(buildingId);
-        return _usageByType[buildingId][uint8(usageType)];
-    }
-
-    function exists(uint256 buildingId) external view returns (bool) {
-        return _ownerOf(buildingId) != address(0);
-    }
-
-    function nextBuildingId() external view returns (uint256) {
-        return _nextBuildingId;
+        _pushChronicle(
+            buildingId,
+            eventType,
+            eventData1,
+            eventData2,
+            actor,
+            extraData
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
                            TRANSFER RESTRICTIONS
     //////////////////////////////////////////////////////////////*/
-    /* TYPE: NFT transfer policy — placed buildings cannot move */
 
     function _update(
         address to,
@@ -818,38 +951,45 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         from = _ownerOf(tokenId);
 
         if (from != address(0) && to != address(0)) {
-            BuildingStateData memory s = _buildingStateData[tokenId];
-            if (s.placed) revert TransferBlockedWhilePlaced(tokenId);
+            if (_placed[tokenId]) revert TransferBlockedWhilePlaced(tokenId);
+            if (_migrationPrepared[tokenId]) {
+                revert TransferBlockedWhileMigrationPrepared(tokenId);
+            }
 
             _buildingMeta[tokenId].totalTransfers += 1;
+
+            _pushChronicle(
+                tokenId,
+                CityBuildingTypes.ChronicleEventType.Transfer,
+                0,
+                0,
+                msg.sender,
+                bytes32(uint256(uint160(to)))
+            );
         }
 
         return super._update(to, tokenId, auth);
     }
 
     /*//////////////////////////////////////////////////////////////
-                                INTERNALS
+                               INTERNALS
     //////////////////////////////////////////////////////////////*/
+
     function _requireMintedBuilding(uint256 buildingId) internal view {
         if (_ownerOf(buildingId) == address(0)) revert InvalidTokenId();
     }
 
     function _requireMutableBuilding(uint256 buildingId) internal view {
         _requireMintedBuilding(buildingId);
-
-        BuildingStateData memory s = _buildingStateData[buildingId];
-        if (s.archived) revert BuildingArchived();
-        if (s.migrationPrepared) revert BuildingPreparedForMigration();
+        if (_archived[buildingId]) revert BuildingArchived();
+        if (_migrationPrepared[buildingId]) revert BuildingPreparedForMigration();
     }
 
     function _requireOwnerOrManager(uint256 buildingId) internal view {
-        address owner = ownerOf(buildingId);
         if (
-            msg.sender != owner &&
-            !hasRole(BUILDING_MANAGER_ROLE, msg.sender)
-        ) {
-            revert ZeroAddress(); // replace with custom unauthorized error later if preferred
-        }
+            msg.sender != ownerOf(buildingId) &&
+            !hasRole(MANAGER_ROLE, msg.sender)
+        ) revert Unauthorized();
     }
 
     function _deriveDnaSeed(
@@ -888,13 +1028,42 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
                         block.timestamp
                     )
                 )
-            ) % 100000
+            ) % type(uint32).max
+        );
+    }
+
+    function _pushChronicle(
+        uint256 buildingId,
+        CityBuildingTypes.ChronicleEventType eventType,
+        uint32 eventData1,
+        uint32 eventData2,
+        address actor,
+        bytes32 extraData
+    ) internal {
+        _chronicles[buildingId].push(
+            CityBuildingTypes.ChronicleEntry({
+                eventType: eventType,
+                eventData1: eventData1,
+                eventData2: eventData2,
+                actor: actor,
+                timestamp: uint64(block.timestamp),
+                extraData: extraData
+            })
+        );
+
+        emit ChronicleEntryRecorded(
+            buildingId,
+            _chronicles[buildingId].length - 1,
+            eventType,
+            actor,
+            uint64(block.timestamp)
         );
     }
 
     /*//////////////////////////////////////////////////////////////
                            INTERFACE SUPPORT
     //////////////////////////////////////////////////////////////*/
+
     function supportsInterface(
         bytes4 interfaceId
     ) public view override(ERC721, AccessControl) returns (bool) {

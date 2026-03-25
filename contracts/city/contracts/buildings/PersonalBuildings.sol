@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/buildings/PersonalBuildings.sol */
+/* TYPE: personal buildings orchestrator / user-facing logic layer — NOT NFT */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -6,35 +8,20 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../libraries/CityBuildingTypes.sol";
+import "../interfaces/ICityBuildingNFTV1Like.sol";
+import "../interfaces/buildings/ICityBuildingFunctionRegistry.sol";
+import "../interfaces/buildings/ICityBuildingVault.sol";
 
 /*//////////////////////////////////////////////////////////////
                         EXTERNAL INTERFACES
 //////////////////////////////////////////////////////////////*/
 
-interface ICityBuildingNFTV1PersonalLogic {
-    function ownerOf(uint256 tokenId) external view returns (address);
-
+interface ICityBuildingNFTV1PersonalLogic is ICityBuildingNFTV1Like {
     function mintBuilding(
         address to,
         CityBuildingTypes.PersonalBuildingType buildingType,
         uint32 versionTag
     ) external returns (uint256 buildingId);
-
-    function getBuildingCore(
-        uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingCore memory);
-
-    function getBuildingMeta(
-        uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingMeta memory);
-
-    function getBuildingState(
-        uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingState);
-
-    function isArchived(uint256 buildingId) external view returns (bool);
-
-    function isMigrationPrepared(uint256 buildingId) external view returns (bool);
 
     function upgradeBuilding(uint256 buildingId, uint8 newLevel) external;
 
@@ -124,207 +111,6 @@ interface IPersonalBuildingMintPlotAdapter {
         );
 }
 
-interface ICityBuildingFunctionRegistry {
-    struct FunctionProfile {
-        CityBuildingTypes.PersonalBuildingType buildingType;
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint8 evolutionTier;
-        uint8 visualTier;
-        uint8 utilityTier;
-        uint8 craftTier;
-        uint8 techTier;
-        uint8 defenseTier;
-        uint8 marketTier;
-        uint8 vaultTier;
-        bool vaultEligible;
-        bool marketEligible;
-        bool craftingEligible;
-        bool researchEligible;
-        bool defenseEligible;
-        bool prestigeEligible;
-    }
-
-    struct ResidenceProfile {
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint8 showcaseSlots;
-        uint8 trophySlots;
-        uint16 prestigePresentationBps;
-        bool legacyFlag;
-        bool galleryEligible;
-        bool trophyHallEligible;
-    }
-
-    struct FarmingHubProfile {
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint16 farmingBoostBps;
-        uint16 boostDurationBps;
-        uint16 claimWindowBonusBps;
-        uint16 farmChainBonusBps;
-    }
-
-    struct ForgeProfile {
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint8 craftingAccessTier;
-        uint8 recipeTier;
-        uint16 craftCostReductionBps;
-        uint16 craftProvenanceBonusBps;
-        uint16 outputQualityBps;
-        bool creatorBranchEligible;
-    }
-
-    struct WarehouseProfile {
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint8 vaultTier;
-        uint16 vaultCapBps;
-        uint16 storageCapBps;
-        uint16 logisticsBonusBps;
-        uint16 protectedShareBps;
-        uint16 raidableShareBps;
-        bool vaultEnabledEligible;
-        bool repairPrepEligible;
-        bool rebelsPrepEligible;
-    }
-
-    struct MarketStallProfile {
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint16 listingCap;
-        uint256 categoryMask;
-        uint16 marketFeeReductionBps;
-        uint16 premiumVisibilityBps;
-        bool provenancePremiumFlag;
-    }
-
-    struct GuardTowerProfile {
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint16 defenseBps;
-        uint16 warehouseProtectionBps;
-        uint16 raidMitigationBps;
-        uint8 radarTier;
-        uint8 shieldTier;
-        uint16 mercenarySynergyBps;
-    }
-
-    struct ResearchLabProfile {
-        uint8 level;
-        CityBuildingTypes.BuildingSpecialization specialization;
-        uint8 techTier;
-        uint256 discoveryMask;
-        uint8 blueprintUnlockTier;
-        bool enchantPrepFlag;
-        bool materiaPrepFlag;
-        uint16 forgeSynergyBps;
-    }
-
-    function getFunctionProfile(
-        uint256 buildingId
-    ) external view returns (FunctionProfile memory);
-
-    function getResidenceProfile(
-        uint256 buildingId
-    ) external view returns (ResidenceProfile memory);
-
-    function getFarmingHubProfile(
-        uint256 buildingId
-    ) external view returns (FarmingHubProfile memory);
-
-    function getForgeProfile(
-        uint256 buildingId
-    ) external view returns (ForgeProfile memory);
-
-    function getWarehouseProfile(
-        uint256 buildingId
-    ) external view returns (WarehouseProfile memory);
-
-    function getMarketStallProfile(
-        uint256 buildingId
-    ) external view returns (MarketStallProfile memory);
-
-    function getGuardTowerProfile(
-        uint256 buildingId
-    ) external view returns (GuardTowerProfile memory);
-
-    function getResearchLabProfile(
-        uint256 buildingId
-    ) external view returns (ResearchLabProfile memory);
-}
-
-interface ICityBuildingVault {
-    struct WarehouseVaultProfile {
-        bool vaultEnabled;
-        bool raidEnabled;
-        bool repairRequired;
-        bool emergencyLocked;
-        uint8 vaultTier;
-        uint8 defenseTier;
-        uint8 decayState;
-        uint8 repairState;
-        uint32 vaultCapBps;
-        uint32 defenseBps;
-        uint32 raidMitigationBps;
-        uint32 damageBps;
-        uint64 activatedAt;
-        uint64 lastVaultActionAt;
-        uint64 lastDecayCheckAt;
-        uint64 lastRepairAt;
-        uint64 lastRaidAt;
-    }
-
-    struct VaultResourceState {
-        uint256 stored;
-        uint256 reserved;
-        uint256 protectedAmount;
-        uint256 raidableAmount;
-    }
-
-    function getWarehouseVaultProfile(
-        uint256 buildingId
-    ) external view returns (WarehouseVaultProfile memory);
-
-    function getWarehouseVaultResourceState(
-        uint256 buildingId,
-        uint8 resourceId
-    ) external view returns (VaultResourceState memory);
-
-    function isWarehouseVaultEnabled(
-        uint256 buildingId
-    ) external view returns (bool);
-
-    function getWarehouseVaultCapBps(
-        uint256 buildingId
-    ) external view returns (uint32);
-
-    function getWarehouseVaultDefenseProfile(
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            uint8 defenseTier,
-            uint32 defenseBps,
-            uint32 raidMitigationBps,
-            uint32 damageBps
-        );
-
-    function getWarehouseVaultTotals(
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            uint256 totalStored,
-            uint256 totalReserved,
-            uint256 totalProtected,
-            uint256 totalRaidable
-        );
-}
-
 /*//////////////////////////////////////////////////////////////
                          PERSONAL BUILDINGS
 //////////////////////////////////////////////////////////////*/
@@ -343,7 +129,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     uint8 public constant RESOURCE_SLOT_COUNT = 10;
-    uint32 public constant DEFAULT_VERSION_TAG = 1;
+    uint32 public constant DEFAULT_VERSION_TAG = CityBuildingTypes.VERSION_TAG_V1;
     uint256 public constant MAX_BATCH_SET = 100;
 
     /*//////////////////////////////////////////////////////////////
@@ -752,7 +538,9 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         uint32 historyReward,
         bool configured
     ) external onlyRole(CONFIG_ROLE) {
-        if (specialization == CityBuildingTypes.BuildingSpecialization.None) revert InvalidSpecialization();
+        if (specialization == CityBuildingTypes.BuildingSpecialization.None) {
+            revert InvalidSpecialization();
+        }
 
         _specializationConfigs[uint8(specialization)] = SpecializationCostConfig({
             resourceAmounts: resourceAmounts,
@@ -860,7 +648,10 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         _collectPitFee(msg.sender, cfg.pitFee, reason);
 
         uint32 effectiveVersionTag = versionTag == 0 ? DEFAULT_VERSION_TAG : versionTag;
-        if (effectiveVersionTag == 0) revert InvalidVersionTag();
+        if (
+            effectiveVersionTag != CityBuildingTypes.VERSION_TAG_V1 &&
+            effectiveVersionTag != CityBuildingTypes.VERSION_TAG_V2
+        ) revert InvalidVersionTag();
 
         buildingId = buildingNFT.mintBuilding(
             msg.sender,
@@ -1462,6 +1253,30 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         return vault.getWarehouseVaultTotals(buildingId);
     }
 
+    function getBuildingDurabilityState(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint8 decayState,
+            uint8 repairState,
+            uint32 damageBps,
+            bool repairRequired,
+            uint64 lastDecayCheckAt,
+            uint64 lastRepairAt
+        )
+    {
+        if (address(vault) == address(0)) revert VaultNotSet();
+
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            revert NotWarehouseBuilding();
+        }
+
+        return vault.getBuildingDurabilityState(buildingId);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                INTERNALS
     //////////////////////////////////////////////////////////////*/
@@ -1488,11 +1303,9 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
             }
         }
 
-        if (!hasCost) {
-            return;
-        }
-
+        if (!hasCost) return;
         if (address(resourceAdapter) == address(0)) revert InvalidConfig();
+
         resourceAdapter.burnResourceBundle(from, amounts, reason);
     }
 

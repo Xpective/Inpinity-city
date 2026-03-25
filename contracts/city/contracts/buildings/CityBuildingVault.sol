@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/buildings/CityBuildingVault.sol */
+/* TYPE: warehouse vault / decay / repair / raid-prep layer — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -6,7 +8,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../libraries/CityBuildingTypes.sol";
-import "../../interfaces/buildings/ICityBuildingVault.sol";
+import "../interfaces/buildings/ICityBuildingVault.sol";
 
 /*//////////////////////////////////////////////////////////////
                         EXTERNAL INTERFACES
