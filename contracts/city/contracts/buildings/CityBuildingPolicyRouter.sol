@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
-import "contracts/city/contracts/interfaces/ICityPersonalPlacementPolicy.sol";
+import ".../interfaces/ICityPersonalPlacementPolicy.sol";
 
 /*//////////////////////////////////////////////////////////////
                     CITY BUILDING POLICY ROUTER
