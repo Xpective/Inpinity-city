@@ -77,6 +77,7 @@ contract CityBuildingVault is
     error InvalidBps();
     error InvalidDecayState();
     error InvalidRepairState();
+    error InvalidResourceState();
     error BuildingArchived();
     error BuildingPreparedForMigration();
     error VaultNotEnabled();
@@ -243,10 +244,10 @@ contract CityBuildingVault is
         uint32 vaultCapBps
     ) external onlyRole(VAULT_OPERATOR_ROLE) whenNotPaused {
         _requireWarehouse(buildingId);
+        if (vaultCapBps > MAX_BPS) revert InvalidBps();
 
         WarehouseVaultProfile storage p = _vaultProfiles[buildingId];
         if (p.vaultEnabled) revert VaultAlreadyEnabled();
-        if (vaultCapBps > MAX_BPS) revert InvalidBps();
 
         p.vaultEnabled = true;
         p.raidEnabled = false;
@@ -347,11 +348,7 @@ contract CityBuildingVault is
         p.defenseBps = defenseBps;
         p.raidMitigationBps = raidMitigationBps;
         p.damageBps = damageBps;
-        p.repairRequired = (
-            repairState == REPAIR_MINOR_REQUIRED ||
-            repairState == REPAIR_MAJOR_REQUIRED ||
-            repairState == REPAIR_LOCKED_UNTIL_REPAIR
-        );
+        p.repairRequired = _isRepairRequiredState(repairState);
         p.lastVaultActionAt = uint64(block.timestamp);
 
         emit WarehouseVaultProfileUpdated(
@@ -378,10 +375,7 @@ contract CityBuildingVault is
     ) external onlyRole(VAULT_OPERATOR_ROLE) whenNotPaused {
         _requireEnabledWarehouse(buildingId);
         _requireValidResourceId(resourceId);
-
-        if (reserved > stored) revert AmountExceedsStored();
-        if (protectedAmount > stored) revert AmountExceedsStored();
-        if (raidableAmount > stored) revert AmountExceedsStored();
+        _requireValidResourceState(stored, reserved, protectedAmount, raidableAmount);
 
         VaultResourceState storage s = _vaultResources[buildingId][resourceId];
         s.stored = stored;
@@ -456,6 +450,7 @@ contract CityBuildingVault is
 
         WarehouseVaultProfile storage p = _vaultProfiles[buildingId];
         if (p.emergencyLocked) revert EmergencyLocked();
+        if (!p.raidEnabled) revert VaultNotEnabled();
 
         VaultResourceState storage s = _vaultResources[buildingId][resourceId];
         if (amount > s.raidableAmount) revert AmountExceedsRaidable();
@@ -489,11 +484,7 @@ contract CityBuildingVault is
 
         WarehouseVaultProfile storage p = _vaultProfiles[buildingId];
         p.repairState = repairState;
-        p.repairRequired = (
-            repairState == REPAIR_MINOR_REQUIRED ||
-            repairState == REPAIR_MAJOR_REQUIRED ||
-            repairState == REPAIR_LOCKED_UNTIL_REPAIR
-        );
+        p.repairRequired = _isRepairRequiredState(repairState);
         p.lastVaultActionAt = uint64(block.timestamp);
 
         emit WarehouseVaultRepairRequiredSet(
@@ -518,11 +509,7 @@ contract CityBuildingVault is
         p.damageBps = damageBps;
         p.lastRepairAt = uint64(block.timestamp);
         p.lastVaultActionAt = uint64(block.timestamp);
-        p.repairRequired = (
-            repairState == REPAIR_MINOR_REQUIRED ||
-            repairState == REPAIR_MAJOR_REQUIRED ||
-            repairState == REPAIR_LOCKED_UNTIL_REPAIR
-        );
+        p.repairRequired = _isRepairRequiredState(repairState);
 
         if (!p.repairRequired && damageBps == 0) {
             p.decayState = DECAY_STABLE;
@@ -649,6 +636,32 @@ contract CityBuildingVault is
         }
     }
 
+    function getBuildingDurabilityState(
+        uint256 buildingId
+    )
+        external
+        view
+        override
+        returns (
+            uint8 decayState,
+            uint8 repairState,
+            uint32 damageBps,
+            bool repairRequired,
+            uint64 lastDecayCheckAt,
+            uint64 lastRepairAt
+        )
+    {
+        WarehouseVaultProfile memory p = _vaultProfiles[buildingId];
+        return (
+            p.decayState,
+            p.repairState,
+            p.damageBps,
+            p.repairRequired,
+            p.lastDecayCheckAt,
+            p.lastRepairAt
+        );
+    }
+
     /*//////////////////////////////////////////////////////////////
                                INTERNALS
     //////////////////////////////////////////////////////////////*/
@@ -682,5 +695,25 @@ contract CityBuildingVault is
 
     function _requireValidRepairState(uint8 repairState) internal pure {
         if (repairState > REPAIR_LOCKED_UNTIL_REPAIR) revert InvalidRepairState();
+    }
+
+    function _requireValidResourceState(
+        uint256 stored,
+        uint256 reserved,
+        uint256 protectedAmount,
+        uint256 raidableAmount
+    ) internal pure {
+        if (reserved > stored) revert AmountExceedsStored();
+        if (protectedAmount > stored) revert AmountExceedsStored();
+        if (raidableAmount > stored) revert AmountExceedsStored();
+        if (protectedAmount + raidableAmount > stored) revert InvalidResourceState();
+    }
+
+    function _isRepairRequiredState(uint8 repairState) internal pure returns (bool) {
+        return (
+            repairState == REPAIR_MINOR_REQUIRED ||
+            repairState == REPAIR_MAJOR_REQUIRED ||
+            repairState == REPAIR_LOCKED_UNTIL_REPAIR
+        );
     }
 }

@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/buildings/CityBuildingFunctionRegistry.sol */
+/* TYPE: building function matrix / read layer — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -5,7 +7,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "../libraries/CityBuildingTypes.sol";
-import "../../interfaces/buildings/ICityBuildingFunctionRegistry.sol";
+import "../interfaces/buildings/ICityBuildingFunctionRegistry.sol";
 
 /*//////////////////////////////////////////////////////////////
                         DEPENDENCY INTERFACES

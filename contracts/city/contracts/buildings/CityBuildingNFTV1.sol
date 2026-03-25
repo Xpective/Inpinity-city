@@ -1,1370 +1,903 @@
+/* FILE: contracts/city/contracts/buildings/CityBuildingNFTV1.sol */
+/* TYPE: NFT / ASSET / IDENTITY / PROVENANCE LAYER — NOT PersonalBuildings.sol */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+/*
+    IMPORTANT:
+    - This file is the NFT / asset layer for Personal Buildings V1.
+    - This file is NOT the gameplay orchestrator.
+    - This file is NOT PlacementPolicy.
+    - This file is NOT FunctionRegistry.
+    - This file is NOT Vault logic.
+    - This file is NOT mint-through-owned-plot logic.
+*/
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "../libraries/CityBuildingTypes.sol";
 
-/*//////////////////////////////////////////////////////////////
-                        EXTERNAL INTERFACES
-//////////////////////////////////////////////////////////////*/
+contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
+    /*//////////////////////////////////////////////////////////////
+                         FILE ROLE / RESPONSIBILITY
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: NFT / ASSET LAYER
+       Responsibility:
+       - tradable building asset IDs
+       - identity / visual / provenance core
+       - core/meta/state reads
+       - usage / prestige / history counters
+       - placed / archived / migrationPrepared flags
+       - upgrade + specialization state mutation
+       - future URI/image extensibility
+       - transfer blocking while placed
+    */
 
-interface ICityBuildingNFTV1PersonalLogic {
-    function ownerOf(uint256 tokenId) external view returns (address);
+    /*//////////////////////////////////////////////////////////////
+                                 ROLES
+    //////////////////////////////////////////////////////////////*/
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BUILDING_MANAGER_ROLE = keccak256("BUILDING_MANAGER_ROLE");
+    bytes32 public constant PLACEMENT_ROLE = keccak256("PLACEMENT_ROLE");
+    bytes32 public constant METADATA_ROLE = keccak256("METADATA_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+    error ZeroAddress();
+    error InvalidBuildingType();
+    error InvalidLevel();
+    error InvalidSpecialization();
+    error InvalidVersionTag();
+    error InvalidState();
+    error InvalidNameLength();
+    error InvalidTokenId();
+    error AlreadyPlaced();
+    error NotPlaced();
+    error BuildingArchived();
+    error BuildingPreparedForMigration();
+    error TransferBlockedWhilePlaced(uint256 buildingId);
+    error NoStateChange();
+
+    /*//////////////////////////////////////////////////////////////
+                                CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    uint32 public constant DEFAULT_VERSION_TAG = CityBuildingTypes.VERSION_TAG_V1;
+    uint256 public constant MAX_CUSTOM_NAME_LENGTH = 64;
+
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: NFT / ASSET EVENTS */
+    event BuildingMinted(
+        uint256 indexed buildingId,
+        address indexed to,
+        CityBuildingTypes.PersonalBuildingType indexed buildingType,
+        uint32 versionTag,
+        uint64 mintedAt
+    );
+
+    event BuildingPlacedStateSet(
+        uint256 indexed buildingId,
+        bool placed,
+        address indexed executor,
+        uint64 updatedAt
+    );
+
+    event BuildingArchivedStateSet(
+        uint256 indexed buildingId,
+        bool archived,
+        address indexed executor,
+        uint64 updatedAt
+    );
+
+    event BuildingMigrationPreparedStateSet(
+        uint256 indexed buildingId,
+        bool prepared,
+        address indexed executor,
+        uint64 updatedAt
+    );
+
+    event BuildingUpgraded(
+        uint256 indexed buildingId,
+        uint8 oldLevel,
+        uint8 newLevel,
+        address indexed executor,
+        uint64 updatedAt
+    );
+
+    event BuildingSpecialized(
+        uint256 indexed buildingId,
+        CityBuildingTypes.BuildingSpecialization oldSpecialization,
+        CityBuildingTypes.BuildingSpecialization newSpecialization,
+        address indexed executor,
+        uint64 updatedAt
+    );
+
+    event BuildingCustomNameSet(
+        uint256 indexed buildingId,
+        string customName,
+        address indexed executor
+    );
+
+    event BuildingPrestigeUpdated(
+        uint256 indexed buildingId,
+        uint32 oldValue,
+        uint32 newValue,
+        address indexed executor
+    );
+
+    event BuildingHistoryUpdated(
+        uint256 indexed buildingId,
+        uint32 oldValue,
+        uint32 newValue,
+        address indexed executor
+    );
+
+    event BuildingUsageRecorded(
+        uint256 indexed buildingId,
+        CityBuildingTypes.BuildingUsageType indexed usageType,
+        uint32 amount,
+        uint32 newTypeTotal,
+        uint32 newGlobalTotal,
+        address indexed executor
+    );
+
+    event BuildingImageURISet(
+        uint256 indexed buildingId,
+        string imageURI,
+        address indexed executor
+    );
+
+    event BuildingMetadataURISet(
+        uint256 indexed buildingId,
+        string metadataURI,
+        address indexed executor
+    );
+
+    event BaseTokenURISet(
+        string oldValue,
+        string newValue,
+        address indexed executor
+    );
+
+    /*//////////////////////////////////////////////////////////////
+                            INTERNAL STORAGE
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: internal NFT storage — NOT gameplay orchestration */
+
+    struct BuildingCoreData {
+        CityBuildingTypes.BuildingCategory category;
+        CityBuildingTypes.PersonalBuildingType buildingType;
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+    }
+
+    struct BuildingMetaData {
+        string customName;
+        uint32 versionTag;
+        uint32 totalUses;
+        uint32 totalTransfers;
+        uint32 totalUpgrades;
+        uint32 prestigeScore;
+        uint32 historyScore;
+    }
+
+    struct BuildingStateData {
+        CityBuildingTypes.BuildingState state;
+        bool placed;
+        bool archived;
+        bool migrationPrepared;
+    }
+
+    struct BuildingIdentityData {
+        uint256 dnaSeed;
+        uint32 visualVariant;
+        uint8 originFaction;
+        uint8 originDistrictKind;
+        uint8 resonanceType;
+        uint32 founderEra;
+        uint32 genesisEra;
+        uint64 mintedAt;
+        address creator;
+        address originalMinter;
+    }
+
+    struct BuildingUriData {
+        string imageURI;
+        string metadataURI;
+    }
+
+    mapping(uint256 => BuildingCoreData) private _buildingCore;
+    mapping(uint256 => BuildingMetaData) private _buildingMeta;
+    mapping(uint256 => BuildingStateData) private _buildingStateData;
+    mapping(uint256 => BuildingIdentityData) private _buildingIdentity;
+    mapping(uint256 => BuildingUriData) private _buildingUris;
+    mapping(uint256 => mapping(uint8 => uint32)) private _usageByType;
+
+    uint256 private _nextBuildingId = 1;
+    string private _baseTokenUri;
+
+    /*//////////////////////////////////////////////////////////////
+                             EXTERNAL READ STRUCTS
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: frontend / adapter / migration-friendly read models */
+
+    struct BuildingIdentityView {
+        uint256 buildingId;
+        CityBuildingTypes.BuildingCategory category;
+        CityBuildingTypes.PersonalBuildingType buildingType;
+        uint32 versionTag;
+        uint256 dnaSeed;
+        uint32 visualVariant;
+        string customName;
+        uint8 resonanceType;
+        uint64 mintedAt;
+        address creator;
+        address originalMinter;
+    }
+
+    struct VisualStateView {
+        uint32 visualVariant;
+        uint8 level;
+        CityBuildingTypes.BuildingSpecialization specialization;
+        bool placed;
+        bool archived;
+        bool migrationPrepared;
+        CityBuildingTypes.BuildingState state;
+        string imageURI;
+        string metadataURI;
+    }
+
+    struct ProvenanceCoreView {
+        uint8 originFaction;
+        uint8 originDistrictKind;
+        uint32 founderEra;
+        uint32 genesisEra;
+        address creator;
+        address originalMinter;
+        uint64 mintedAt;
+        uint32 versionTag;
+        uint32 prestigeScore;
+        uint32 historyScore;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: NFT / ASSET CONSTRUCTOR */
+    constructor(
+        address admin_,
+        string memory baseTokenUri_
+    ) ERC721("Inpinity City Building", "ICBUILD") {
+        if (admin_ == address(0)) revert ZeroAddress();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
+        _grantRole(MINTER_ROLE, admin_);
+        _grantRole(BUILDING_MANAGER_ROLE, admin_);
+        _grantRole(PLACEMENT_ROLE, admin_);
+        _grantRole(METADATA_ROLE, admin_);
+        _grantRole(PAUSER_ROLE, admin_);
+
+        _baseTokenUri = baseTokenUri_;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               PAUSE CONTROL
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: NFT / ASSET CONTROL */
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                  MINT
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: NFT minting only — NOT plot entitlement logic */
     function mintBuilding(
         address to,
         CityBuildingTypes.PersonalBuildingType buildingType,
         uint32 versionTag
-    ) external returns (uint256 buildingId);
+    ) external onlyRole(MINTER_ROLE) whenNotPaused returns (uint256 buildingId) {
+        if (to == address(0)) revert ZeroAddress();
+        if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
+
+        uint32 effectiveVersionTag = versionTag == 0 ? DEFAULT_VERSION_TAG : versionTag;
+        if (effectiveVersionTag == 0) revert InvalidVersionTag();
+
+        buildingId = _nextBuildingId++;
+        _safeMint(to, buildingId);
+
+        _buildingCore[buildingId] = BuildingCoreData({
+            category: CityBuildingTypes.BuildingCategory.Personal,
+            buildingType: buildingType,
+            level: 1,
+            specialization: CityBuildingTypes.BuildingSpecialization.None
+        });
+
+        _buildingMeta[buildingId] = BuildingMetaData({
+            customName: "",
+            versionTag: effectiveVersionTag,
+            totalUses: 0,
+            totalTransfers: 0,
+            totalUpgrades: 0,
+            prestigeScore: 0,
+            historyScore: 0
+        });
+
+        _buildingStateData[buildingId] = BuildingStateData({
+            state: CityBuildingTypes.BuildingState.Unplaced,
+            placed: false,
+            archived: false,
+            migrationPrepared: false
+        });
+
+        _buildingIdentity[buildingId] = BuildingIdentityData({
+            dnaSeed: _deriveDnaSeed(buildingId, to, buildingType),
+            visualVariant: _deriveVisualVariant(buildingId, buildingType),
+            originFaction: 0,
+            originDistrictKind: 0,
+            resonanceType: 0,
+            founderEra: 0,
+            genesisEra: 0,
+            mintedAt: uint64(block.timestamp),
+            creator: msg.sender,
+            originalMinter: to
+        });
+
+        emit BuildingMinted(
+            buildingId,
+            to,
+            buildingType,
+            effectiveVersionTag,
+            uint64(block.timestamp)
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          CORE / META / STATE READS
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: NFT canonical reads */
 
     function getBuildingCore(
         uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingCore memory);
+    ) external view returns (CityBuildingTypes.BuildingCore memory core) {
+        _requireMintedBuilding(buildingId);
+
+        BuildingCoreData memory d = _buildingCore[buildingId];
+        BuildingIdentityData memory i = _buildingIdentity[buildingId];
+        BuildingStateData memory s = _buildingStateData[buildingId];
+
+        /*
+            ASSUMPTION:
+            This constructor shape assumes CityBuildingTypes.BuildingCore contains
+            at least the fields used elsewhere in the project:
+            category, buildingType, level, specialization, mintedAt, firstOwner, placed.
+            If CityBuildingTypes.BuildingCore in the repo contains extra fields,
+            align this return mapping to the actual library definition.
+        */
+        core = CityBuildingTypes.BuildingCore({
+            category: d.category,
+            buildingType: d.buildingType,
+            level: d.level,
+            specialization: d.specialization,
+            mintedAt: i.mintedAt,
+            firstOwner: i.originalMinter,
+            placed: s.placed
+        });
+    }
 
     function getBuildingMeta(
         uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingMeta memory);
+    ) external view returns (CityBuildingTypes.BuildingMeta memory meta) {
+        _requireMintedBuilding(buildingId);
+
+        BuildingMetaData memory d = _buildingMeta[buildingId];
+
+        /*
+            ASSUMPTION:
+            This constructor shape assumes CityBuildingTypes.BuildingMeta contains
+            the fields used by the project notes:
+            customName, versionTag, totalUses, totalTransfers,
+            totalUpgrades, prestigeScore, historyScore.
+        */
+        meta = CityBuildingTypes.BuildingMeta({
+            customName: d.customName,
+            versionTag: d.versionTag,
+            totalUses: d.totalUses,
+            totalTransfers: d.totalTransfers,
+            totalUpgrades: d.totalUpgrades,
+            prestigeScore: d.prestigeScore,
+            historyScore: d.historyScore
+        });
+    }
 
     function getBuildingState(
         uint256 buildingId
-    ) external view returns (CityBuildingTypes.BuildingState);
+    ) external view returns (CityBuildingTypes.BuildingState) {
+        _requireMintedBuilding(buildingId);
+        return _buildingStateData[buildingId].state;
+    }
 
-    function isArchived(uint256 buildingId) external view returns (bool);
+    function isArchived(uint256 buildingId) external view returns (bool) {
+        _requireMintedBuilding(buildingId);
+        return _buildingStateData[buildingId].archived;
+    }
 
-    function isMigrationPrepared(uint256 buildingId) external view returns (bool);
+    function isMigrationPrepared(uint256 buildingId) external view returns (bool) {
+        _requireMintedBuilding(buildingId);
+        return _buildingStateData[buildingId].migrationPrepared;
+    }
 
-    function upgradeBuilding(uint256 buildingId, uint8 newLevel) external;
+    /*//////////////////////////////////////////////////////////////
+                        NEW IDENTITY / VISUAL / PROVENANCE READS
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: stable read layer for frontend / placement / V2 migration */
+
+    function getBuildingIdentity(
+        uint256 buildingId
+    ) external view returns (BuildingIdentityView memory view_) {
+        _requireMintedBuilding(buildingId);
+
+        BuildingCoreData memory c = _buildingCore[buildingId];
+        BuildingMetaData memory m = _buildingMeta[buildingId];
+        BuildingIdentityData memory i = _buildingIdentity[buildingId];
+
+        view_ = BuildingIdentityView({
+            buildingId: buildingId,
+            category: c.category,
+            buildingType: c.buildingType,
+            versionTag: m.versionTag,
+            dnaSeed: i.dnaSeed,
+            visualVariant: i.visualVariant,
+            customName: m.customName,
+            resonanceType: i.resonanceType,
+            mintedAt: i.mintedAt,
+            creator: i.creator,
+            originalMinter: i.originalMinter
+        });
+    }
+
+    function getVisualState(
+        uint256 buildingId
+    ) external view returns (VisualStateView memory view_) {
+        _requireMintedBuilding(buildingId);
+
+        BuildingCoreData memory c = _buildingCore[buildingId];
+        BuildingStateData memory s = _buildingStateData[buildingId];
+        BuildingIdentityData memory i = _buildingIdentity[buildingId];
+        BuildingUriData memory u = _buildingUris[buildingId];
+
+        view_ = VisualStateView({
+            visualVariant: i.visualVariant,
+            level: c.level,
+            specialization: c.specialization,
+            placed: s.placed,
+            archived: s.archived,
+            migrationPrepared: s.migrationPrepared,
+            state: s.state,
+            imageURI: u.imageURI,
+            metadataURI: u.metadataURI
+        });
+    }
+
+    function getProvenanceCore(
+        uint256 buildingId
+    ) external view returns (ProvenanceCoreView memory view_) {
+        _requireMintedBuilding(buildingId);
+
+        BuildingIdentityData memory i = _buildingIdentity[buildingId];
+        BuildingMetaData memory m = _buildingMeta[buildingId];
+
+        view_ = ProvenanceCoreView({
+            originFaction: i.originFaction,
+            originDistrictKind: i.originDistrictKind,
+            founderEra: i.founderEra,
+            genesisEra: i.genesisEra,
+            creator: i.creator,
+            originalMinter: i.originalMinter,
+            mintedAt: i.mintedAt,
+            versionTag: m.versionTag,
+            prestigeScore: m.prestigeScore,
+            historyScore: m.historyScore
+        });
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              STATE MUTATIONS
+    //////////////////////////////////////////////////////////////*/
+    /* TYPE: asset-state mutation — NOT gameplay orchestration */
+
+    function setPlaced(
+        uint256 buildingId,
+        bool placed
+    ) external onlyRole(PLACEMENT_ROLE) whenNotPaused {
+        _requireMutableBuilding(buildingId);
+
+        BuildingStateData storage s = _buildingStateData[buildingId];
+        if (s.placed == placed) revert NoStateChange();
+
+        s.placed = placed;
+        s.state = placed
+            ? CityBuildingTypes.BuildingState.PlacedActive
+            : CityBuildingTypes.BuildingState.Unplaced;
+
+        emit BuildingPlacedStateSet(
+            buildingId,
+            placed,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function upgradeBuilding(
+        uint256 buildingId,
+        uint8 newLevel
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMutableBuilding(buildingId);
+        if (!CityBuildingTypes.isValidLevel(newLevel)) revert InvalidLevel();
+
+        BuildingCoreData storage c = _buildingCore[buildingId];
+        uint8 oldLevel = c.level;
+
+        if (newLevel <= oldLevel) revert NoStateChange();
+
+        c.level = newLevel;
+        _buildingMeta[buildingId].totalUpgrades += 1;
+
+        emit BuildingUpgraded(
+            buildingId,
+            oldLevel,
+            newLevel,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
 
     function specializeBuilding(
         uint256 buildingId,
         CityBuildingTypes.BuildingSpecialization newSpecialization
-    ) external;
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMutableBuilding(buildingId);
+        if (newSpecialization == CityBuildingTypes.BuildingSpecialization.None) {
+            revert InvalidSpecialization();
+        }
 
-    function addPrestigeScore(uint256 buildingId, uint32 amount) external;
+        BuildingCoreData storage c = _buildingCore[buildingId];
+        CityBuildingTypes.BuildingSpecialization oldSpecialization = c.specialization;
+        if (oldSpecialization == newSpecialization) revert NoStateChange();
 
-    function addHistoryScore(uint256 buildingId, uint32 amount) external;
+        c.specialization = newSpecialization;
+
+        emit BuildingSpecialized(
+            buildingId,
+            oldSpecialization,
+            newSpecialization,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function setArchived(
+        uint256 buildingId,
+        bool archived
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+
+        BuildingStateData storage s = _buildingStateData[buildingId];
+        if (s.archived == archived) revert NoStateChange();
+
+        s.archived = archived;
+        s.state = archived
+            ? CityBuildingTypes.BuildingState.Archived
+            : (s.placed ? CityBuildingTypes.BuildingState.PlacedActive : CityBuildingTypes.BuildingState.Unplaced);
+
+        emit BuildingArchivedStateSet(
+            buildingId,
+            archived,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function setMigrationPrepared(
+        uint256 buildingId,
+        bool prepared
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+
+        BuildingStateData storage s = _buildingStateData[buildingId];
+        if (s.migrationPrepared == prepared) revert NoStateChange();
+
+        s.migrationPrepared = prepared;
+
+        emit BuildingMigrationPreparedStateSet(
+            buildingId,
+            prepared,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function setBuildingCustomName(
+        uint256 buildingId,
+        string calldata customName
+    ) external whenNotPaused {
+        _requireMintedBuilding(buildingId);
+        _requireOwnerOrManager(buildingId);
+
+        if (bytes(customName).length > MAX_CUSTOM_NAME_LENGTH) revert InvalidNameLength();
+
+        _buildingMeta[buildingId].customName = customName;
+        emit BuildingCustomNameSet(buildingId, customName, msg.sender);
+    }
+
+    function addPrestigeScore(
+        uint256 buildingId,
+        uint32 amount
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+
+        BuildingMetaData storage m = _buildingMeta[buildingId];
+        uint32 oldValue = m.prestigeScore;
+        uint32 newValue = oldValue + amount;
+        m.prestigeScore = newValue;
+
+        emit BuildingPrestigeUpdated(buildingId, oldValue, newValue, msg.sender);
+    }
+
+    function addHistoryScore(
+        uint256 buildingId,
+        uint32 amount
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+
+        BuildingMetaData storage m = _buildingMeta[buildingId];
+        uint32 oldValue = m.historyScore;
+        uint32 newValue = oldValue + amount;
+        m.historyScore = newValue;
+
+        emit BuildingHistoryUpdated(buildingId, oldValue, newValue, msg.sender);
+    }
 
     function recordUsage(
         uint256 buildingId,
         CityBuildingTypes.BuildingUsageType usageType,
         uint32 amount
-    ) external;
-}
-
-interface ICityBuildingPlacementPersonalRead {
-    function getPlacementSummary(
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            uint256 plotId,
-            bool placed,
-            bool prepared,
-            bool archived,
-            uint64 placedAt,
-            uint64 lastPlacedAt,
-            address placedBy
-        );
-}
-
-/// @notice Resource adapter for ResourceToken / city resource burning.
-/// @dev PersonalBuildings must receive CALLER_ROLE on the adapter.
-interface IPersonalBuildingResourceAdapter {
-    function burnResourceBundle(
-        address from,
-        uint256[10] calldata amounts,
-        bytes32 reason
-    ) external;
-}
-
-/// @notice PIT / Pitrone fee adapter.
-/// @dev PersonalBuildings must receive CALLER_ROLE on the adapter.
-interface IPersonalBuildingPitAdapter {
-    function collectPitFee(
-        address from,
-        uint256 amount,
-        bytes32 reason
-    ) external;
-}
-
-/// @notice Optional discovery / research / recipe gate adapter.
-interface IPersonalBuildingTechAdapter {
-    function canUpgradeBuilding(
-        address owner,
-        uint256 buildingId,
-        CityBuildingTypes.BuildingCore calldata core,
-        uint8 targetLevel
-    ) external view returns (bool allowed, bytes32 reasonCode);
-
-    function canSpecializeBuilding(
-        address owner,
-        uint256 buildingId,
-        CityBuildingTypes.BuildingCore calldata core,
-        CityBuildingTypes.BuildingSpecialization specialization
-    ) external view returns (bool allowed, bytes32 reasonCode);
-}
-
-/// @notice Optional hook adapter to touch plot activity / city status after meaningful actions.
-interface IPersonalBuildingStatusHookAdapter {
-    function touchPlotActivity(uint256 plotId) external;
-}
-
-/// @notice Plot adapter used for player-facing building minting.
-/// @dev One owned completed personal plot can be used as mint entitlement.
-interface IPersonalBuildingMintPlotAdapter {
-    function getMintPlotInfo(
-        uint256 plotId
-    )
-        external
-        view
-        returns (
-            address owner,
-            bool exists,
-            bool completed,
-            bool personalPlot,
-            bool eligible,
-            uint8 districtKind,
-            uint8 faction
-        );
-}
-
-/*//////////////////////////////////////////////////////////////
-                         PERSONAL BUILDINGS
-//////////////////////////////////////////////////////////////*/
-
-/// @title PersonalBuildings
-/// @notice Gameplay logic layer for personal buildings:
-///         - player-facing mint by owned completed personal plot
-///         - configurable mint / upgrade / specialization costs
-///         - resource burning via adapter
-///         - PIT fee collection via adapter
-///         - optional tech-gating via adapter
-///         - optional plot activity touch via status hook adapter
-///         - read helpers for quotes / set progress / synergies
-///
-/// @dev This contract sits above:
-///      - CityBuildingNFTV1     (asset / identity layer)
-///      - CityBuildingPlacement (placement truth layer)
-///
-///      Required role grants after deploy:
-///      - On CityBuildingNFTV1:
-///          MINTER_ROLE, UPGRADER_ROLE, USAGE_ROLE
-///      - On CityResourceAdapter:
-///          CALLER_ROLE
-///      - On CityPitAdapter:
-///          CALLER_ROLE
-contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
-    /*//////////////////////////////////////////////////////////////
-                                 ROLES
-    //////////////////////////////////////////////////////////////*/
-
-    bytes32 public constant LOGIC_ADMIN_ROLE = keccak256("LOGIC_ADMIN_ROLE");
-    bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-
-    /*//////////////////////////////////////////////////////////////
-                               CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    uint8 public constant RESOURCE_SLOT_COUNT = 10;
-    uint32 public constant DEFAULT_VERSION_TAG = CityBuildingTypes.VERSION_TAG_V1;
-    uint256 public constant DEFAULT_MAX_BATCH_SET = 100;
-
-    /*//////////////////////////////////////////////////////////////
-                                 ERRORS
-    //////////////////////////////////////////////////////////////*/
-
-    error ZeroAddress();
-    error InvalidBuildingNFT();
-    error InvalidPlacement();
-    error InvalidResourceAdapter();
-    error InvalidPitAdapter();
-    error InvalidTechAdapter();
-    error InvalidStatusHookAdapter();
-    error InvalidMintPlotAdapter();
-
-    error InvalidBuildingCategory();
-    error InvalidBuildingType();
-    error InvalidLevel();
-    error InvalidSpecialization();
-    error InvalidVersionTag();
-    error InvalidConfig();
-    error MaxLevelReached();
-    error NoStateChange();
-
-    error NotBuildingOwner();
-    error BuildingArchived();
-    error BuildingPreparedForMigration();
-    error BuildingStateNotUpgradeable();
-    error BuildingStateNotSpecializable();
-
-    error UpgradeCooldownActive(uint64 readyAt);
-    error UpgradeNotConfigured();
-    error SpecializationNotConfigured();
-    error MintNotConfigured();
-    error TechRequirementFailed(bytes32 reasonCode);
-
-    error MintAdapterNotSet();
-    error PlotNotFound();
-    error PlotNotCompleted();
-    error PlotNotPersonal();
-    error PlotNotEligibleForMint();
-    error PlotOwnerMismatch();
-    error PlotMintAlreadyUsed();
-    error InvalidPlotId();
-
-    error NoIdsProvided();
-    error BatchLengthMismatch();
-    error BatchTooLarge(uint256 provided, uint256 maxAllowed);
-
-    /*//////////////////////////////////////////////////////////////
-                                EVENTS
-    //////////////////////////////////////////////////////////////*/
-
-    event BuildingNFTSet(address indexed buildingNFT, address indexed executor);
-    event PlacementSet(address indexed placement, address indexed executor);
-    event ResourceAdapterSet(address indexed adapter, address indexed executor);
-    event PitAdapterSet(address indexed adapter, address indexed executor);
-    event TechAdapterSet(address indexed adapter, address indexed executor);
-    event StatusHookAdapterSet(address indexed adapter, address indexed executor);
-    event MintPlotAdapterSet(address indexed adapter, address indexed executor);
-
-    event MaxBatchSetUpdated(uint256 oldValue, uint256 newValue, address indexed executor);
-
-    event MintCostConfigured(
-        CityBuildingTypes.PersonalBuildingType indexed buildingType,
-        uint256[10] resourceAmounts,
-        uint256 pitFee,
-        uint32 prestigeReward,
-        uint32 historyReward,
-        bool configured,
-        address indexed executor
-    );
-
-    event UpgradeCostConfigured(
-        CityBuildingTypes.PersonalBuildingType indexed buildingType,
-        uint8 indexed targetLevel,
-        uint256[10] resourceAmounts,
-        uint256 pitFee,
-        uint64 cooldown,
-        uint32 prestigeReward,
-        uint32 historyReward,
-        bool configured,
-        address indexed executor
-    );
-
-    event SpecializationCostConfigured(
-        CityBuildingTypes.BuildingSpecialization indexed specialization,
-        uint256[10] resourceAmounts,
-        uint256 pitFee,
-        uint32 prestigeReward,
-        uint32 historyReward,
-        bool configured,
-        address indexed executor
-    );
-
-    event PlotMintEntitlementUpdated(
-        uint256 indexed plotId,
-        bool used,
-        uint256 indexed buildingId,
-        address indexed executor
-    );
-
-    event LastUpgradeExecutionAtUpdated(
-        uint256 indexed buildingId,
-        uint64 lastExecutionAt,
-        address indexed executor
-    );
-
-    event PersonalBuildingMintedThroughLogic(
-        uint256 indexed buildingId,
-        uint256 indexed plotId,
-        CityBuildingTypes.PersonalBuildingType indexed buildingType,
-        address owner,
-        uint64 mintedAt
-    );
-
-    event BuildingUpgradedThroughLogic(
-        uint256 indexed buildingId,
-        CityBuildingTypes.PersonalBuildingType indexed buildingType,
-        uint8 oldLevel,
-        uint8 newLevel,
-        address indexed owner,
-        uint64 executedAt
-    );
-
-    event BuildingSpecializedThroughLogic(
-        uint256 indexed buildingId,
-        CityBuildingTypes.PersonalBuildingType indexed buildingType,
-        CityBuildingTypes.BuildingSpecialization indexed specialization,
-        address owner,
-        uint64 executedAt
-    );
-
-    /*//////////////////////////////////////////////////////////////
-                                 STORAGE
-    //////////////////////////////////////////////////////////////*/
-
-    ICityBuildingNFTV1PersonalLogic public buildingNFT;
-    ICityBuildingPlacementPersonalRead public placement;
-
-    IPersonalBuildingResourceAdapter public resourceAdapter;
-    IPersonalBuildingPitAdapter public pitAdapter;
-    IPersonalBuildingTechAdapter public techAdapter;
-    IPersonalBuildingStatusHookAdapter public statusHookAdapter;
-    IPersonalBuildingMintPlotAdapter public mintPlotAdapter;
-
-    uint256 public maxBatchSet = DEFAULT_MAX_BATCH_SET;
-
-    struct MintCostConfig {
-        uint256[10] resourceAmounts;
-        uint256 pitFee;
-        uint32 prestigeReward;
-        uint32 historyReward;
-        bool configured;
-    }
-
-    struct UpgradeCostConfig {
-        uint256[10] resourceAmounts;
-        uint256 pitFee;
-        uint64 cooldown;
-        uint32 prestigeReward;
-        uint32 historyReward;
-        bool configured;
-    }
-
-    struct SpecializationCostConfig {
-        uint256[10] resourceAmounts;
-        uint256 pitFee;
-        uint32 prestigeReward;
-        uint32 historyReward;
-        bool configured;
-    }
-
-    /// @notice buildingType => mint cost config
-    mapping(uint8 => MintCostConfig) private _mintConfigs;
-
-    /// @notice buildingType => targetLevel => config
-    mapping(uint8 => mapping(uint8 => UpgradeCostConfig)) private _upgradeConfigs;
-
-    /// @notice specialization => config
-    mapping(uint8 => SpecializationCostConfig) private _specializationConfigs;
-
-    /// @notice buildingId => last upgrade execution timestamp via this logic contract
-    mapping(uint256 => uint64) public lastUpgradeExecutionAt;
-
-    /// @notice plotId => whether this plot entitlement already minted a personal building
-    mapping(uint256 => bool) public plotMintUsed;
-
-    /// @notice plotId => the building minted via that plot entitlement
-    mapping(uint256 => uint256) public mintedBuildingIdByPlot;
-
-    /*//////////////////////////////////////////////////////////////
-                               CONSTRUCTOR
-    //////////////////////////////////////////////////////////////*/
-
-    constructor(
-        address buildingNFT_,
-        address placement_,
-        address resourceAdapter_,
-        address pitAdapter_,
-        address techAdapter_,
-        address statusHookAdapter_,
-        address mintPlotAdapter_,
-        address admin_
-    ) {
-        if (admin_ == address(0)) revert ZeroAddress();
-        if (buildingNFT_ == address(0)) revert ZeroAddress();
-        if (placement_ == address(0)) revert ZeroAddress();
-
-        if (buildingNFT_.code.length == 0) revert InvalidBuildingNFT();
-        if (placement_.code.length == 0) revert InvalidPlacement();
-        if (resourceAdapter_ != address(0) && resourceAdapter_.code.length == 0) revert InvalidResourceAdapter();
-        if (pitAdapter_ != address(0) && pitAdapter_.code.length == 0) revert InvalidPitAdapter();
-        if (techAdapter_ != address(0) && techAdapter_.code.length == 0) revert InvalidTechAdapter();
-        if (statusHookAdapter_ != address(0) && statusHookAdapter_.code.length == 0) revert InvalidStatusHookAdapter();
-        if (mintPlotAdapter_ != address(0) && mintPlotAdapter_.code.length == 0) revert InvalidMintPlotAdapter();
-
-        buildingNFT = ICityBuildingNFTV1PersonalLogic(buildingNFT_);
-        placement = ICityBuildingPlacementPersonalRead(placement_);
-        resourceAdapter = IPersonalBuildingResourceAdapter(resourceAdapter_);
-        pitAdapter = IPersonalBuildingPitAdapter(pitAdapter_);
-        techAdapter = IPersonalBuildingTechAdapter(techAdapter_);
-        statusHookAdapter = IPersonalBuildingStatusHookAdapter(statusHookAdapter_);
-        mintPlotAdapter = IPersonalBuildingMintPlotAdapter(mintPlotAdapter_);
-
-        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
-        _grantRole(LOGIC_ADMIN_ROLE, admin_);
-        _grantRole(CONFIG_ROLE, admin_);
-        _grantRole(OPERATOR_ROLE, admin_);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                               ADMIN
-    //////////////////////////////////////////////////////////////*/
-
-    function pause() external onlyRole(LOGIC_ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(LOGIC_ADMIN_ROLE) {
-        _unpause();
-    }
-
-    function setBuildingNFT(address buildingNFT_) external onlyRole(LOGIC_ADMIN_ROLE) {
-        if (buildingNFT_ == address(0)) revert ZeroAddress();
-        if (buildingNFT_.code.length == 0) revert InvalidBuildingNFT();
-
-        buildingNFT = ICityBuildingNFTV1PersonalLogic(buildingNFT_);
-        emit BuildingNFTSet(buildingNFT_, msg.sender);
-    }
-
-    function setPlacement(address placement_) external onlyRole(LOGIC_ADMIN_ROLE) {
-        if (placement_ == address(0)) revert ZeroAddress();
-        if (placement_.code.length == 0) revert InvalidPlacement();
-
-        placement = ICityBuildingPlacementPersonalRead(placement_);
-        emit PlacementSet(placement_, msg.sender);
-    }
-
-    function setResourceAdapter(address adapter_) external onlyRole(LOGIC_ADMIN_ROLE) {
-        if (adapter_ == address(0)) {
-            resourceAdapter = IPersonalBuildingResourceAdapter(address(0));
-        } else {
-            if (adapter_.code.length == 0) revert InvalidResourceAdapter();
-            resourceAdapter = IPersonalBuildingResourceAdapter(adapter_);
-        }
-
-        emit ResourceAdapterSet(adapter_, msg.sender);
-    }
-
-    function setPitAdapter(address adapter_) external onlyRole(LOGIC_ADMIN_ROLE) {
-        if (adapter_ == address(0)) {
-            pitAdapter = IPersonalBuildingPitAdapter(address(0));
-        } else {
-            if (adapter_.code.length == 0) revert InvalidPitAdapter();
-            pitAdapter = IPersonalBuildingPitAdapter(adapter_);
-        }
-
-        emit PitAdapterSet(adapter_, msg.sender);
-    }
-
-    function setTechAdapter(address adapter_) external onlyRole(LOGIC_ADMIN_ROLE) {
-        if (adapter_ == address(0)) {
-            techAdapter = IPersonalBuildingTechAdapter(address(0));
-        } else {
-            if (adapter_.code.length == 0) revert InvalidTechAdapter();
-            techAdapter = IPersonalBuildingTechAdapter(adapter_);
-        }
-
-        emit TechAdapterSet(adapter_, msg.sender);
-    }
-
-    function setStatusHookAdapter(address adapter_) external onlyRole(LOGIC_ADMIN_ROLE) {
-        if (adapter_ == address(0)) {
-            statusHookAdapter = IPersonalBuildingStatusHookAdapter(address(0));
-        } else {
-            if (adapter_.code.length == 0) revert InvalidStatusHookAdapter();
-            statusHookAdapter = IPersonalBuildingStatusHookAdapter(adapter_);
-        }
-
-        emit StatusHookAdapterSet(adapter_, msg.sender);
-    }
-
-    function setMintPlotAdapter(address adapter_) external onlyRole(LOGIC_ADMIN_ROLE) {
-        if (adapter_ == address(0)) {
-            mintPlotAdapter = IPersonalBuildingMintPlotAdapter(address(0));
-        } else {
-            if (adapter_.code.length == 0) revert InvalidMintPlotAdapter();
-            mintPlotAdapter = IPersonalBuildingMintPlotAdapter(adapter_);
-        }
-
-        emit MintPlotAdapterSet(adapter_, msg.sender);
-    }
-
-    function setMaxBatchSet(uint256 newValue) external onlyRole(CONFIG_ROLE) {
-        if (newValue == 0) revert InvalidConfig();
-
-        uint256 oldValue = maxBatchSet;
-        maxBatchSet = newValue;
-
-        emit MaxBatchSetUpdated(oldValue, newValue, msg.sender);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                             CONFIG SETTERS
-    //////////////////////////////////////////////////////////////*/
-
-    function setMintCostConfig(
-        CityBuildingTypes.PersonalBuildingType buildingType,
-        uint256[10] calldata resourceAmounts,
-        uint256 pitFee,
-        uint32 prestigeReward,
-        uint32 historyReward,
-        bool configured
-    ) external onlyRole(CONFIG_ROLE) {
-        if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
-
-        _mintConfigs[uint8(buildingType)] = MintCostConfig({
-            resourceAmounts: resourceAmounts,
-            pitFee: pitFee,
-            prestigeReward: prestigeReward,
-            historyReward: historyReward,
-            configured: configured
-        });
-
-        emit MintCostConfigured(
-            buildingType,
-            resourceAmounts,
-            pitFee,
-            prestigeReward,
-            historyReward,
-            configured,
-            msg.sender
-        );
-    }
-
-    function setUpgradeCostConfig(
-        CityBuildingTypes.PersonalBuildingType buildingType,
-        uint8 targetLevel,
-        uint256[10] calldata resourceAmounts,
-        uint256 pitFee,
-        uint64 cooldown,
-        uint32 prestigeReward,
-        uint32 historyReward,
-        bool configured
-    ) external onlyRole(CONFIG_ROLE) {
-        if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
-        if (!CityBuildingTypes.isValidLevel(targetLevel) || targetLevel <= 1) revert InvalidLevel();
-
-        _upgradeConfigs[uint8(buildingType)][targetLevel] = UpgradeCostConfig({
-            resourceAmounts: resourceAmounts,
-            pitFee: pitFee,
-            cooldown: cooldown,
-            prestigeReward: prestigeReward,
-            historyReward: historyReward,
-            configured: configured
-        });
-
-        emit UpgradeCostConfigured(
-            buildingType,
-            targetLevel,
-            resourceAmounts,
-            pitFee,
-            cooldown,
-            prestigeReward,
-            historyReward,
-            configured,
-            msg.sender
-        );
-    }
-
-    function setSpecializationCostConfig(
-        CityBuildingTypes.BuildingSpecialization specialization,
-        uint256[10] calldata resourceAmounts,
-        uint256 pitFee,
-        uint32 prestigeReward,
-        uint32 historyReward,
-        bool configured
-    ) external onlyRole(CONFIG_ROLE) {
-        if (specialization == CityBuildingTypes.BuildingSpecialization.None) {
-            revert InvalidSpecialization();
-        }
-
-        _specializationConfigs[uint8(specialization)] = SpecializationCostConfig({
-            resourceAmounts: resourceAmounts,
-            pitFee: pitFee,
-            prestigeReward: prestigeReward,
-            historyReward: historyReward,
-            configured: configured
-        });
-
-        emit SpecializationCostConfigured(
-            specialization,
-            resourceAmounts,
-            pitFee,
-            prestigeReward,
-            historyReward,
-            configured,
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+
+        uint8 usageKey = uint8(usageType);
+
+        BuildingMetaData storage m = _buildingMeta[buildingId];
+        m.totalUses += amount;
+        _usageByType[buildingId][usageKey] += amount;
+
+        emit BuildingUsageRecorded(
+            buildingId,
+            usageType,
+            amount,
+            _usageByType[buildingId][usageKey],
+            m.totalUses,
             msg.sender
         );
     }
 
     /*//////////////////////////////////////////////////////////////
-                           OPERATOR / RECOVERY
+                         OPTIONAL IDENTITY / PROVENANCE SETTERS
     //////////////////////////////////////////////////////////////*/
+    /* TYPE: manager-side provenance/visual enrichment for V1/V2 readiness */
 
-    function setPlotMintUsage(
-        uint256 plotId,
-        bool used,
-        uint256 buildingId
-    ) external onlyRole(OPERATOR_ROLE) {
-        if (plotId == 0) revert InvalidPlotId();
-
-        plotMintUsed[plotId] = used;
-        mintedBuildingIdByPlot[plotId] = used ? buildingId : 0;
-
-        emit PlotMintEntitlementUpdated(plotId, used, mintedBuildingIdByPlot[plotId], msg.sender);
-    }
-
-    function batchSetPlotMintUsage(
-        uint256[] calldata plotIds,
-        bool[] calldata usedFlags,
-        uint256[] calldata buildingIds
-    ) external onlyRole(OPERATOR_ROLE) {
-        uint256 len = plotIds.length;
-        if (len != usedFlags.length || len != buildingIds.length) revert BatchLengthMismatch();
-        if (len > maxBatchSet) revert BatchTooLarge(len, maxBatchSet);
-
-        for (uint256 i = 0; i < len; i++) {
-            if (plotIds[i] == 0) revert InvalidPlotId();
-
-            plotMintUsed[plotIds[i]] = usedFlags[i];
-            mintedBuildingIdByPlot[plotIds[i]] = usedFlags[i] ? buildingIds[i] : 0;
-
-            emit PlotMintEntitlementUpdated(
-                plotIds[i],
-                usedFlags[i],
-                mintedBuildingIdByPlot[plotIds[i]],
-                msg.sender
-            );
-        }
-    }
-
-    function setLastUpgradeExecutionAt(
+    function setIdentityTraits(
         uint256 buildingId,
-        uint64 ts
-    ) external onlyRole(OPERATOR_ROLE) {
-        lastUpgradeExecutionAt[buildingId] = ts;
-        emit LastUpgradeExecutionAtUpdated(buildingId, ts, msg.sender);
+        uint256 dnaSeed,
+        uint32 visualVariant,
+        uint8 originFaction,
+        uint8 originDistrictKind,
+        uint8 resonanceType,
+        uint32 founderEra,
+        uint32 genesisEra
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+
+        BuildingIdentityData storage i = _buildingIdentity[buildingId];
+        i.dnaSeed = dnaSeed;
+        i.visualVariant = visualVariant;
+        i.originFaction = originFaction;
+        i.originDistrictKind = originDistrictKind;
+        i.resonanceType = resonanceType;
+        i.founderEra = founderEra;
+        i.genesisEra = genesisEra;
     }
 
-    /*//////////////////////////////////////////////////////////////
-                           PLAYER MINT FLOW
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Player-facing mint: a player who owns a valid personal plot may mint one building using that plot as entitlement.
-    /// @dev This does NOT auto-place the building. Placement remains in CityBuildingPlacement.
-    function mintPersonalBuildingForOwnedPlot(
-        uint256 plotId,
-        CityBuildingTypes.PersonalBuildingType buildingType,
+    function setVersionTag(
+        uint256 buildingId,
         uint32 versionTag
-    ) external whenNotPaused nonReentrant returns (uint256 buildingId) {
-        if (plotId == 0) revert InvalidPlotId();
-        if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
-        if (address(mintPlotAdapter) == address(0)) revert MintAdapterNotSet();
-        if (plotMintUsed[plotId]) revert PlotMintAlreadyUsed();
-        if (versionTag > 0 && versionTag != DEFAULT_VERSION_TAG) revert InvalidVersionTag();
+    ) external onlyRole(BUILDING_MANAGER_ROLE) whenNotPaused {
+        _requireMintedBuilding(buildingId);
+        if (versionTag == 0) revert InvalidVersionTag();
 
-        (
-            address plotOwner,
-            bool exists,
-            bool completed,
-            bool personalPlot,
-            bool eligible,
-            uint8 districtKind,
-            uint8 faction
-        ) = mintPlotAdapter.getMintPlotInfo(plotId);
-
-        districtKind;
-        faction;
-
-        if (!exists) revert PlotNotFound();
-        if (plotOwner != msg.sender) revert PlotOwnerMismatch();
-        if (!completed) revert PlotNotCompleted();
-        if (!personalPlot) revert PlotNotPersonal();
-        if (!eligible) revert PlotNotEligibleForMint();
-
-        MintCostConfig memory cfg = _mintConfigs[uint8(buildingType)];
-        if (!cfg.configured) revert MintNotConfigured();
-
-        bytes32 reason = _mintReason(plotId, buildingType);
-
-        _consumeResources(msg.sender, cfg.resourceAmounts, reason);
-        _collectPitFee(msg.sender, cfg.pitFee, reason);
-
-        buildingId = buildingNFT.mintBuilding(
-            msg.sender,
-            buildingType,
-            versionTag == 0 ? DEFAULT_VERSION_TAG : versionTag
-        );
-
-        plotMintUsed[plotId] = true;
-        mintedBuildingIdByPlot[plotId] = buildingId;
-
-        if (cfg.prestigeReward > 0) {
-            buildingNFT.addPrestigeScore(buildingId, cfg.prestigeReward);
-        }
-        if (cfg.historyReward > 0) {
-            buildingNFT.addHistoryScore(buildingId, cfg.historyReward);
-        }
-
-        _recordMintUsage(buildingId, buildingType);
-        _touchPlotActivityIfPossible(plotId);
-
-        emit PersonalBuildingMintedThroughLogic(
-            buildingId,
-            plotId,
-            buildingType,
-            msg.sender,
-            uint64(block.timestamp)
-        );
+        _buildingMeta[buildingId].versionTag = versionTag;
     }
 
     /*//////////////////////////////////////////////////////////////
-                           USER ACTIONS
+                             METADATA / URI
     //////////////////////////////////////////////////////////////*/
+    /* TYPE: metadata layer — still NFT layer, not gameplay logic */
 
-    function upgradeBuilding(uint256 buildingId) external whenNotPaused nonReentrant {
-        _requireBuildingOwner(buildingId);
-        _requireBuildingMutable(buildingId);
-
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-
-        if (core.category != CityBuildingTypes.BuildingCategory.Personal) revert InvalidBuildingCategory();
-        if (!CityBuildingTypes.isValidBaseType(core.buildingType)) revert InvalidBuildingType();
-        if (!CityBuildingTypes.isValidLevel(core.level)) revert InvalidLevel();
-        if (core.level >= CityBuildingTypes.MAX_BUILDING_LEVEL) revert MaxLevelReached();
-
-        CityBuildingTypes.BuildingState state_ = buildingNFT.getBuildingState(buildingId);
-        if (state_ == CityBuildingTypes.BuildingState.None || state_ == CityBuildingTypes.BuildingState.Archived) {
-            revert BuildingStateNotUpgradeable();
-        }
-
-        uint8 oldLevel = core.level;
-        uint8 targetLevel = oldLevel + 1;
-
-        UpgradeCostConfig memory cfg = _upgradeConfigs[uint8(core.buildingType)][targetLevel];
-        if (!cfg.configured) revert UpgradeNotConfigured();
-
-        uint64 lastExec = lastUpgradeExecutionAt[buildingId];
-        if (cfg.cooldown > 0 && lastExec > 0) {
-            uint64 readyAt = lastExec + cfg.cooldown;
-            if (block.timestamp < readyAt) revert UpgradeCooldownActive(readyAt);
-        }
-
-        if (address(techAdapter) != address(0)) {
-            (bool allowed, bytes32 reasonCode) = techAdapter.canUpgradeBuilding(
-                msg.sender,
-                buildingId,
-                core,
-                targetLevel
-            );
-            if (!allowed) revert TechRequirementFailed(reasonCode);
-        }
-
-        bytes32 reason = _upgradeReason(buildingId, targetLevel);
-
-        _consumeResources(msg.sender, cfg.resourceAmounts, reason);
-        _collectPitFee(msg.sender, cfg.pitFee, reason);
-
-        buildingNFT.upgradeBuilding(buildingId, targetLevel);
-        lastUpgradeExecutionAt[buildingId] = uint64(block.timestamp);
-
-        if (cfg.prestigeReward > 0) {
-            buildingNFT.addPrestigeScore(buildingId, cfg.prestigeReward);
-        }
-        if (cfg.historyReward > 0) {
-            buildingNFT.addHistoryScore(buildingId, cfg.historyReward);
-        }
-
-        _recordLevelUsage(buildingId, core.buildingType, targetLevel);
-        _touchPlacementActivityIfPossible(buildingId);
-
-        emit BuildingUpgradedThroughLogic(
-            buildingId,
-            core.buildingType,
-            oldLevel,
-            targetLevel,
-            msg.sender,
-            uint64(block.timestamp)
-        );
+    function setBaseTokenURI(
+        string calldata newBaseTokenUri
+    ) external onlyRole(METADATA_ROLE) {
+        string memory oldValue = _baseTokenUri;
+        _baseTokenUri = newBaseTokenUri;
+        emit BaseTokenURISet(oldValue, newBaseTokenUri, msg.sender);
     }
 
-    function specializeBuilding(
+    function setImageURI(
         uint256 buildingId,
-        CityBuildingTypes.BuildingSpecialization specialization
-    ) external whenNotPaused nonReentrant {
-        _requireBuildingOwner(buildingId);
-        _requireBuildingMutable(buildingId);
+        string calldata imageURI
+    ) external onlyRole(METADATA_ROLE) {
+        _requireMintedBuilding(buildingId);
+        _buildingUris[buildingId].imageURI = imageURI;
+        emit BuildingImageURISet(buildingId, imageURI, msg.sender);
+    }
 
-        if (specialization == CityBuildingTypes.BuildingSpecialization.None) {
-            revert InvalidSpecialization();
+    function setMetadataURI(
+        uint256 buildingId,
+        string calldata metadataURI
+    ) external onlyRole(METADATA_ROLE) {
+        _requireMintedBuilding(buildingId);
+        _buildingUris[buildingId].metadataURI = metadataURI;
+        emit BuildingMetadataURISet(buildingId, metadataURI, msg.sender);
+    }
+
+    function getImageURI(uint256 buildingId) external view returns (string memory) {
+        _requireMintedBuilding(buildingId);
+        return _buildingUris[buildingId].imageURI;
+    }
+
+    function getMetadataURI(uint256 buildingId) external view returns (string memory) {
+        _requireMintedBuilding(buildingId);
+        return _buildingUris[buildingId].metadataURI;
+    }
+
+    function tokenURI(uint256 buildingId) public view override returns (string memory) {
+        _requireMintedBuilding(buildingId);
+
+        string memory explicitMetadataUri = _buildingUris[buildingId].metadataURI;
+        if (bytes(explicitMetadataUri).length > 0) {
+            return explicitMetadataUri;
         }
 
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-
-        if (core.category != CityBuildingTypes.BuildingCategory.Personal) revert InvalidBuildingCategory();
-        if (!CityBuildingTypes.isValidBaseType(core.buildingType)) revert InvalidBuildingType();
-        if (!CityBuildingTypes.canChooseSpecialization(core.buildingType, core.level, specialization)) {
-            revert InvalidSpecialization();
-        }
-        if (core.specialization == specialization) revert NoStateChange();
-
-        CityBuildingTypes.BuildingState state_ = buildingNFT.getBuildingState(buildingId);
-        if (state_ == CityBuildingTypes.BuildingState.None || state_ == CityBuildingTypes.BuildingState.Archived) {
-            revert BuildingStateNotSpecializable();
+        if (bytes(_baseTokenUri).length == 0) {
+            return "";
         }
 
-        SpecializationCostConfig memory cfg = _specializationConfigs[uint8(specialization)];
-        if (!cfg.configured) revert SpecializationNotConfigured();
-
-        if (address(techAdapter) != address(0)) {
-            (bool allowed, bytes32 reasonCode) = techAdapter.canSpecializeBuilding(
-                msg.sender,
-                buildingId,
-                core,
-                specialization
-            );
-            if (!allowed) revert TechRequirementFailed(reasonCode);
-        }
-
-        bytes32 reason = _specializationReason(buildingId, specialization);
-
-        _consumeResources(msg.sender, cfg.resourceAmounts, reason);
-        _collectPitFee(msg.sender, cfg.pitFee, reason);
-
-        buildingNFT.specializeBuilding(buildingId, specialization);
-
-        if (cfg.prestigeReward > 0) {
-            buildingNFT.addPrestigeScore(buildingId, cfg.prestigeReward);
-        }
-        if (cfg.historyReward > 0) {
-            buildingNFT.addHistoryScore(buildingId, cfg.historyReward);
-        }
-
-        _recordSpecializationUsage(buildingId, specialization);
-        _touchPlacementActivityIfPossible(buildingId);
-
-        emit BuildingSpecializedThroughLogic(
-            buildingId,
-            core.buildingType,
-            specialization,
-            msg.sender,
-            uint64(block.timestamp)
-        );
+        return string(abi.encodePacked(_baseTokenUri, Strings.toString(buildingId), ".json"));
     }
 
     /*//////////////////////////////////////////////////////////////
-                                  READS
+                              EXTRA READS
     //////////////////////////////////////////////////////////////*/
+    /* TYPE: utility reads for frontend / migration / analytics */
 
-    function getMintQuote(
-        CityBuildingTypes.PersonalBuildingType buildingType
-    )
-        external
-        view
-        returns (
-            uint256[10] memory resourceAmounts,
-            uint256 pitFee,
-            uint32 prestigeReward,
-            uint32 historyReward,
-            bool configured,
-            uint32 defaultVersionTag
-        )
-    {
-        MintCostConfig memory cfg = _mintConfigs[uint8(buildingType)];
-        return (
-            cfg.resourceAmounts,
-            cfg.pitFee,
-            cfg.prestigeReward,
-            cfg.historyReward,
-            cfg.configured,
-            DEFAULT_VERSION_TAG
-        );
+    function getUsageCount(
+        uint256 buildingId,
+        CityBuildingTypes.BuildingUsageType usageType
+    ) external view returns (uint32) {
+        _requireMintedBuilding(buildingId);
+        return _usageByType[buildingId][uint8(usageType)];
     }
 
-    function getUpgradeQuote(
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            CityBuildingTypes.PersonalBuildingType buildingType,
-            uint8 currentLevel,
-            uint8 targetLevel,
-            uint256[10] memory resourceAmounts,
-            uint256 pitFee,
-            uint64 cooldown,
-            uint64 lastExec,
-            uint64 readyAt,
-            uint32 prestigeReward,
-            uint32 historyReward,
-            bool configured
-        )
-    {
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-
-        buildingType = core.buildingType;
-        currentLevel = core.level;
-
-        if (!CityBuildingTypes.isValidLevel(currentLevel) || currentLevel >= CityBuildingTypes.MAX_BUILDING_LEVEL) {
-            targetLevel = currentLevel;
-            return (
-                buildingType,
-                currentLevel,
-                targetLevel,
-                resourceAmounts,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                false
-            );
-        }
-
-        targetLevel = currentLevel + 1;
-
-        UpgradeCostConfig memory cfg = _upgradeConfigs[uint8(buildingType)][targetLevel];
-        if (!cfg.configured) {
-            return (
-                buildingType,
-                currentLevel,
-                targetLevel,
-                resourceAmounts,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                false
-            );
-        }
-
-        lastExec = lastUpgradeExecutionAt[buildingId];
-        readyAt = cfg.cooldown == 0
-            ? uint64(block.timestamp)
-            : (lastExec == 0 ? uint64(block.timestamp) : lastExec + cfg.cooldown);
-
-        return (
-            buildingType,
-            currentLevel,
-            targetLevel,
-            cfg.resourceAmounts,
-            cfg.pitFee,
-            cfg.cooldown,
-            lastExec,
-            readyAt,
-            cfg.prestigeReward,
-            cfg.historyReward,
-            cfg.configured
-        );
+    function exists(uint256 buildingId) external view returns (bool) {
+        return _ownerOf(buildingId) != address(0);
     }
 
-    function getSpecializationQuote(
-        CityBuildingTypes.BuildingSpecialization specialization
-    )
-        external
-        view
-        returns (
-            uint256[10] memory resourceAmounts,
-            uint256 pitFee,
-            uint32 prestigeReward,
-            uint32 historyReward,
-            bool configured
-        )
-    {
-        SpecializationCostConfig memory cfg = _specializationConfigs[uint8(specialization)];
-        return (
-            cfg.resourceAmounts,
-            cfg.pitFee,
-            cfg.prestigeReward,
-            cfg.historyReward,
-            cfg.configured
-        );
-    }
-
-    function getMintEntitlementStatus(
-        uint256 plotId
-    )
-        external
-        view
-        returns (
-            bool used,
-            uint256 mintedBuildingId,
-            address owner,
-            bool exists,
-            bool completed,
-            bool personalPlot,
-            bool eligible,
-            uint8 districtKind,
-            uint8 faction
-        )
-    {
-        used = plotMintUsed[plotId];
-        mintedBuildingId = mintedBuildingIdByPlot[plotId];
-
-        if (address(mintPlotAdapter) == address(0)) {
-            return (used, mintedBuildingId, address(0), false, false, false, false, 0, 0);
-        }
-
-        (
-            owner,
-            exists,
-            completed,
-            personalPlot,
-            eligible,
-            districtKind,
-            faction
-        ) = mintPlotAdapter.getMintPlotInfo(plotId);
-    }
-
-    struct PersonalSetProgress {
-        bool hasResidence;
-        bool hasFarmingHub;
-        bool hasForge;
-        bool hasWarehouse;
-        bool hasMarketStall;
-        bool hasGuardTower;
-        bool hasResearchLab;
-        uint8 uniqueCount;
-        bool fullSetBonus;
-    }
-
-    function getPersonalSetProgress(
-        address owner,
-        uint256[] calldata buildingIds
-    ) external view returns (PersonalSetProgress memory progress) {
-        if (buildingIds.length == 0) revert NoIdsProvided();
-
-        uint256 len = buildingIds.length;
-        for (uint256 i = 0; i < len; i++) {
-            uint256 buildingId = buildingIds[i];
-
-            if (buildingNFT.ownerOf(buildingId) != owner) continue;
-            if (buildingNFT.isArchived(buildingId)) continue;
-
-            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-            if (core.category != CityBuildingTypes.BuildingCategory.Personal) continue;
-
-            if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Residence && !progress.hasResidence) {
-                progress.hasResidence = true;
-                progress.uniqueCount += 1;
-            } else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.FarmingHub && !progress.hasFarmingHub) {
-                progress.hasFarmingHub = true;
-                progress.uniqueCount += 1;
-            } else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Forge && !progress.hasForge) {
-                progress.hasForge = true;
-                progress.uniqueCount += 1;
-            } else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Warehouse && !progress.hasWarehouse) {
-                progress.hasWarehouse = true;
-                progress.uniqueCount += 1;
-            } else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.MarketStall && !progress.hasMarketStall) {
-                progress.hasMarketStall = true;
-                progress.uniqueCount += 1;
-            } else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.GuardTower && !progress.hasGuardTower) {
-                progress.hasGuardTower = true;
-                progress.uniqueCount += 1;
-            } else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.ResearchLab && !progress.hasResearchLab) {
-                progress.hasResearchLab = true;
-                progress.uniqueCount += 1;
-            }
-        }
-
-        progress.fullSetBonus =
-            progress.hasResidence &&
-            progress.hasFarmingHub &&
-            progress.hasForge &&
-            progress.hasWarehouse &&
-            progress.hasMarketStall &&
-            progress.hasGuardTower &&
-            progress.hasResearchLab;
-    }
-
-    struct SynergyFlags {
-        bool residenceMarket;
-        bool farmingWarehouse;
-        bool forgeResearch;
-        bool warehouseMarket;
-        bool guardResearch;
-        bool guardMarket;
-        bool residenceResearch;
-        bool forgeWarehouse;
-        bool forgeMarket;
-        bool warehouseGuardCore;
-        bool tradeFortressCore;
-        bool fullSet;
-    }
-
-    function evaluateSynergies(
-        address owner,
-        uint256[] calldata buildingIds,
-        uint8 minimumLevel
-    ) external view returns (SynergyFlags memory s) {
-        if (buildingIds.length == 0) revert NoIdsProvided();
-
-        bool hasResidence;
-        bool hasFarmingHub;
-        bool hasForge;
-        bool hasWarehouse;
-        bool hasMarketStall;
-        bool hasGuardTower;
-        bool hasResearchLab;
-
-        uint256 len = buildingIds.length;
-        for (uint256 i = 0; i < len; i++) {
-            uint256 buildingId = buildingIds[i];
-
-            if (buildingNFT.ownerOf(buildingId) != owner) continue;
-            if (buildingNFT.isArchived(buildingId)) continue;
-
-            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-            if (core.category != CityBuildingTypes.BuildingCategory.Personal) continue;
-            if (core.level < minimumLevel) continue;
-
-            if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Residence) hasResidence = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.FarmingHub) hasFarmingHub = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Forge) hasForge = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Warehouse) hasWarehouse = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.MarketStall) hasMarketStall = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.GuardTower) hasGuardTower = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.ResearchLab) hasResearchLab = true;
-        }
-
-        s.residenceMarket = hasResidence && hasMarketStall;
-        s.farmingWarehouse = hasFarmingHub && hasWarehouse;
-        s.forgeResearch = hasForge && hasResearchLab;
-        s.warehouseMarket = hasWarehouse && hasMarketStall;
-        s.guardResearch = hasGuardTower && hasResearchLab;
-        s.guardMarket = hasGuardTower && hasMarketStall;
-        s.residenceResearch = hasResidence && hasResearchLab;
-        s.forgeWarehouse = hasForge && hasWarehouse;
-        s.forgeMarket = hasForge && hasMarketStall;
-        s.warehouseGuardCore = hasWarehouse && hasGuardTower;
-        s.tradeFortressCore = hasWarehouse && hasMarketStall && hasGuardTower;
-        s.fullSet =
-            hasResidence &&
-            hasFarmingHub &&
-            hasForge &&
-            hasWarehouse &&
-            hasMarketStall &&
-            hasGuardTower &&
-            hasResearchLab;
-    }
-
-    function getPlacementSnapshot(
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            uint256 plotId,
-            bool placed,
-            bool prepared,
-            bool archived,
-            uint64 placedAt,
-            uint64 lastPlacedAt,
-            address placedBy
-        )
-    {
-        return placement.getPlacementSummary(buildingId);
-    }
-
-    function getMintCostConfig(
-        CityBuildingTypes.PersonalBuildingType buildingType
-    ) external view returns (MintCostConfig memory) {
-        return _mintConfigs[uint8(buildingType)];
-    }
-
-    function getUpgradeCostConfig(
-        CityBuildingTypes.PersonalBuildingType buildingType,
-        uint8 targetLevel
-    ) external view returns (UpgradeCostConfig memory) {
-        return _upgradeConfigs[uint8(buildingType)][targetLevel];
-    }
-
-    function getSpecializationCostConfig(
-        CityBuildingTypes.BuildingSpecialization specialization
-    ) external view returns (SpecializationCostConfig memory) {
-        return _specializationConfigs[uint8(specialization)];
+    function nextBuildingId() external view returns (uint256) {
+        return _nextBuildingId;
     }
 
     /*//////////////////////////////////////////////////////////////
-                               INTERNALS
+                           TRANSFER RESTRICTIONS
     //////////////////////////////////////////////////////////////*/
+    /* TYPE: NFT transfer policy — placed buildings cannot move */
 
-    function _requireBuildingOwner(uint256 buildingId) internal view {
-        if (buildingNFT.ownerOf(buildingId) != msg.sender) revert NotBuildingOwner();
-    }
+    function _update(
+        address to,
+        uint256 tokenId,
+        address auth
+    ) internal override whenNotPaused returns (address from) {
+        from = _ownerOf(tokenId);
 
-    function _requireBuildingMutable(uint256 buildingId) internal view {
-        if (buildingNFT.isArchived(buildingId)) revert BuildingArchived();
-        if (buildingNFT.isMigrationPrepared(buildingId)) revert BuildingPreparedForMigration();
-    }
+        if (from != address(0) && to != address(0)) {
+            BuildingStateData memory s = _buildingStateData[tokenId];
+            if (s.placed) revert TransferBlockedWhilePlaced(tokenId);
 
-    function _consumeResources(
-        address from,
-        uint256[10] memory amounts,
-        bytes32 reason
-    ) internal {
-        bool hasCost = false;
-
-        for (uint256 i = 0; i < RESOURCE_SLOT_COUNT; i++) {
-            if (amounts[i] != 0) {
-                hasCost = true;
-                break;
-            }
+            _buildingMeta[tokenId].totalTransfers += 1;
         }
 
-        if (!hasCost) return;
-
-        if (address(resourceAdapter) == address(0)) revert InvalidConfig();
-
-        resourceAdapter.burnResourceBundle(from, amounts, reason);
+        return super._update(to, tokenId, auth);
     }
 
-    function _collectPitFee(
-        address from,
-        uint256 amount,
-        bytes32 reason
-    ) internal {
-        if (amount == 0) return;
-        if (address(pitAdapter) == address(0)) revert InvalidConfig();
-
-        pitAdapter.collectPitFee(from, amount, reason);
+    /*//////////////////////////////////////////////////////////////
+                                INTERNALS
+    //////////////////////////////////////////////////////////////*/
+    function _requireMintedBuilding(uint256 buildingId) internal view {
+        if (_ownerOf(buildingId) == address(0)) revert InvalidTokenId();
     }
 
-    function _touchPlotActivityIfPossible(uint256 plotId) internal {
-        if (address(statusHookAdapter) == address(0)) return;
-        if (plotId == 0) return;
+    function _requireMutableBuilding(uint256 buildingId) internal view {
+        _requireMintedBuilding(buildingId);
 
-        statusHookAdapter.touchPlotActivity(plotId);
+        BuildingStateData memory s = _buildingStateData[buildingId];
+        if (s.archived) revert BuildingArchived();
+        if (s.migrationPrepared) revert BuildingPreparedForMigration();
     }
 
-    function _touchPlacementActivityIfPossible(uint256 buildingId) internal {
-        if (address(statusHookAdapter) == address(0)) return;
-
-        (
-            uint256 plotId,
-            bool placed,
-            ,
-            ,
-            ,
-            ,
-            address placedBy
-        ) = placement.getPlacementSummary(buildingId);
-
-        placedBy;
-
-        if (placed && plotId != 0) {
-            statusHookAdapter.touchPlotActivity(plotId);
-        }
-    }
-
-    function _recordMintUsage(
-        uint256 buildingId,
-        CityBuildingTypes.PersonalBuildingType buildingType
-    ) internal {
-        if (buildingType == CityBuildingTypes.PersonalBuildingType.Residence) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.Visit, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.FarmingHub) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.FarmingBoostActivation, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.Forge) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.Craft, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.StorageDeposit, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.MarketStall) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.MarketListingCreate, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.GuardTower) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.DefenseSupport, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.ResearchLab) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.ResearchComplete, 1);
-        }
-    }
-
-    function _recordLevelUsage(
-        uint256 buildingId,
-        CityBuildingTypes.PersonalBuildingType buildingType,
-        uint8 targetLevel
-    ) internal {
-        if (buildingType == CityBuildingTypes.PersonalBuildingType.FarmingHub) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.FarmingBoostActivation, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.Forge) {
-            if (targetLevel >= 7) {
-                buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.BuildingEvolution, 1);
-            } else {
-                buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.Craft, 1);
-            }
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.StorageYieldClaim, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.MarketStall) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.MarketListingCreate, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.GuardTower) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.DefenseSupport, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.ResearchLab) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.ResearchComplete, 1);
-        } else if (buildingType == CityBuildingTypes.PersonalBuildingType.Residence) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.Visit, 1);
-        }
-    }
-
-    function _recordSpecializationUsage(
-        uint256 buildingId,
-        CityBuildingTypes.BuildingSpecialization specialization
-    ) internal {
+    function _requireOwnerOrManager(uint256 buildingId) internal view {
+        address owner = ownerOf(buildingId);
         if (
-            specialization == CityBuildingTypes.BuildingSpecialization.WeaponForge ||
-            specialization == CityBuildingTypes.BuildingSpecialization.RelicForge ||
-            specialization == CityBuildingTypes.BuildingSpecialization.ComponentForge ||
-            specialization == CityBuildingTypes.BuildingSpecialization.MasterForge
+            msg.sender != owner &&
+            !hasRole(BUILDING_MANAGER_ROLE, msg.sender)
         ) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.RecipeCreate, 1);
-        } else if (
-            specialization == CityBuildingTypes.BuildingSpecialization.MasterLab
-        ) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.DiscoveryUnlock, 1);
-        } else if (
-            specialization == CityBuildingTypes.BuildingSpecialization.RadarTower ||
-            specialization == CityBuildingTypes.BuildingSpecialization.DefenseTower ||
-            specialization == CityBuildingTypes.BuildingSpecialization.MercenaryTower ||
-            specialization == CityBuildingTypes.BuildingSpecialization.ShieldTower
-        ) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.DefenseSupport, 1);
-        } else if (
-            specialization == CityBuildingTypes.BuildingSpecialization.MerchantHouse ||
-            specialization == CityBuildingTypes.BuildingSpecialization.TradeDepot ||
-            specialization == CityBuildingTypes.BuildingSpecialization.MerchantVault
-        ) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.MarketSale, 1);
-        } else if (
-            specialization == CityBuildingTypes.BuildingSpecialization.GalleryHouse ||
-            specialization == CityBuildingTypes.BuildingSpecialization.TrophyHall
-        ) {
-            buildingNFT.recordUsage(buildingId, CityBuildingTypes.BuildingUsageType.ShowcaseOpen, 1);
+            revert ZeroAddress(); // replace with custom unauthorized error later if preferred
         }
     }
 
-    function _mintReason(
-        uint256 plotId,
+    function _deriveDnaSeed(
+        uint256 buildingId,
+        address to,
         CityBuildingTypes.PersonalBuildingType buildingType
-    ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked("PERSONAL_BUILDING_MINT", plotId, uint8(buildingType))
+    ) internal view returns (uint256) {
+        return uint256(
+            keccak256(
+                abi.encodePacked(
+                    "INPINITY_CITY_BUILDING_DNA",
+                    block.chainid,
+                    address(this),
+                    buildingId,
+                    to,
+                    uint8(buildingType),
+                    block.timestamp
+                )
+            )
         );
     }
 
-    function _upgradeReason(
+    function _deriveVisualVariant(
         uint256 buildingId,
-        uint8 newLevel
-    ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked("PERSONAL_BUILDING_UPGRADE", buildingId, newLevel)
+        CityBuildingTypes.PersonalBuildingType buildingType
+    ) internal view returns (uint32) {
+        return uint32(
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        "INPINITY_CITY_BUILDING_VISUAL",
+                        address(this),
+                        buildingId,
+                        uint8(buildingType),
+                        block.prevrandao,
+                        block.timestamp
+                    )
+                )
+            ) % 100000
         );
     }
 
-    function _specializationReason(
-        uint256 buildingId,
-        CityBuildingTypes.BuildingSpecialization specialization
-    ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked("PERSONAL_BUILDING_SPECIALIZE", buildingId, uint8(specialization))
-        );
+    /*//////////////////////////////////////////////////////////////
+                           INTERFACE SUPPORT
+    //////////////////////////////////////////////////////////////*/
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(ERC721, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }

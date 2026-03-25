@@ -1,7 +1,9 @@
+/* FILE: contracts/city/contracts/interfaces/buildings/ICityBuildingFunctionRegistry.sol */
+/* TYPE: building function profile interface — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../../contracts/city/libraries/CityBuildingTypes.sol";
+import "../../libraries/CityBuildingTypes.sol";
 
 interface ICityBuildingFunctionRegistry {
     struct FunctionProfile {

@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/buildings/CityBuildingPlacementPolicy.sol */
+/* TYPE: placement validation layer — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -6,17 +8,16 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "../libraries/CityBuildingTypes.sol";
 import "../interfaces/ICityBuildingNFTV1Like.sol";
+import "../interfaces/ICityPersonalPlacementPolicy.sol";
 
 /*//////////////////////////////////////////////////////////////
                      EXTERNAL READ INTERFACES
 //////////////////////////////////////////////////////////////*/
 
-/// @notice Adapter that resolves plot owner.
 interface ICityPlotOwnerAdapter {
     function getPlotOwner(uint256 plotId) external view returns (address owner);
 }
 
-/// @notice Adapter that resolves placement-relevant plot info.
 interface ICityPlotInfoAdapter {
     function getPlotPlacementInfo(
         uint256 plotId
@@ -32,7 +33,6 @@ interface ICityPlotInfoAdapter {
         );
 }
 
-/// @notice Adapter that resolves placement-relevant status flags.
 interface ICityPlotStatusAdapter {
     function getPlotStatusFlags(
         uint256 plotId
@@ -54,7 +54,11 @@ interface ICityPlotStatusAdapter {
 /// @notice Policy/validator contract for personal building placement.
 /// @dev This is the personal-placement module behind the router.
 ///      Community / Borderline / Nexus should later get sibling policy contracts.
-contract CityBuildingPlacementPolicy is AccessControl, Pausable {
+contract CityBuildingPlacementPolicy is
+    AccessControl,
+    Pausable,
+    ICityBuildingPlacementPolicy
+{
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
@@ -301,6 +305,7 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
     )
         external
         view
+        override
         returns (
             bool allowed,
             bool ownerMatches,
@@ -471,11 +476,7 @@ contract CityBuildingPlacementPolicy is AccessControl, Pausable {
                 );
             }
 
-            (
-                bool dormant_,
-                bool decayed_,
-                bool layerEligible_
-            ) = plotStatusAdapter.getPlotStatusFlags(plotId);
+            (bool dormant_, bool decayed_, bool layerEligible_) = plotStatusAdapter.getPlotStatusFlags(plotId);
 
             if (blockDormant && dormant_) {
                 return _composeResult(
