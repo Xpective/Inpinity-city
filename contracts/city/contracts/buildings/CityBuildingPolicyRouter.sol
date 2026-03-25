@@ -1,10 +1,12 @@
+/* FILE: contracts/city/contracts/buildings/CityBuildingPolicyRouter.sol */
+/* TYPE: policy routing layer — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
-import ".../interfaces/ICityPersonalPlacementPolicy.sol";
+import "../interfaces/ICityPersonalPlacementPolicy.sol";
 
 /*//////////////////////////////////////////////////////////////
                     CITY BUILDING POLICY ROUTER

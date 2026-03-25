@@ -66,6 +66,12 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         uint64 mintedAt
     );
 
+    event BuildingCreatorAssigned(
+        uint256 indexed buildingId,
+        address indexed creator,
+        address indexed executor
+    );
+
     event BuildingStateSet(
         uint256 indexed buildingId,
         CityBuildingTypes.BuildingState state,
@@ -333,7 +339,39 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         CityBuildingTypes.PersonalBuildingType buildingType,
         uint32 versionTag
     ) external onlyRole(MINTER_ROLE) whenNotPaused returns (uint256 buildingId) {
-        if (to == address(0)) revert ZeroAddress();
+        // Normaler Player-Mint:
+        // creator = to (Plot-Besitzer / ursprünglicher Spieler)
+        buildingId = _mintBuildingInternal(
+            to,
+            to,
+            buildingType,
+            versionTag
+        );
+    }
+
+    function mintBuildingWithCreator(
+        address to,
+        address creator_,
+        CityBuildingTypes.PersonalBuildingType buildingType,
+        uint32 versionTag
+    ) external onlyRole(MINTER_ROLE) whenNotPaused returns (uint256 buildingId) {
+        // Event / Drop / Special Mint:
+        // creator kann bewusst vom ersten Owner abweichen
+        buildingId = _mintBuildingInternal(
+            to,
+            creator_,
+            buildingType,
+            versionTag
+        );
+    }
+
+    function _mintBuildingInternal(
+        address to,
+        address creator_,
+        CityBuildingTypes.PersonalBuildingType buildingType,
+        uint32 versionTag
+    ) internal returns (uint256 buildingId) {
+        if (to == address(0) || creator_ == address(0)) revert ZeroAddress();
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
 
         uint32 effectiveVersionTag = versionTag == 0
@@ -346,8 +384,9 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         ) revert InvalidVersionTag();
 
         buildingId = _nextBuildingId++;
-        _safeMint(to, buildingId);
 
+        // Erst Storage initialisieren, dann _safeMint.
+        // So sind Reads bei onERC721Received bereits konsistent.
         _buildingCore[buildingId] = CityBuildingTypes.BuildingCore({
             category: CityBuildingTypes.BuildingCategory.Personal,
             buildingType: buildingType,
@@ -373,9 +412,11 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         _archived[buildingId] = false;
         _migrationPrepared[buildingId] = false;
 
-        _identityExt[buildingId].creator = msg.sender;
+        _identityExt[buildingId].creator = creator_;
         _identityExt[buildingId].dnaSeed = _deriveDnaSeed(buildingId, to, buildingType);
         _identityExt[buildingId].visualVariant = _deriveVisualVariant(buildingId, buildingType);
+
+        _safeMint(to, buildingId);
 
         _pushChronicle(
             buildingId,
@@ -392,6 +433,12 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
             buildingType,
             effectiveVersionTag,
             uint64(block.timestamp)
+        );
+
+        emit BuildingCreatorAssigned(
+            buildingId,
+            creator_,
+            msg.sender
         );
     }
 
