@@ -11,6 +11,7 @@ import "../libraries/CityBuildingTypes.sol";
 import "../interfaces/ICityBuildingNFTV1Like.sol";
 import "../interfaces/buildings/ICityBuildingFunctionRegistry.sol";
 import "../interfaces/buildings/ICityBuildingVault.sol";
+import "../interfaces/buildings/ICityBuildingVaultYield.sol";
 
 /*//////////////////////////////////////////////////////////////
                         EXTERNAL INTERFACES
@@ -111,21 +112,7 @@ interface IPersonalBuildingMintPlotAdapter {
         );
 }
 
-interface IPersonalBuildingsVaultRead is ICityBuildingVault {
-    function getBuildingDurabilityState(
-        uint256 buildingId
-    )
-        external
-        view
-        returns (
-            uint8 decayState,
-            uint8 repairState,
-            uint32 damageBps,
-            bool repairRequired,
-            uint64 lastDecayCheckAt,
-            uint64 lastRepairAt
-        );
-
+interface IPersonalBuildingsVaultRead is ICityBuildingVault, ICityBuildingVaultYield {
     function getRecommendedWarehouseVaultProfile(
         uint256 buildingId
     )
@@ -1594,6 +1581,84 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     {
         _requireWarehouseVault(buildingId);
         return vault.getRecommendedWarehouseBuckets(buildingId);
+    }
+
+    function getResourceYieldConfig(
+        uint8 resourceId
+    )
+        external
+        view
+        returns (
+            uint32 sevenDayBaseBps,
+            uint32 thirtyDayBaseBps,
+            bool enabled
+        )
+    {
+        if (address(vault) == address(0)) revert VaultNotSet();
+        if (resourceId >= RESOURCE_SLOT_COUNT) revert InvalidResourceId();
+
+        return vault.getResourceYieldConfig(resourceId);
+    }
+
+    function getWarehouseYieldPosition(
+        uint256 buildingId,
+        uint8 resourceId
+    )
+        external
+        view
+        returns (
+            uint256 amount,
+            uint256 protectionShiftedAmount,
+            uint64 startedAt,
+            uint64 maturityAt,
+            uint8 lockMode,
+            uint32 effectiveYieldBps,
+            bool active,
+            bool matured,
+            uint256 previewYieldAmount
+        )
+    {
+        _requireWarehouseVault(buildingId);
+        if (resourceId >= RESOURCE_SLOT_COUNT) revert InvalidResourceId();
+
+        return vault.getWarehouseYieldPosition(buildingId, resourceId);
+    }
+
+    function previewWarehouseYieldSettlement(
+        uint256 buildingId,
+        uint8 resourceId
+    )
+        external
+        view
+        returns (
+            uint256 principalAmount,
+            uint256 yieldAmount,
+            bool matured,
+            uint64 maturityAt
+        )
+    {
+        _requireWarehouseVault(buildingId);
+        if (resourceId >= RESOURCE_SLOT_COUNT) revert InvalidResourceId();
+
+        return vault.previewWarehouseYieldSettlement(buildingId, resourceId);
+    }
+
+    function isWarehouseYieldEligible(
+        uint256 buildingId
+    ) external view returns (bool) {
+        _requireWarehouseVault(buildingId);
+        return vault.isWarehouseYieldEligible(buildingId);
+    }
+
+    function getEffectiveWarehouseYieldBps(
+        uint256 buildingId,
+        uint8 resourceId,
+        uint8 lockMode
+    ) external view returns (uint32) {
+        _requireWarehouseVault(buildingId);
+        if (resourceId >= RESOURCE_SLOT_COUNT) revert InvalidResourceId();
+
+        return vault.getEffectiveWarehouseYieldBps(buildingId, resourceId, lockMode);
     }
 
     /*//////////////////////////////////////////////////////////////
