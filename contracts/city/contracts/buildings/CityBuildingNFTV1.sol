@@ -157,6 +157,13 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
         address indexed executor
     );
 
+    event BuildingVersionTagSet(
+        uint256 indexed buildingId,
+        uint32 oldVersionTag,
+        uint32 newVersionTag,
+        address indexed executor
+    );
+
     event BaseTokenURISet(
         string oldValue,
         string newValue,
@@ -938,7 +945,26 @@ contract CityBuildingNFTV1 is ERC721, AccessControl, Pausable {
             versionTag != CityBuildingTypes.VERSION_TAG_V2
         ) revert InvalidVersionTag();
 
+        uint32 oldVersionTag = _buildingMeta[buildingId].versionTag;
+        if (oldVersionTag == versionTag) revert NoStateChange();
+
         _buildingMeta[buildingId].versionTag = versionTag;
+
+        _pushChronicle(
+            buildingId,
+            CityBuildingTypes.ChronicleEventType.VersionUpgrade,
+            oldVersionTag,
+            versionTag,
+            msg.sender,
+            bytes32(0)
+        );
+
+        emit BuildingVersionTagSet(
+            buildingId,
+            oldVersionTag,
+            versionTag,
+            msg.sender
+        );
     }
 
     function setImageURI(
