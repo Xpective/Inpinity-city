@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import "../libraries/CityBuildingTypes.sol";
 import "../interfaces/buildings/ICityBuildingVault.sol";
+import "../interfaces/buildings/ICityBuildingVaultYield.sol";
 
 /*//////////////////////////////////////////////////////////////
                         EXTERNAL INTERFACES
@@ -34,7 +35,8 @@ contract CityBuildingVault is
     AccessControl,
     Pausable,
     ReentrancyGuard,
-    ICityBuildingVault
+    ICityBuildingVault,
+    ICityBuildingVaultYield
 {
     /*//////////////////////////////////////////////////////////////
                                  ROLES
@@ -548,7 +550,7 @@ contract CityBuildingVault is
         if (amount > stakeable) revert AmountExceedsStored();
 
         uint64 lockDuration = _yieldLockDuration(lockMode);
-        uint32 effectiveYieldBps = _effectiveYieldBps(core, resourceId, lockMode);
+        uint32 effectiveYieldBps = _effectiveYieldBpsFromConfig(core, config, lockMode);
         if (effectiveYieldBps == 0) revert YieldConfigNotEnabled();
 
         uint256 protectionShifted = amount <= state_.raidableAmount ? amount : state_.raidableAmount;
@@ -992,6 +994,7 @@ contract CityBuildingVault is
     )
         external
         view
+        override
         returns (
             uint32 sevenDayBaseBps,
             uint32 thirtyDayBaseBps,
@@ -1009,6 +1012,7 @@ contract CityBuildingVault is
     )
         external
         view
+        override
         returns (
             uint256 amount,
             uint256 protectionShiftedAmount,
@@ -1041,6 +1045,7 @@ contract CityBuildingVault is
     )
         external
         view
+        override
         returns (
             uint256 principalAmount,
             uint256 yieldAmount,
@@ -1059,7 +1064,7 @@ contract CityBuildingVault is
 
     function isWarehouseYieldEligible(
         uint256 buildingId
-    ) external view returns (bool) {
+    ) external view override returns (bool) {
         CityBuildingTypes.BuildingCore memory core = _requireWarehouseCore(buildingId);
         return core.level >= 5;
     }
@@ -1068,10 +1073,16 @@ contract CityBuildingVault is
         uint256 buildingId,
         uint8 resourceId,
         uint8 lockMode
-    ) external view returns (uint32) {
+    ) external view override returns (uint32) {
+        _requireValidResourceId(resourceId);
+
         CityBuildingTypes.BuildingCore memory core = _requireWarehouseCore(buildingId);
         if (core.level < 5) return 0;
-        return _effectiveYieldBps(core, resourceId, lockMode);
+
+        ResourceYieldConfig memory config = _yieldConfigs[resourceId];
+        if (!config.enabled) return 0;
+
+        return _effectiveYieldBpsFromConfig(core, config, lockMode);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1147,7 +1158,13 @@ contract CityBuildingVault is
     ) internal view returns (uint32) {
         ResourceYieldConfig memory config = _yieldConfigs[resourceId];
         if (!config.enabled) revert YieldConfigNotEnabled();
+        return _baseYieldBpsFromConfig(config, lockMode);
+    }
 
+    function _baseYieldBpsFromConfig(
+        ResourceYieldConfig memory config,
+        uint8 lockMode
+    ) internal pure returns (uint32) {
         if (lockMode == YIELD_MODE_7D) return config.sevenDayBaseBps;
         if (lockMode == YIELD_MODE_30D) return config.thirtyDayBaseBps;
         revert InvalidYieldMode();
@@ -1191,6 +1208,17 @@ contract CityBuildingVault is
         uint8 lockMode
     ) internal view returns (uint32) {
         uint32 base = _baseYieldBps(resourceId, lockMode);
+        uint32 bonus = _warehouseYieldBonusBps(core, lockMode);
+        uint32 effective = base + bonus;
+        return effective > MAX_BPS ? MAX_BPS : effective;
+    }
+
+    function _effectiveYieldBpsFromConfig(
+        CityBuildingTypes.BuildingCore memory core,
+        ResourceYieldConfig memory config,
+        uint8 lockMode
+    ) internal pure returns (uint32) {
+        uint32 base = _baseYieldBpsFromConfig(config, lockMode);
         uint32 bonus = _warehouseYieldBonusBps(core, lockMode);
         uint32 effective = base + bonus;
         return effective > MAX_BPS ? MAX_BPS : effective;

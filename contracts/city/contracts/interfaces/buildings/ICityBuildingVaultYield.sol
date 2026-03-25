@@ -1,5 +1,5 @@
 /* FILE: contracts/city/contracts/interfaces/buildings/ICityBuildingVaultYield.sol */
-/* TYPE: separate warehouse yield / staking read interface */
+/* TYPE: separate warehouse yield / staking read interface — NOT base vault interface */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
