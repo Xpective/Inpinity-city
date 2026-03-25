@@ -1,7 +1,9 @@
+/* FILE: contracts/city/contracts/adapters/CityPlacementReadAdapter.sol */
+/* TYPE: placement read adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../../interfaces/buildings/ICityPlacementCoreAdapter.sol";
+import "../interfaces/ICityPlacementCoreAdapter.sol";
 
 contract CityPlacementReadAdapter {
     ICityPlacementCoreAdapter public immutable coreAdapter;

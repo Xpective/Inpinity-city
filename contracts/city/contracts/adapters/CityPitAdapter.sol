@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/adapters/CityPitAdapter.sol */
+/* TYPE: PIT fee adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 

@@ -8,25 +8,32 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 import "../interfaces/ICityPlacementCoreAdapter.sol";
 
-interface ICityRegistryLike {
+/*
+    NOTE:
+    This adapter intentionally uses direct live-core signatures here instead of the
+    lightweight adapters/interfaces/*Like.sol files, because its expected live read
+    methods differ from the simplified wrappers used by the mint/plot adapters.
+*/
+
+interface ICityRegistryCoreLike {
     function ownerOfPlot(uint256 plotId) external view returns (address);
     function isPersonalPlot(uint256 plotId) external view returns (bool);
 }
 
-interface ICityLandLike {
+interface ICityLandCoreLike {
     function isPlotFullyCompleted(uint256 plotId) external view returns (bool);
 }
 
-interface ICityStatusLike {
+interface ICityStatusCoreLike {
     function isPlotEligibleForBuilding(uint256 plotId) external view returns (bool);
 }
 
-interface ICityDistrictsLike {
+interface ICityDistrictsCoreLike {
     function districtKindOfPlot(uint256 plotId) external view returns (uint8);
     function factionOfPlot(uint256 plotId) external view returns (uint8);
 }
 
-interface ICityValidationLike {
+interface ICityValidationCoreLike {
     function isDistrictAllowedForPersonalBuilding(
         uint256 plotId,
         uint8 buildingType
@@ -46,11 +53,6 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
     bytes32 public constant ADAPTER_ADMIN_ROLE = keccak256("ADAPTER_ADMIN_ROLE");
 
     error ZeroAddress();
-    error InvalidRegistry();
-    error InvalidLand();
-    error InvalidStatus();
-    error InvalidDistricts();
-    error InvalidValidation();
 
     event CoreContractsSet(
         address indexed registry,
@@ -135,26 +137,26 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
     }
 
     function isPersonalPlot(uint256 plotId) external view override whenNotPaused returns (bool) {
-        return ICityRegistryLike(cityRegistry).isPersonalPlot(plotId);
+        return ICityRegistryCoreLike(cityRegistry).isPersonalPlot(plotId);
     }
 
     function isPlotOwner(address user, uint256 plotId) external view override whenNotPaused returns (bool) {
-        return ICityRegistryLike(cityRegistry).ownerOfPlot(plotId) == user;
+        return ICityRegistryCoreLike(cityRegistry).ownerOfPlot(plotId) == user;
     }
 
     function isPlotCompleted(uint256 plotId) external view override whenNotPaused returns (bool) {
-        return ICityLandLike(cityLand).isPlotFullyCompleted(plotId);
+        return ICityLandCoreLike(cityLand).isPlotFullyCompleted(plotId);
     }
 
     function isPlotEligibleForPlacement(uint256 plotId) external view override whenNotPaused returns (bool) {
-        return ICityStatusLike(cityStatus).isPlotEligibleForBuilding(plotId);
+        return ICityStatusCoreLike(cityStatus).isPlotEligibleForBuilding(plotId);
     }
 
     function isDistrictAllowedForPersonalBuilding(
         uint256 plotId,
         uint8 buildingType
     ) external view override whenNotPaused returns (bool) {
-        return ICityValidationLike(cityValidation).isDistrictAllowedForPersonalBuilding(
+        return ICityValidationCoreLike(cityValidation).isDistrictAllowedForPersonalBuilding(
             plotId,
             buildingType
         );
@@ -165,7 +167,7 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
         uint256 plotId,
         uint8 buildingType
     ) external view override whenNotPaused returns (bool) {
-        return ICityValidationLike(cityValidation).isFactionAllowedForPersonalBuilding(
+        return ICityValidationCoreLike(cityValidation).isFactionAllowedForPersonalBuilding(
             user,
             plotId,
             buildingType
@@ -173,15 +175,15 @@ contract CityPlacementCoreAdapter is ICityPlacementCoreAdapter, AccessControl, P
     }
 
     function getPlotFaction(uint256 plotId) external view override whenNotPaused returns (uint8) {
-        return ICityDistrictsLike(cityDistricts).factionOfPlot(plotId);
+        return ICityDistrictsCoreLike(cityDistricts).factionOfPlot(plotId);
     }
 
     function getPlotDistrictKind(uint256 plotId) external view override whenNotPaused returns (uint8) {
-        return ICityDistrictsLike(cityDistricts).districtKindOfPlot(plotId);
+        return ICityDistrictsCoreLike(cityDistricts).districtKindOfPlot(plotId);
     }
 
     function getPlotOwner(uint256 plotId) external view override whenNotPaused returns (address) {
-        return ICityRegistryLike(cityRegistry).ownerOfPlot(plotId);
+        return ICityRegistryCoreLike(cityRegistry).ownerOfPlot(plotId);
     }
 
     function _validateCoreContracts(

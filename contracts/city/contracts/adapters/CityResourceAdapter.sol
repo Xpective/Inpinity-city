@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/adapters/CityResourceAdapter.sol */
+/* TYPE: resource burn adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -21,7 +23,6 @@ contract CityResourceAdapter is AccessControl {
     error ZeroAddress();
     error InvalidResourceToken();
     error BurnFailed(uint256 resourceId, uint256 amount);
-    error ArrayLengthMismatch();
 
     event ResourceTokenSet(address indexed token, address indexed executor);
     event ResourceBundleBurned(
@@ -69,7 +70,6 @@ contract CityResourceAdapter is AccessControl {
             nonZeroEntries++;
 
             try resourceToken.burn(from, i, amount) {
-                // success
             } catch {
                 revert BurnFailed(i, amount);
             }

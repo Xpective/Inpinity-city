@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/adapters/CityPlotStatusAdapter.sol */
+/* TYPE: plot status adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -19,8 +21,6 @@ contract CityPlotStatusAdapter is AccessControl {
 
     ICityStatusLike public status;
 
-    /// @dev Default-Werte. Falls eure echte Enum anders ist,
-    /// kann der Admin sie später umstellen.
     uint8 public dormantStatusCode = 2;
     uint8 public decayedStatusCode = 3;
 

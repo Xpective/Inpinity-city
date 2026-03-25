@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/adapters/interfaces/ICityDistrictsLike.sol */
+/* TYPE: lightweight adapter-side live districts interface */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 

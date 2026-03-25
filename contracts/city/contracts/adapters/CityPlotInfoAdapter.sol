@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/adapters/CityPlotInfoAdapter.sol */
+/* TYPE: plot info adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -23,7 +25,6 @@ contract CityPlotInfoAdapter is AccessControl {
     ICityLandLike public land;
     ICityDistrictsLike public districts;
 
-    /// @dev Laut eurem Core-Pattern ist Personal = 1.
     uint8 internal constant PLOT_TYPE_PERSONAL = 1;
 
     constructor(

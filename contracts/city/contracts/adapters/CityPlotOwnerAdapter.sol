@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/adapters/CityPlotOwnerAdapter.sol */
+/* TYPE: plot owner adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 

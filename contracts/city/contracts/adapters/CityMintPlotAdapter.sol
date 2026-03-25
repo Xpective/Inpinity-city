@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/adapters/CityMintPlotAdapter.sol */
+/* TYPE: mint plot adapter — NOT NFT, NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -77,9 +79,6 @@ contract CityMintPlotAdapter is AccessControl {
         emit DistrictsSet(districts_, msg.sender);
     }
 
-    /// @notice Returns normalized plot data for player mint eligibility.
-    /// @dev V1 eligible = exists && personalPlot && completed.
-    ///      Additional status restrictions can be layered later in PersonalBuildings or policy.
     function getMintPlotInfo(
         uint256 plotId
     )
