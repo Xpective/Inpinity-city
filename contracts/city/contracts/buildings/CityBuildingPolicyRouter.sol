@@ -16,7 +16,11 @@ import "../interfaces/ICityPersonalPlacementPolicy.sol";
 /// @notice Shared router for building policy contracts across Personal / Community / Borderline / Nexus.
 /// @dev V1 actively routes Personal placement validation.
 ///      Community / Borderline / Nexus hooks are intentionally pre-wired for later expansion.
-contract CityBuildingPolicyRouter is AccessControl, Pausable {
+contract CityBuildingPolicyRouter is
+    AccessControl,
+    Pausable,
+    ICityBuildingPlacementPolicy
+{
     /*//////////////////////////////////////////////////////////////
                                  ROLES
     //////////////////////////////////////////////////////////////*/
@@ -125,6 +129,7 @@ contract CityBuildingPolicyRouter is AccessControl, Pausable {
     )
         external
         view
+        override
         returns (
             bool allowed,
             bool ownerMatches,
