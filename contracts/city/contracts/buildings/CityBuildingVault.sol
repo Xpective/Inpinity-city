@@ -186,6 +186,16 @@ contract CityBuildingVault is
         address indexed executor
     );
 
+    event WarehouseVaultRecommendedProfileApplied(
+        uint256 indexed buildingId,
+        uint8 recommendedVaultTier,
+        uint8 recommendedDefenseTier,
+        uint32 recommendedVaultCapBps,
+        uint32 recommendedDefenseBps,
+        uint32 recommendedRaidMitigationBps,
+        address indexed executor
+    );
+
     /*//////////////////////////////////////////////////////////////
                                  STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -251,19 +261,27 @@ contract CityBuildingVault is
         WarehouseVaultProfile storage p = _vaultProfiles[buildingId];
         if (p.vaultEnabled) revert VaultAlreadyEnabled();
 
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+
+        uint8 resolvedVaultTier = vaultTier == 0 ? _recommendedVaultTier(core) : vaultTier;
+        uint8 resolvedDefenseTier = _recommendedDefenseTier(core);
+        uint32 resolvedVaultCapBps = vaultCapBps == 0 ? _recommendedVaultCapBps(core) : vaultCapBps;
+        uint32 resolvedDefenseBps = _recommendedDefenseBps(core);
+        uint32 resolvedRaidMitigationBps = _recommendedRaidMitigationBps(core);
+
         p.vaultEnabled = true;
-        p.raidEnabled = false;
+        p.raidEnabled = core.level >= 3;
         p.repairRequired = false;
         p.emergencyLocked = false;
 
-        p.vaultTier = vaultTier;
-        p.defenseTier = 0;
-        p.decayState = DECAY_STABLE;
-        p.repairState = REPAIR_NOT_REQUIRED;
+        p.vaultTier = resolvedVaultTier;
+        p.defenseTier = resolvedDefenseTier;
+        p.decayState = core.level >= 3 ? DECAY_STABLE : DECAY_NONE;
+        p.repairState = core.level >= 3 ? REPAIR_NOT_REQUIRED : REPAIR_NONE;
 
-        p.vaultCapBps = vaultCapBps;
-        p.defenseBps = 0;
-        p.raidMitigationBps = 0;
+        p.vaultCapBps = resolvedVaultCapBps;
+        p.defenseBps = resolvedDefenseBps;
+        p.raidMitigationBps = resolvedRaidMitigationBps;
         p.damageBps = 0;
 
         p.activatedAt = uint64(block.timestamp);
@@ -272,7 +290,16 @@ contract CityBuildingVault is
         p.lastRepairAt = 0;
         p.lastRaidAt = 0;
 
-        emit WarehouseVaultEnabled(buildingId, vaultTier, vaultCapBps, msg.sender);
+        emit WarehouseVaultEnabled(buildingId, resolvedVaultTier, resolvedVaultCapBps, msg.sender);
+        emit WarehouseVaultRecommendedProfileApplied(
+            buildingId,
+            resolvedVaultTier,
+            resolvedDefenseTier,
+            resolvedVaultCapBps,
+            resolvedDefenseBps,
+            resolvedRaidMitigationBps,
+            msg.sender
+        );
     }
 
     function disableWarehouseVault(
@@ -664,16 +691,67 @@ contract CityBuildingVault is
         );
     }
 
+    function getRecommendedWarehouseVaultProfile(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint8 vaultTier,
+            uint8 defenseTier,
+            uint32 vaultCapBps,
+            uint32 defenseBps,
+            uint32 raidMitigationBps,
+            bool decayPrepared,
+            bool repairPrepared,
+            bool raidEligibleByLevel
+        )
+    {
+        CityBuildingTypes.BuildingCore memory core = _requireWarehouseCore(buildingId);
+
+        return (
+            _recommendedVaultTier(core),
+            _recommendedDefenseTier(core),
+            _recommendedVaultCapBps(core),
+            _recommendedDefenseBps(core),
+            _recommendedRaidMitigationBps(core),
+            core.level >= 3,
+            core.level >= 3,
+            core.level >= 3
+        );
+    }
+
+    function getRecommendedWarehouseBuckets(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint32 reserveBuckets,
+            uint32 protectedBuckets,
+            uint32 raidableBuckets
+        )
+    {
+        CityBuildingTypes.BuildingCore memory core = _requireWarehouseCore(buildingId);
+        return _recommendedBucketProfile(core);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                INTERNALS
     //////////////////////////////////////////////////////////////*/
 
     function _requireWarehouse(uint256 buildingId) internal view {
+        _requireWarehouseCore(buildingId);
+    }
+
+    function _requireWarehouseCore(
+        uint256 buildingId
+    ) internal view returns (CityBuildingTypes.BuildingCore memory core) {
         if (buildingId == 0) revert InvalidBuildingId();
         if (buildingNFT.isArchived(buildingId)) revert BuildingArchived();
         if (buildingNFT.isMigrationPrepared(buildingId)) revert BuildingPreparedForMigration();
 
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        core = buildingNFT.getBuildingCore(buildingId);
         if (core.category != CityBuildingTypes.BuildingCategory.Personal) {
             revert InvalidBuildingCategory();
         }
@@ -717,5 +795,150 @@ contract CityBuildingVault is
             repairState == REPAIR_MAJOR_REQUIRED ||
             repairState == REPAIR_LOCKED_UNTIL_REPAIR
         );
+    }
+
+    function _recommendedVaultTier(
+        CityBuildingTypes.BuildingCore memory core
+    ) internal pure returns (uint8) {
+        if (core.level >= 7) return 4;
+        if (core.level >= 5) return 3;
+        if (core.level >= 3) return 2;
+        return 1;
+    }
+
+    function _recommendedDefenseTier(
+        CityBuildingTypes.BuildingCore memory core
+    ) internal pure returns (uint8) {
+        uint8 tier;
+        if (core.level >= 7) tier = 3;
+        else if (core.level >= 5) tier = 2;
+        else if (core.level >= 3) tier = 1;
+        else tier = 0;
+
+        if (
+            core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault
+        ) {
+            tier += 1;
+        }
+
+        return tier;
+    }
+
+    function _recommendedVaultCapBps(
+        CityBuildingTypes.BuildingCore memory core
+    ) internal pure returns (uint32) {
+        uint32 cap;
+        if (core.level == 1) cap = 1500;
+        else if (core.level == 2) cap = 2200;
+        else if (core.level == 3) cap = 3200;
+        else if (core.level == 4) cap = 4200;
+        else if (core.level == 5) cap = 5600;
+        else if (core.level == 6) cap = 7000;
+        else cap = 8500;
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.ResourceVault) {
+            cap += 500;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.TradeDepot) {
+            cap += 250;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MerchantVault) {
+            cap += 400;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault) {
+            cap += 300;
+        }
+
+        return cap > MAX_BPS ? MAX_BPS : cap;
+    }
+
+    function _recommendedDefenseBps(
+        CityBuildingTypes.BuildingCore memory core
+    ) internal pure returns (uint32) {
+        uint32 defense;
+        if (core.level <= 2) defense = 0;
+        else if (core.level == 3) defense = 200;
+        else if (core.level == 4) defense = 400;
+        else if (core.level == 5) defense = 650;
+        else if (core.level == 6) defense = 900;
+        else defense = 1200;
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault) {
+            defense += 250;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MerchantVault) {
+            defense += 100;
+        }
+
+        return defense > MAX_BPS ? MAX_BPS : defense;
+    }
+
+    function _recommendedRaidMitigationBps(
+        CityBuildingTypes.BuildingCore memory core
+    ) internal pure returns (uint32) {
+        uint32 mitigation;
+        if (core.level <= 3) mitigation = 0;
+        else if (core.level == 4) mitigation = 175;
+        else if (core.level == 5) mitigation = 350;
+        else if (core.level == 6) mitigation = 525;
+        else mitigation = 800;
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault) {
+            mitigation += 200;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.ResourceVault) {
+            mitigation += 75;
+        }
+
+        return mitigation > MAX_BPS ? MAX_BPS : mitigation;
+    }
+
+    function _recommendedBucketProfile(
+        CityBuildingTypes.BuildingCore memory core
+    )
+        internal
+        pure
+        returns (
+            uint32 reserveBuckets,
+            uint32 protectedBuckets,
+            uint32 raidableBuckets
+        )
+    {
+        if (core.level == 1) {
+            reserveBuckets = 1;
+            protectedBuckets = 1;
+            raidableBuckets = 1;
+        } else if (core.level == 2) {
+            reserveBuckets = 2;
+            protectedBuckets = 1;
+            raidableBuckets = 2;
+        } else if (core.level == 3) {
+            reserveBuckets = 3;
+            protectedBuckets = 1;
+            raidableBuckets = 2;
+        } else if (core.level == 4) {
+            reserveBuckets = 4;
+            protectedBuckets = 1;
+            raidableBuckets = 3;
+        } else if (core.level == 5) {
+            reserveBuckets = 5;
+            protectedBuckets = 2;
+            raidableBuckets = 3;
+        } else if (core.level == 6) {
+            reserveBuckets = 6;
+            protectedBuckets = 2;
+            raidableBuckets = 4;
+        } else {
+            reserveBuckets = 8;
+            protectedBuckets = 3;
+            raidableBuckets = 4;
+        }
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.ResourceVault) {
+            protectedBuckets += 1;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.TradeDepot) {
+            reserveBuckets += 1;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault) {
+            protectedBuckets += 1;
+            if (raidableBuckets > 0) raidableBuckets -= 1;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MerchantVault) {
+            reserveBuckets += 1;
+            protectedBuckets += 1;
+        }
     }
 }
