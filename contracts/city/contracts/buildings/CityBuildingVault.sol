@@ -45,6 +45,7 @@ contract CityBuildingVault is
     bytes32 public constant VAULT_CALLER_ROLE = keccak256("VAULT_CALLER_ROLE");
     bytes32 public constant RAID_CALLER_ROLE = keccak256("RAID_CALLER_ROLE");
     bytes32 public constant REPAIR_CALLER_ROLE = keccak256("REPAIR_CALLER_ROLE");
+    bytes32 public constant YIELD_CALLER_ROLE = keccak256("YIELD_CALLER_ROLE");
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -64,6 +65,13 @@ contract CityBuildingVault is
     uint8 public constant REPAIR_MAJOR_REQUIRED = 3;
     uint8 public constant REPAIR_LOCKED_UNTIL_REPAIR = 4;
 
+    uint8 public constant YIELD_MODE_NONE = 0;
+    uint8 public constant YIELD_MODE_7D = 1;
+    uint8 public constant YIELD_MODE_30D = 2;
+
+    uint64 public constant YIELD_LOCK_7D = 7 days;
+    uint64 public constant YIELD_LOCK_30D = 30 days;
+
     uint32 public constant MAX_BPS = 10_000;
 
     /*//////////////////////////////////////////////////////////////
@@ -80,6 +88,9 @@ contract CityBuildingVault is
     error InvalidDecayState();
     error InvalidRepairState();
     error InvalidResourceState();
+    error InvalidYieldMode();
+    error InvalidAmount();
+
     error BuildingArchived();
     error BuildingPreparedForMigration();
     error VaultNotEnabled();
@@ -88,6 +99,12 @@ contract CityBuildingVault is
     error AmountExceedsStored();
     error AmountExceedsRaidable();
     error AmountExceedsProtected();
+
+    error YieldNotEligibleByLevel();
+    error YieldConfigNotEnabled();
+    error YieldPositionActive();
+    error YieldPositionNotFound();
+    error YieldPositionNotMatured(uint64 maturityAt);
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -196,6 +213,35 @@ contract CityBuildingVault is
         address indexed executor
     );
 
+    event ResourceYieldConfigSet(
+        uint8 indexed resourceId,
+        uint32 sevenDayBaseBps,
+        uint32 thirtyDayBaseBps,
+        bool enabled,
+        address indexed executor
+    );
+
+    event WarehouseYieldPositionOpened(
+        uint256 indexed buildingId,
+        uint8 indexed resourceId,
+        uint256 amount,
+        uint8 lockMode,
+        uint32 effectiveYieldBps,
+        uint64 startedAt,
+        uint64 maturityAt,
+        address indexed executor
+    );
+
+    event WarehouseYieldPositionClosed(
+        uint256 indexed buildingId,
+        uint8 indexed resourceId,
+        uint256 amount,
+        uint256 yieldAmount,
+        uint8 lockMode,
+        uint64 closedAt,
+        address indexed executor
+    );
+
     /*//////////////////////////////////////////////////////////////
                                  STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -204,6 +250,27 @@ contract CityBuildingVault is
 
     mapping(uint256 => WarehouseVaultProfile) internal _vaultProfiles;
     mapping(uint256 => mapping(uint8 => VaultResourceState)) internal _vaultResources;
+
+    struct ResourceYieldConfig {
+        uint32 sevenDayBaseBps;
+        uint32 thirtyDayBaseBps;
+        bool enabled;
+    }
+
+    struct WarehouseYieldPosition {
+        uint256 amount;
+        uint256 protectionShiftedAmount;
+        uint64 startedAt;
+        uint64 maturityAt;
+        uint8 lockMode;
+        uint32 effectiveYieldBps;
+        bool active;
+    }
+
+    mapping(uint8 => ResourceYieldConfig) internal _yieldConfigs;
+    mapping(uint256 => mapping(uint8 => WarehouseYieldPosition)) internal _yieldPositions;
+    mapping(uint256 => mapping(uint8 => uint256)) public totalYieldSettledByResource;
+    mapping(uint256 => mapping(uint8 => uint64)) public lastYieldSettledAtByResource;
 
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
@@ -224,6 +291,7 @@ contract CityBuildingVault is
         _grantRole(VAULT_CALLER_ROLE, admin_);
         _grantRole(RAID_CALLER_ROLE, admin_);
         _grantRole(REPAIR_CALLER_ROLE, admin_);
+        _grantRole(YIELD_CALLER_ROLE, admin_);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -244,6 +312,30 @@ contract CityBuildingVault is
 
         buildingNFT = ICityBuildingNFTV1VaultRead(buildingNFT_);
         emit BuildingNFTSet(buildingNFT_, msg.sender);
+    }
+
+    function setResourceYieldConfig(
+        uint8 resourceId,
+        uint32 sevenDayBaseBps,
+        uint32 thirtyDayBaseBps,
+        bool enabled
+    ) external onlyRole(VAULT_OPERATOR_ROLE) {
+        _requireValidResourceId(resourceId);
+        if (sevenDayBaseBps > MAX_BPS || thirtyDayBaseBps > MAX_BPS) revert InvalidBps();
+
+        _yieldConfigs[resourceId] = ResourceYieldConfig({
+            sevenDayBaseBps: sevenDayBaseBps,
+            thirtyDayBaseBps: thirtyDayBaseBps,
+            enabled: enabled
+        });
+
+        emit ResourceYieldConfigSet(
+            resourceId,
+            sevenDayBaseBps,
+            thirtyDayBaseBps,
+            enabled,
+            msg.sender
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -314,6 +406,7 @@ contract CityBuildingVault is
 
         for (uint8 i = 0; i < RESOURCE_SLOT_COUNT; i++) {
             delete _vaultResources[buildingId][i];
+            delete _yieldPositions[buildingId][i];
         }
 
         emit WarehouseVaultDisabled(buildingId, msg.sender);
@@ -421,6 +514,164 @@ contract CityBuildingVault is
             reserved,
             protectedAmount,
             raidableAmount,
+            msg.sender
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          YIELD / STAKING PREP
+    //////////////////////////////////////////////////////////////*/
+
+    function openWarehouseYieldPosition(
+        uint256 buildingId,
+        uint8 resourceId,
+        uint256 amount,
+        uint8 lockMode
+    ) external onlyRole(YIELD_CALLER_ROLE) whenNotPaused nonReentrant {
+        CityBuildingTypes.BuildingCore memory core = _requireWarehouseCore(buildingId);
+        if (!_vaultProfiles[buildingId].vaultEnabled) revert VaultNotEnabled();
+        if (core.level < 5) revert YieldNotEligibleByLevel();
+        if (_vaultProfiles[buildingId].emergencyLocked) revert EmergencyLocked();
+
+        _requireValidResourceId(resourceId);
+        if (amount == 0) revert InvalidAmount();
+
+        ResourceYieldConfig memory config = _yieldConfigs[resourceId];
+        if (!config.enabled) revert YieldConfigNotEnabled();
+
+        WarehouseYieldPosition storage position = _yieldPositions[buildingId][resourceId];
+        if (position.active) revert YieldPositionActive();
+
+        VaultResourceState storage state_ = _vaultResources[buildingId][resourceId];
+
+        uint256 stakeable = state_.stored > state_.reserved ? state_.stored - state_.reserved : 0;
+        if (amount > stakeable) revert AmountExceedsStored();
+
+        uint64 lockDuration = _yieldLockDuration(lockMode);
+        uint32 effectiveYieldBps = _effectiveYieldBps(core, resourceId, lockMode);
+        if (effectiveYieldBps == 0) revert YieldConfigNotEnabled();
+
+        uint256 protectionShifted = amount <= state_.raidableAmount ? amount : state_.raidableAmount;
+
+        state_.reserved += amount;
+        if (protectionShifted != 0) {
+            state_.raidableAmount -= protectionShifted;
+            state_.protectedAmount += protectionShifted;
+        }
+
+        position.amount = amount;
+        position.protectionShiftedAmount = protectionShifted;
+        position.startedAt = uint64(block.timestamp);
+        position.maturityAt = uint64(block.timestamp) + lockDuration;
+        position.lockMode = lockMode;
+        position.effectiveYieldBps = effectiveYieldBps;
+        position.active = true;
+
+        _vaultProfiles[buildingId].lastVaultActionAt = uint64(block.timestamp);
+
+        emit WarehouseVaultResourceStateUpdated(
+            buildingId,
+            resourceId,
+            state_.stored,
+            state_.reserved,
+            state_.protectedAmount,
+            state_.raidableAmount,
+            msg.sender
+        );
+
+        emit WarehouseYieldPositionOpened(
+            buildingId,
+            resourceId,
+            amount,
+            lockMode,
+            effectiveYieldBps,
+            uint64(block.timestamp),
+            uint64(block.timestamp) + lockDuration,
+            msg.sender
+        );
+    }
+
+    function closeWarehouseYieldPosition(
+        uint256 buildingId,
+        uint8 resourceId
+    )
+        external
+        onlyRole(YIELD_CALLER_ROLE)
+        whenNotPaused
+        nonReentrant
+        returns (
+            uint256 principalAmount,
+            uint256 yieldAmount
+        )
+    {
+        _requireEnabledWarehouse(buildingId);
+        _requireValidResourceId(resourceId);
+
+        WarehouseYieldPosition storage position = _yieldPositions[buildingId][resourceId];
+        if (!position.active) revert YieldPositionNotFound();
+        if (block.timestamp < position.maturityAt) {
+            revert YieldPositionNotMatured(position.maturityAt);
+        }
+
+        VaultResourceState storage state_ = _vaultResources[buildingId][resourceId];
+
+        principalAmount = position.amount;
+        yieldAmount = (principalAmount * position.effectiveYieldBps) / MAX_BPS;
+
+        if (state_.reserved >= principalAmount) {
+            state_.reserved -= principalAmount;
+        } else {
+            state_.reserved = 0;
+        }
+
+        uint256 shifted = position.protectionShiftedAmount;
+        if (shifted != 0) {
+            if (state_.protectedAmount >= shifted) {
+                state_.protectedAmount -= shifted;
+            } else {
+                state_.protectedAmount = 0;
+            }
+
+            state_.raidableAmount += shifted;
+            if (state_.raidableAmount > state_.stored) {
+                state_.raidableAmount = state_.stored;
+            }
+
+            if (state_.protectedAmount + state_.raidableAmount > state_.stored) {
+                uint256 overflow = state_.protectedAmount + state_.raidableAmount - state_.stored;
+                if (state_.raidableAmount >= overflow) {
+                    state_.raidableAmount -= overflow;
+                } else {
+                    state_.raidableAmount = 0;
+                }
+            }
+        }
+
+        totalYieldSettledByResource[buildingId][resourceId] += yieldAmount;
+        lastYieldSettledAtByResource[buildingId][resourceId] = uint64(block.timestamp);
+
+        uint8 closedLockMode = position.lockMode;
+        delete _yieldPositions[buildingId][resourceId];
+
+        _vaultProfiles[buildingId].lastVaultActionAt = uint64(block.timestamp);
+
+        emit WarehouseVaultResourceStateUpdated(
+            buildingId,
+            resourceId,
+            state_.stored,
+            state_.reserved,
+            state_.protectedAmount,
+            state_.raidableAmount,
+            msg.sender
+        );
+
+        emit WarehouseYieldPositionClosed(
+            buildingId,
+            resourceId,
+            principalAmount,
+            yieldAmount,
+            closedLockMode,
+            uint64(block.timestamp),
             msg.sender
         );
     }
@@ -736,6 +987,93 @@ contract CityBuildingVault is
         return _recommendedBucketProfile(core);
     }
 
+    function getResourceYieldConfig(
+        uint8 resourceId
+    )
+        external
+        view
+        returns (
+            uint32 sevenDayBaseBps,
+            uint32 thirtyDayBaseBps,
+            bool enabled
+        )
+    {
+        _requireValidResourceId(resourceId);
+        ResourceYieldConfig memory cfg = _yieldConfigs[resourceId];
+        return (cfg.sevenDayBaseBps, cfg.thirtyDayBaseBps, cfg.enabled);
+    }
+
+    function getWarehouseYieldPosition(
+        uint256 buildingId,
+        uint8 resourceId
+    )
+        external
+        view
+        returns (
+            uint256 amount,
+            uint256 protectionShiftedAmount,
+            uint64 startedAt,
+            uint64 maturityAt,
+            uint8 lockMode,
+            uint32 effectiveYieldBps,
+            bool active,
+            bool matured,
+            uint256 previewYieldAmount
+        )
+    {
+        _requireValidResourceId(resourceId);
+
+        WarehouseYieldPosition memory p = _yieldPositions[buildingId][resourceId];
+        amount = p.amount;
+        protectionShiftedAmount = p.protectionShiftedAmount;
+        startedAt = p.startedAt;
+        maturityAt = p.maturityAt;
+        lockMode = p.lockMode;
+        effectiveYieldBps = p.effectiveYieldBps;
+        active = p.active;
+        matured = p.active && block.timestamp >= p.maturityAt;
+        previewYieldAmount = p.active ? (p.amount * p.effectiveYieldBps) / MAX_BPS : 0;
+    }
+
+    function previewWarehouseYieldSettlement(
+        uint256 buildingId,
+        uint8 resourceId
+    )
+        external
+        view
+        returns (
+            uint256 principalAmount,
+            uint256 yieldAmount,
+            bool matured,
+            uint64 maturityAt
+        )
+    {
+        _requireValidResourceId(resourceId);
+
+        WarehouseYieldPosition memory p = _yieldPositions[buildingId][resourceId];
+        principalAmount = p.amount;
+        yieldAmount = p.active ? (p.amount * p.effectiveYieldBps) / MAX_BPS : 0;
+        matured = p.active && block.timestamp >= p.maturityAt;
+        maturityAt = p.maturityAt;
+    }
+
+    function isWarehouseYieldEligible(
+        uint256 buildingId
+    ) external view returns (bool) {
+        CityBuildingTypes.BuildingCore memory core = _requireWarehouseCore(buildingId);
+        return core.level >= 5;
+    }
+
+    function getEffectiveWarehouseYieldBps(
+        uint256 buildingId,
+        uint8 resourceId,
+        uint8 lockMode
+    ) external view returns (uint32) {
+        CityBuildingTypes.BuildingCore memory core = _requireWarehouseCore(buildingId);
+        if (core.level < 5) return 0;
+        return _effectiveYieldBps(core, resourceId, lockMode);
+    }
+
     /*//////////////////////////////////////////////////////////////
                                INTERNALS
     //////////////////////////////////////////////////////////////*/
@@ -797,6 +1135,67 @@ contract CityBuildingVault is
         );
     }
 
+    function _yieldLockDuration(uint8 lockMode) internal pure returns (uint64) {
+        if (lockMode == YIELD_MODE_7D) return YIELD_LOCK_7D;
+        if (lockMode == YIELD_MODE_30D) return YIELD_LOCK_30D;
+        revert InvalidYieldMode();
+    }
+
+    function _baseYieldBps(
+        uint8 resourceId,
+        uint8 lockMode
+    ) internal view returns (uint32) {
+        ResourceYieldConfig memory config = _yieldConfigs[resourceId];
+        if (!config.enabled) revert YieldConfigNotEnabled();
+
+        if (lockMode == YIELD_MODE_7D) return config.sevenDayBaseBps;
+        if (lockMode == YIELD_MODE_30D) return config.thirtyDayBaseBps;
+        revert InvalidYieldMode();
+    }
+
+    function _warehouseYieldBonusBps(
+        CityBuildingTypes.BuildingCore memory core,
+        uint8 lockMode
+    ) internal pure returns (uint32) {
+        if (core.level < 5) return 0;
+
+        uint32 bonus;
+        if (lockMode == YIELD_MODE_7D) {
+            if (core.level == 5) bonus = 50;
+            else if (core.level == 6) bonus = 100;
+            else bonus = 150;
+        } else if (lockMode == YIELD_MODE_30D) {
+            if (core.level == 5) bonus = 100;
+            else if (core.level == 6) bonus = 200;
+            else bonus = 300;
+        } else {
+            revert InvalidYieldMode();
+        }
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.ResourceVault) {
+            bonus += lockMode == YIELD_MODE_7D ? 50 : 100;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.TradeDepot) {
+            bonus += lockMode == YIELD_MODE_7D ? 75 : 125;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MerchantVault) {
+            bonus += lockMode == YIELD_MODE_7D ? 100 : 150;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault) {
+            bonus += lockMode == YIELD_MODE_7D ? 50 : 75;
+        }
+
+        return bonus;
+    }
+
+    function _effectiveYieldBps(
+        CityBuildingTypes.BuildingCore memory core,
+        uint8 resourceId,
+        uint8 lockMode
+    ) internal view returns (uint32) {
+        uint32 base = _baseYieldBps(resourceId, lockMode);
+        uint32 bonus = _warehouseYieldBonusBps(core, lockMode);
+        uint32 effective = base + bonus;
+        return effective > MAX_BPS ? MAX_BPS : effective;
+    }
+
     function _recommendedVaultTier(
         CityBuildingTypes.BuildingCore memory core
     ) internal pure returns (uint8) {
@@ -815,9 +1214,7 @@ contract CityBuildingVault is
         else if (core.level >= 3) tier = 1;
         else tier = 0;
 
-        if (
-            core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault
-        ) {
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault) {
             tier += 1;
         }
 
