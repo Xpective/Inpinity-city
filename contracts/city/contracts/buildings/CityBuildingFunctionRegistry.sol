@@ -42,6 +42,20 @@ interface ICityBuildingPlacementFunctionRead {
         );
 }
 
+interface ICityBuildingPlacementProvenanceRead {
+    function getFirstPlacementSnapshot(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint256 firstPlotId,
+            uint8 firstFaction,
+            uint8 firstDistrictKind,
+            uint64 firstPlacedTimestamp
+        );
+}
+
 /*//////////////////////////////////////////////////////////////
                     CITY BUILDING FUNCTION REGISTRY
 //////////////////////////////////////////////////////////////*/
@@ -52,6 +66,19 @@ contract CityBuildingFunctionRegistry is
     ICityBuildingFunctionRegistry
 {
     bytes32 public constant REGISTRY_ADMIN_ROLE = keccak256("REGISTRY_ADMIN_ROLE");
+
+    uint32 internal constant FLAG_LEVEL_7 = 1 << 0;
+    uint32 internal constant FLAG_SPECIALIZED = 1 << 1;
+    uint32 internal constant FLAG_CURRENTLY_PLACED = 1 << 2;
+    uint32 internal constant FLAG_HAS_PLACEMENT_HISTORY = 1 << 3;
+    uint32 internal constant FLAG_HAS_FIRST_PLACEMENT = 1 << 4;
+    uint32 internal constant FLAG_HAS_FIRST_FACTION = 1 << 5;
+    uint32 internal constant FLAG_HAS_FIRST_DISTRICT = 1 << 6;
+    uint32 internal constant FLAG_FACTION_VARIANT = 1 << 7;
+    uint32 internal constant FLAG_FIRST_OWNER_SET = 1 << 8;
+    uint32 internal constant FLAG_MINTED_TIMESTAMP_SET = 1 << 9;
+    uint32 internal constant FLAG_LEGACY_READY = 1 << 10;
+    uint32 internal constant FLAG_MASTER_TIER = 1 << 11;
 
     error ZeroAddress();
     error InvalidBuildingNFT();
@@ -134,7 +161,8 @@ contract CityBuildingFunctionRegistry is
         p.visualTier = _deriveVisualTier(core.level);
         p.provenanceFlags = _deriveProvenanceFlags(buildingId, core);
 
-        p.fullSetEligible = false;
+        // Per-building neutral defaults
+        p.fullSetEligible = core.level >= 4;
 
         if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Residence) {
             ResidenceProfile memory rp = _buildResidenceProfile(core);
@@ -299,6 +327,17 @@ contract CityBuildingFunctionRegistry is
             p.galleryBranchPrep = true;
             p.trophyBranchPrep = true;
         }
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.GalleryHouse) {
+            p.showcaseSlots += 2;
+            p.galleryBranchPrep = true;
+            p.prestigePresentationBps += 75;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.TrophyHall) {
+            p.archiveSlots += 2;
+            p.trophyBranchPrep = true;
+            p.legacyFlag = true;
+            p.prestigePresentationBps += 125;
+        }
     }
 
     function _buildFarmingHubProfile(
@@ -324,6 +363,20 @@ contract CityBuildingFunctionRegistry is
         p.craftCostReductionBps = uint32(core.level) * 75;
         p.craftProvenanceBonusBps = core.level >= 3 ? uint32(core.level - 2) * 100 : 0;
         p.outputQualityBps = core.level >= 5 ? uint32(core.level - 4) * 125 : 0;
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.WeaponForge) {
+            p.outputQualityBps += 75;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.RelicForge) {
+            p.craftProvenanceBonusBps += 100;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.ComponentForge) {
+            p.craftCostReductionBps += 75;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MasterForge) {
+            p.craftTier += 1;
+            p.recipeTier += 1;
+            p.craftCostReductionBps += 100;
+            p.craftProvenanceBonusBps += 150;
+            p.outputQualityBps += 200;
+        }
     }
 
     function _buildWarehouseProfile(
@@ -334,12 +387,61 @@ contract CityBuildingFunctionRegistry is
         p.vaultTier = _deriveVaultTier(core.level);
         p.capacityTier = _deriveVaultTier(core.level);
 
-        p.reserveBuckets = core.level >= 4 ? 4 : core.level;
-        p.protectedBuckets = core.level >= 5 ? 2 : 1;
-        p.raidableBuckets = core.level >= 6 ? 4 : 3;
+        if (core.level == 1) {
+            p.reserveBuckets = 1;
+            p.protectedBuckets = 1;
+            p.raidableBuckets = 1;
+            p.repairFlag = false;
+            p.decayFlag = false;
+        } else if (core.level == 2) {
+            p.reserveBuckets = 2;
+            p.protectedBuckets = 1;
+            p.raidableBuckets = 2;
+            p.repairFlag = false;
+            p.decayFlag = false;
+        } else if (core.level == 3) {
+            p.reserveBuckets = 3;
+            p.protectedBuckets = 1;
+            p.raidableBuckets = 2;
+            p.repairFlag = true;
+            p.decayFlag = true;
+        } else if (core.level == 4) {
+            p.reserveBuckets = 4;
+            p.protectedBuckets = 1;
+            p.raidableBuckets = 3;
+            p.repairFlag = true;
+            p.decayFlag = true;
+        } else if (core.level == 5) {
+            p.reserveBuckets = 5;
+            p.protectedBuckets = 2;
+            p.raidableBuckets = 3;
+            p.repairFlag = true;
+            p.decayFlag = true;
+        } else if (core.level == 6) {
+            p.reserveBuckets = 6;
+            p.protectedBuckets = 2;
+            p.raidableBuckets = 4;
+            p.repairFlag = true;
+            p.decayFlag = true;
+        } else {
+            p.reserveBuckets = 8;
+            p.protectedBuckets = 3;
+            p.raidableBuckets = 4;
+            p.repairFlag = true;
+            p.decayFlag = true;
+        }
 
-        p.repairFlag = core.level >= 3;
-        p.decayFlag = core.level >= 3;
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.ResourceVault) {
+            p.protectedBuckets += 1;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.TradeDepot) {
+            p.reserveBuckets += 1;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.FortressVault) {
+            p.protectedBuckets += 1;
+            if (p.raidableBuckets > 0) p.raidableBuckets -= 1;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MerchantVault) {
+            p.reserveBuckets += 1;
+            p.protectedBuckets += 1;
+        }
     }
 
     function _buildMarketStallProfile(
@@ -386,6 +488,19 @@ contract CityBuildingFunctionRegistry is
             p.premiumVisibilityBps = 600;
             p.provenancePremium = true;
         }
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.MerchantHouse) {
+            p.marketFeeReductionBps += 100;
+            p.premiumVisibilityBps += 100;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.TradeDepot) {
+            p.listingCap += 3;
+            p.allowedCategoryMask = type(uint32).max;
+            p.marketFeeReductionBps += 75;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MerchantVault) {
+            p.listingCap += 2;
+            p.premiumVisibilityBps += 150;
+            p.provenancePremium = true;
+        }
     }
 
     function _buildGuardTowerProfile(
@@ -399,6 +514,20 @@ contract CityBuildingFunctionRegistry is
         p.raidMitigationBps = core.level >= 4 ? uint32(core.level - 3) * 175 : 0;
         p.radarTier = core.level >= 5 ? uint8(core.level - 4) : 0;
         p.shieldTier = core.level >= 6 ? uint8(core.level - 5) : 0;
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.RadarTower) {
+            p.radarTier += 1;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.DefenseTower) {
+            p.defenseBps += 200;
+            p.warehouseProtectionBps += 100;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.MercenaryTower) {
+            p.defenseBps += 100;
+            p.raidMitigationBps += 150;
+        } else if (core.specialization == CityBuildingTypes.BuildingSpecialization.ShieldTower) {
+            p.shieldTier += 1;
+            p.raidMitigationBps += 250;
+            p.warehouseProtectionBps += 150;
+        }
     }
 
     function _buildResearchLabProfile(
@@ -413,6 +542,14 @@ contract CityBuildingFunctionRegistry is
         p.enchantPrep = core.level >= 5;
         p.materiaPrep = core.level >= 5;
         p.forgeSynergyBps = core.level >= 2 ? uint32(core.level - 1) * 150 : 0;
+
+        if (core.specialization == CityBuildingTypes.BuildingSpecialization.MasterLab) {
+            p.techTier += 1;
+            p.blueprintUnlockTier += 1;
+            p.forgeSynergyBps += 200;
+            p.enchantPrep = true;
+            p.materiaPrep = true;
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -493,8 +630,11 @@ contract CityBuildingFunctionRegistry is
         uint256 buildingId,
         CityBuildingTypes.BuildingCore memory core
     ) internal view returns (uint32 flags) {
-        if (core.level >= 7) flags |= 1 << 0;
-        if (core.specialization != CityBuildingTypes.BuildingSpecialization.None) flags |= 1 << 1;
+        if (core.level >= 7) flags |= FLAG_LEVEL_7;
+        if (core.specialization != CityBuildingTypes.BuildingSpecialization.None) flags |= FLAG_SPECIALIZED;
+        if (core.factionVariant != CityBuildingTypes.FactionVariant.None) flags |= FLAG_FACTION_VARIANT;
+        if (core.firstOwner != address(0)) flags |= FLAG_FIRST_OWNER_SET;
+        if (core.mintedAt != 0) flags |= FLAG_MINTED_TIMESTAMP_SET;
 
         (
             uint256 plotId,
@@ -502,14 +642,32 @@ contract CityBuildingFunctionRegistry is
             ,
             ,
             uint64 placedAt,
-            ,
+            uint64 lastPlacedAt,
             address placedBy
         ) = placement.getPlacementSummary(buildingId);
 
-        placedBy;
+        if (placed && plotId != 0) flags |= FLAG_CURRENTLY_PLACED;
+        if (placedAt != 0 || lastPlacedAt != 0 || placedBy != address(0)) {
+            flags |= FLAG_HAS_PLACEMENT_HISTORY;
+        }
 
-        if (placed && plotId != 0) flags |= 1 << 2;
-        if (placedAt != 0) flags |= 1 << 3;
+        if (core.level >= 5) flags |= FLAG_LEGACY_READY;
+        if (core.level >= 7) flags |= FLAG_MASTER_TIER;
+
+        if (address(placement).code.length > 0) {
+            try ICityBuildingPlacementProvenanceRead(address(placement)).getFirstPlacementSnapshot(buildingId) returns (
+                uint256 firstPlotId,
+                uint8 firstFaction,
+                uint8 firstDistrictKind,
+                uint64 firstPlacedTimestamp
+            ) {
+                if (firstPlotId != 0 || firstPlacedTimestamp != 0) flags |= FLAG_HAS_FIRST_PLACEMENT;
+                if (firstFaction != 0) flags |= FLAG_HAS_FIRST_FACTION;
+                if (firstDistrictKind != 0) flags |= FLAG_HAS_FIRST_DISTRICT;
+            } catch {
+                // optional provenance extension not available on older placement contracts
+            }
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
