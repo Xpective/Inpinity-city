@@ -1,56 +1,1172 @@
+/* FILE: contracts/city/contracts/buildings/BorderlineBuildings.sol */
+/* TYPE: borderline buildings orchestrator / dual-faction crowdfunding / custody layer — NOT PersonalBuildings */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./CityBuildings.sol";
-import "../libraries/CityErrors.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
-contract BorderlineBuildings is CityBuildings {
-    struct BorderlineBuilding {
-        uint256 buildingId;
-        bool exists;
-        bool cooperative; // v1 immer true, später erweiterbar
-    }
+import "../libraries/CityTypes.sol";
+import "../libraries/CollectiveBuildingTypes.sol";
+import "../interfaces/IResourceToken.sol";
+import "../interfaces/ICityLand.sol";
 
-    mapping(uint256 => BorderlineBuilding) public buildingOfPlot;
-    mapping(address => bool) public authorizedCallers;
+/*//////////////////////////////////////////////////////////////
+                        EXTERNAL INTERFACES
+//////////////////////////////////////////////////////////////*/
 
-    event BorderlineBuildingPlaced(
-        uint256 indexed plotId,
-        uint256 indexed buildingId,
-        address indexed placer
+interface ICollectiveBuildingNFTV1Borderline {
+    function mintBorderlineBuilding(
+        address custodyHolder,
+        CollectiveBuildingTypes.BorderlineBuildingKind kind,
+        uint8 primaryFaction,
+        uint8 secondaryFaction,
+        uint256 plotId,
+        uint256 campaignId,
+        CollectiveBuildingTypes.CollectiveCustodyMode custodyMode,
+        uint32 versionTag
+    ) external returns (uint256 tokenId);
+
+    function getCollectiveIdentity(
+        uint256 tokenId
+    ) external view returns (CollectiveBuildingTypes.CollectiveIdentity memory);
+
+    function getCollectiveState(
+        uint256 tokenId
+    ) external view returns (CollectiveBuildingTypes.CollectiveBuildingState);
+
+    function setCollectiveState(
+        uint256 tokenId,
+        CollectiveBuildingTypes.CollectiveBuildingState newState
+    ) external;
+
+    function upgradeCollectiveBuilding(
+        uint256 tokenId,
+        uint8 newLevel
+    ) external;
+
+    function setBorderlineBranch(
+        uint256 tokenId,
+        CollectiveBuildingTypes.BorderlineBuildingBranch newBranch
+    ) external;
+
+    function addPrestigeScore(
+        uint256 tokenId,
+        uint32 amount
+    ) external;
+
+    function addHistoryScore(
+        uint256 tokenId,
+        uint32 amount
+    ) external;
+}
+
+interface ICityRegistryBorderlineRead {
+    function hasCityKeyOf(address user) external view returns (bool);
+
+    function chosenFactionOf(address user) external view returns (CityTypes.Faction);
+
+    function getPlotCore(
+        uint256 plotId
+    ) external view returns (CityTypes.PlotCore memory);
+}
+
+interface ICityStatusTouchHook {
+    function touchActivity(uint256 plotId) external;
+}
+
+/*//////////////////////////////////////////////////////////////
+                        BORDERLINE BUILDINGS
+//////////////////////////////////////////////////////////////*/
+
+contract BorderlineBuildings is
+    AccessControl,
+    Pausable,
+    ReentrancyGuard,
+    ERC1155Holder,
+    ERC721Holder
+{
+    /*//////////////////////////////////////////////////////////////
+                                 ROLES
+    //////////////////////////////////////////////////////////////*/
+
+    bytes32 public constant BORDERLINE_ADMIN_ROLE = keccak256("BORDERLINE_ADMIN_ROLE");
+    bytes32 public constant BORDERLINE_OPERATOR_ROLE = keccak256("BORDERLINE_OPERATOR_ROLE");
+    bytes32 public constant FACTION_ROLE_SETTER_ROLE = keccak256("FACTION_ROLE_SETTER_ROLE");
+    bytes32 public constant CUSTODY_MANAGER_ROLE = keccak256("CUSTODY_MANAGER_ROLE");
+
+    /*//////////////////////////////////////////////////////////////
+                                 ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    error ZeroAddress();
+    error InvalidCollectiveNFT();
+    error InvalidCityRegistry();
+    error InvalidCityLand();
+    error InvalidResourceToken();
+    error InvalidStatusHook();
+
+    error InvalidFaction();
+    error InvalidFactionPair();
+    error InvalidPlot();
+    error InvalidPlotType();
+    error PlotNotCompleted();
+    error BuildingAlreadyExistsOnPlot();
+    error BorderlineBuildingNotFound();
+
+    error InvalidBorderlineKind();
+    error InvalidBorderlineBranch();
+    error InvalidVersionTag();
+    error InvalidTargetLevel();
+    error NoStateChange();
+    error BuildingInactive();
+
+    error NotFactionMember();
+    error NotFactionAuthorized();
+    error NoCityKey();
+
+    error ResourceApprovalMissing();
+    error EmptyFundingTarget();
+    error EmptyContribution();
+    error FundingRoundAlreadyActive();
+    error NoActiveFundingRound();
+    error FundingRoundNotOpen();
+    error FundingRoundNotFunded();
+    error FundingRoundNotRefundable();
+    error FundingRoundAlreadyRefunded();
+    error NoContributionToRefund();
+    error BothFactionsMustContribute();
+
+    /*//////////////////////////////////////////////////////////////
+                                EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event CollectiveNFTSet(address indexed nft, address indexed executor);
+    event CityRegistrySet(address indexed registry, address indexed executor);
+    event CityLandSet(address indexed land, address indexed executor);
+    event ResourceTokenSet(address indexed token, address indexed executor);
+    event StatusHookSet(address indexed hook, address indexed executor);
+    event CustodyHolderSet(address indexed custodyHolder, address indexed executor);
+
+    event FactionGovernanceRoleSet(
+        uint8 indexed faction,
+        address indexed account,
+        CollectiveBuildingTypes.CollectiveGovernanceRole role,
+        address indexed executor
     );
 
-    modifier onlyAuthorized() {
-        if (!(msg.sender == owner() || authorizedCallers[msg.sender])) {
-            revert CityErrors.NotAuthorized();
-        }
-        _;
+    event BorderlineCampaignStarted(
+        uint256 indexed tokenId,
+        uint256 indexed campaignId,
+        uint256 indexed plotId,
+        CollectiveBuildingTypes.BorderlineBuildingKind kind,
+        uint8 primaryFaction,
+        uint8 secondaryFaction,
+        address starter,
+        address custodyHolder
+    );
+
+    event BorderlineFundingRoundOpened(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        bool indexed isUpgrade,
+        uint8 targetLevel,
+        address executor,
+        uint64 openedAt
+    );
+
+    event BorderlineContributionReceived(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        address indexed contributor,
+        uint8 contributorFaction,
+        uint32 contributorCountAfter
+    );
+
+    event BorderlineFundingRoundFunded(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        bool indexed isUpgrade,
+        uint8 targetLevel,
+        bool primaryFactionParticipated,
+        bool secondaryFactionParticipated,
+        uint64 fundedAt
+    );
+
+    event BorderlineFundingRoundCancelled(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        address indexed executor,
+        uint64 cancelledAt
+    );
+
+    event BorderlineFundingRoundFailed(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        address indexed executor,
+        uint64 failedAt
+    );
+
+    event BorderlineFundingRefundClaimed(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        address indexed contributor
+    );
+
+    event BorderlineBuildingActivated(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        uint256 indexed plotId,
+        uint8 primaryFaction,
+        uint8 secondaryFaction,
+        address executor,
+        uint64 activatedAt
+    );
+
+    event BorderlineUpgradeFinalized(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        uint8 oldLevel,
+        uint8 newLevel,
+        address indexed executor,
+        uint64 finalizedAt
+    );
+
+    event BorderlineBranchSelected(
+        uint256 indexed tokenId,
+        CollectiveBuildingTypes.BorderlineBuildingBranch indexed branch,
+        address indexed executor
+    );
+
+    /*//////////////////////////////////////////////////////////////
+                                 STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    ICollectiveBuildingNFTV1Borderline public collectiveNFT;
+    ICityRegistryBorderlineRead public cityRegistry;
+    ICityLand public cityLand;
+    IResourceToken public resourceToken;
+    ICityStatusTouchHook public statusHook;
+
+    /// @notice Optional external custody / collection contract.
+    /// @dev If zero, this contract custodies the NFTs itself.
+    address public custodyHolder;
+
+    uint256 public nextCampaignId = 1;
+
+    struct BorderlineBuildingRecord {
+        uint256 tokenId;
+        CollectiveBuildingTypes.BorderlineBuildingKind kind;
+        uint8 primaryFaction;
+        uint8 secondaryFaction;
+        uint256 plotId;
+        uint256 creationCampaignId;
+        address campaignStarter;
+        bool exists;
+        bool active;
     }
+
+    struct BorderlineFundingRound {
+        uint256 roundId;
+        bool exists;
+        bool isUpgrade;
+        uint8 targetLevel;
+        bool primaryFactionParticipated;
+        bool secondaryFactionParticipated;
+        CollectiveBuildingTypes.CollectiveFundingLedger ledger;
+    }
+
+    struct BorderlineFundingRoundView {
+        uint256 roundId;
+        bool exists;
+        bool isUpgrade;
+        uint8 targetLevel;
+        bool primaryFactionParticipated;
+        bool secondaryFactionParticipated;
+        CollectiveBuildingTypes.CollectiveCampaignState campaignState;
+        uint32 contributorCount;
+        uint64 campaignOpenedAt;
+        uint64 campaignClosedAt;
+        uint64 fundedAt;
+        uint64 activatedAt;
+        uint256[10] targetAmounts;
+        uint256[10] raisedAmounts;
+    }
+
+    mapping(uint256 => BorderlineBuildingRecord) public buildingByTokenId;
+    mapping(uint256 => uint256) public tokenIdByPlotId;
+
+    mapping(uint256 => uint256) public activeRoundIdOf;
+    mapping(uint256 => uint256) public nextRoundIdOf;
+    mapping(uint256 => uint256) public lastRoundIdOf;
+
+    mapping(uint256 => mapping(uint256 => BorderlineFundingRound)) private _roundOfToken;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256[10]))) private _contributionOf;
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) private _refundClaimed;
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) private _isContributorInRound;
+
+    mapping(uint8 => mapping(address => CollectiveBuildingTypes.CollectiveGovernanceRole))
+        public governanceRoleOfFactionMember;
+
+    /*//////////////////////////////////////////////////////////////
+                               CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
 
     constructor(
-        address initialOwner,
-        address cityConfigAddress,
-        address cityRegistryAddress,
-        address cityLandAddress
-    ) CityBuildings(initialOwner, cityConfigAddress, cityRegistryAddress, cityLandAddress) {}
+        address collectiveNFT_,
+        address cityRegistry_,
+        address cityLand_,
+        address resourceToken_,
+        address statusHook_,
+        address admin_
+    ) {
+        if (admin_ == address(0)) revert ZeroAddress();
+        if (collectiveNFT_ == address(0)) revert ZeroAddress();
+        if (cityRegistry_ == address(0)) revert ZeroAddress();
+        if (cityLand_ == address(0)) revert ZeroAddress();
+        if (resourceToken_ == address(0)) revert ZeroAddress();
 
-    function setAuthorizedCaller(address caller, bool allowed) external onlyOwner {
-        if (caller == address(0)) revert CityErrors.ZeroAddress();
-        authorizedCallers[caller] = allowed;
+        if (collectiveNFT_.code.length == 0) revert InvalidCollectiveNFT();
+        if (cityRegistry_.code.length == 0) revert InvalidCityRegistry();
+        if (cityLand_.code.length == 0) revert InvalidCityLand();
+        if (resourceToken_.code.length == 0) revert InvalidResourceToken();
+        if (statusHook_ != address(0) && statusHook_.code.length == 0) revert InvalidStatusHook();
+
+        collectiveNFT = ICollectiveBuildingNFTV1Borderline(collectiveNFT_);
+        cityRegistry = ICityRegistryBorderlineRead(cityRegistry_);
+        cityLand = ICityLand(cityLand_);
+        resourceToken = IResourceToken(resourceToken_);
+        statusHook = ICityStatusTouchHook(statusHook_);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin_);
+        _grantRole(BORDERLINE_ADMIN_ROLE, admin_);
+        _grantRole(BORDERLINE_OPERATOR_ROLE, admin_);
+        _grantRole(FACTION_ROLE_SETTER_ROLE, admin_);
+        _grantRole(CUSTODY_MANAGER_ROLE, admin_);
     }
 
-    function placeBuilding(uint256 plotId, uint256 buildingId) external onlyAuthorized {
-        _requireValidPlotForBuilding(plotId, CityTypes.PlotType.Borderline);
-        _requireEnabledDefinition(buildingId, CityTypes.PlotType.Borderline);
+    /*//////////////////////////////////////////////////////////////
+                                  ADMIN
+    //////////////////////////////////////////////////////////////*/
 
-        if (buildingOfPlot[plotId].exists) revert CityErrors.InvalidValue();
+    function pause() external onlyRole(BORDERLINE_ADMIN_ROLE) {
+        _pause();
+    }
 
-        buildingOfPlot[plotId] = BorderlineBuilding({
-            buildingId: buildingId,
+    function unpause() external onlyRole(BORDERLINE_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    function setCollectiveNFT(address collectiveNFT_) external onlyRole(BORDERLINE_ADMIN_ROLE) {
+        if (collectiveNFT_ == address(0)) revert ZeroAddress();
+        if (collectiveNFT_.code.length == 0) revert InvalidCollectiveNFT();
+
+        collectiveNFT = ICollectiveBuildingNFTV1Borderline(collectiveNFT_);
+        emit CollectiveNFTSet(collectiveNFT_, msg.sender);
+    }
+
+    function setCityRegistry(address cityRegistry_) external onlyRole(BORDERLINE_ADMIN_ROLE) {
+        if (cityRegistry_ == address(0)) revert ZeroAddress();
+        if (cityRegistry_.code.length == 0) revert InvalidCityRegistry();
+
+        cityRegistry = ICityRegistryBorderlineRead(cityRegistry_);
+        emit CityRegistrySet(cityRegistry_, msg.sender);
+    }
+
+    function setCityLand(address cityLand_) external onlyRole(BORDERLINE_ADMIN_ROLE) {
+        if (cityLand_ == address(0)) revert ZeroAddress();
+        if (cityLand_.code.length == 0) revert InvalidCityLand();
+
+        cityLand = ICityLand(cityLand_);
+        emit CityLandSet(cityLand_, msg.sender);
+    }
+
+    function setResourceToken(address resourceToken_) external onlyRole(BORDERLINE_ADMIN_ROLE) {
+        if (resourceToken_ == address(0)) revert ZeroAddress();
+        if (resourceToken_.code.length == 0) revert InvalidResourceToken();
+
+        resourceToken = IResourceToken(resourceToken_);
+        emit ResourceTokenSet(resourceToken_, msg.sender);
+    }
+
+    function setStatusHook(address statusHook_) external onlyRole(BORDERLINE_ADMIN_ROLE) {
+        if (statusHook_ == address(0)) {
+            statusHook = ICityStatusTouchHook(address(0));
+        } else {
+            if (statusHook_.code.length == 0) revert InvalidStatusHook();
+            statusHook = ICityStatusTouchHook(statusHook_);
+        }
+
+        emit StatusHookSet(statusHook_, msg.sender);
+    }
+
+    function setCustodyHolder(address custodyHolder_) external onlyRole(CUSTODY_MANAGER_ROLE) {
+        if (custodyHolder_ != address(0) && custodyHolder_.code.length == 0) {
+            revert ZeroAddress();
+        }
+
+        custodyHolder = custodyHolder_;
+        emit CustodyHolderSet(custodyHolder_, msg.sender);
+    }
+
+    function setFactionGovernanceRole(
+        uint8 faction,
+        address account,
+        CollectiveBuildingTypes.CollectiveGovernanceRole role
+    ) external onlyRole(FACTION_ROLE_SETTER_ROLE) {
+        if (!_isOperationalFaction(faction)) revert InvalidFaction();
+        if (account == address(0)) revert ZeroAddress();
+
+        if (role != CollectiveBuildingTypes.CollectiveGovernanceRole.None) {
+            if (!cityRegistry.hasCityKeyOf(account)) revert NoCityKey();
+            if (!_isFactionMember(faction, account)) revert NotFactionMember();
+        }
+
+        governanceRoleOfFactionMember[faction][account] = role;
+
+        emit FactionGovernanceRoleSet(
+            faction,
+            account,
+            role,
+            msg.sender
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        BORDERLINE CAMPAIGN FLOW
+    //////////////////////////////////////////////////////////////*/
+
+    function startBorderlineBuildingCampaign(
+        uint256 plotId,
+        CollectiveBuildingTypes.BorderlineBuildingKind kind,
+        uint8 primaryFaction,
+        uint8 secondaryFaction,
+        uint256[10] calldata targetAmounts,
+        uint32 versionTag
+    ) external whenNotPaused nonReentrant returns (uint256 tokenId) {
+        if (!CollectiveBuildingTypes.isValidBorderlineKind(kind)) {
+            revert InvalidBorderlineKind();
+        }
+
+        _requireDistinctOperationalFactions(primaryFaction, secondaryFaction);
+        _requireBorderlinePlotReady(plotId);
+        _requireAnyFactionStewardOrBuilder(primaryFaction, secondaryFaction, msg.sender);
+        _requireNonEmptyFundingTarget(targetAmounts);
+
+        if (tokenIdByPlotId[plotId] != 0) revert BuildingAlreadyExistsOnPlot();
+
+        uint256 campaignId = nextCampaignId++;
+        address resolvedCustody = _resolvedCustodyHolder();
+
+        tokenId = collectiveNFT.mintBorderlineBuilding(
+            resolvedCustody,
+            kind,
+            primaryFaction,
+            secondaryFaction,
+            plotId,
+            campaignId,
+            CollectiveBuildingTypes.CollectiveCustodyMode.ContractCustodied,
+            versionTag
+        );
+
+        buildingByTokenId[tokenId] = BorderlineBuildingRecord({
+            tokenId: tokenId,
+            kind: kind,
+            primaryFaction: primaryFaction,
+            secondaryFaction: secondaryFaction,
+            plotId: plotId,
+            creationCampaignId: campaignId,
+            campaignStarter: msg.sender,
             exists: true,
-            cooperative: true
+            active: false
         });
 
-        emit BorderlineBuildingPlaced(plotId, buildingId, msg.sender);
+        tokenIdByPlotId[plotId] = tokenId;
+        nextRoundIdOf[tokenId] = 2;
+        activeRoundIdOf[tokenId] = 1;
+        lastRoundIdOf[tokenId] = 1;
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][1];
+        round.roundId = 1;
+        round.exists = true;
+        round.isUpgrade = false;
+        round.targetLevel = 1;
+        _setTargetAmounts(round.ledger, targetAmounts);
+        round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Funding;
+        round.ledger.campaignOpenedAt = uint64(block.timestamp);
+
+        emit BorderlineCampaignStarted(
+            tokenId,
+            campaignId,
+            plotId,
+            kind,
+            primaryFaction,
+            secondaryFaction,
+            msg.sender,
+            resolvedCustody
+        );
+
+        emit BorderlineFundingRoundOpened(
+            tokenId,
+            1,
+            false,
+            1,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function reopenInitialFundingRound(
+        uint256 tokenId,
+        uint256[10] calldata targetAmounts
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+        _requireAnyFactionStewardOrBuilder(
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender
+        );
+
+        if (record.active) revert NoStateChange();
+        if (activeRoundIdOf[tokenId] != 0) revert FundingRoundAlreadyActive();
+
+        _requireNonEmptyFundingTarget(targetAmounts);
+
+        uint256 roundId = nextRoundIdOf[tokenId];
+        if (roundId == 0) roundId = 1;
+        nextRoundIdOf[tokenId] = roundId + 1;
+        activeRoundIdOf[tokenId] = roundId;
+        lastRoundIdOf[tokenId] = roundId;
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        round.roundId = roundId;
+        round.exists = true;
+        round.isUpgrade = false;
+        round.targetLevel = 1;
+        _setTargetAmounts(round.ledger, targetAmounts);
+        round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Funding;
+        round.ledger.campaignOpenedAt = uint64(block.timestamp);
+
+        emit BorderlineFundingRoundOpened(
+            tokenId,
+            roundId,
+            false,
+            1,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function contributeToFundingRound(
+        uint256 tokenId,
+        uint256[10] calldata amounts
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+        uint8 contributorFaction = _requireBorderlineFactionMemberWithKey(
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender
+        );
+
+        uint256 roundId = activeRoundIdOf[tokenId];
+        if (roundId == 0) revert NoActiveFundingRound();
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        if (
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Funding
+        ) revert FundingRoundNotOpen();
+
+        bool hasContribution;
+        for (uint256 i = 0; i < 10; i++) {
+            if (amounts[i] != 0) {
+                hasContribution = true;
+                break;
+            }
+        }
+        if (!hasContribution) revert EmptyContribution();
+
+        if (!resourceToken.isApprovedForAll(msg.sender, address(this))) {
+            revert ResourceApprovalMissing();
+        }
+
+        if (!_isContributorInRound[tokenId][roundId][msg.sender]) {
+            _isContributorInRound[tokenId][roundId][msg.sender] = true;
+            round.ledger.contributorCount += 1;
+        }
+
+        if (contributorFaction == record.primaryFaction) {
+            round.primaryFactionParticipated = true;
+        } else if (contributorFaction == record.secondaryFaction) {
+            round.secondaryFactionParticipated = true;
+        }
+
+        for (uint256 i = 0; i < 10; i++) {
+            uint256 amount = amounts[i];
+            if (amount == 0) continue;
+
+            resourceToken.safeTransferFrom(
+                msg.sender,
+                address(this),
+                i,
+                amount,
+                ""
+            );
+
+            round.ledger.raisedAmounts[i] += amount;
+            _contributionOf[tokenId][roundId][msg.sender][i] += amount;
+        }
+
+        emit BorderlineContributionReceived(
+            tokenId,
+            roundId,
+            msg.sender,
+            contributorFaction,
+            round.ledger.contributorCount
+        );
+
+        if (
+            _isRoundFunded(round.ledger) &&
+            round.primaryFactionParticipated &&
+            round.secondaryFactionParticipated
+        ) {
+            round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Funded;
+            round.ledger.fundedAt = uint64(block.timestamp);
+
+            emit BorderlineFundingRoundFunded(
+                tokenId,
+                roundId,
+                round.isUpgrade,
+                round.targetLevel,
+                true,
+                true,
+                uint64(block.timestamp)
+            );
+        }
+    }
+
+    function cancelFundingRound(
+        uint256 tokenId
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+        _requireAnyFactionStewardOrBuilder(
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender
+        );
+
+        uint256 roundId = activeRoundIdOf[tokenId];
+        if (roundId == 0) revert NoActiveFundingRound();
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        if (
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Funding
+        ) revert FundingRoundNotOpen();
+
+        round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Cancelled;
+        round.ledger.campaignClosedAt = uint64(block.timestamp);
+        activeRoundIdOf[tokenId] = 0;
+
+        if (round.isUpgrade && record.active) {
+            _syncNftState(tokenId, CollectiveBuildingTypes.CollectiveBuildingState.Active);
+        }
+
+        emit BorderlineFundingRoundCancelled(
+            tokenId,
+            roundId,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function markFundingRoundFailed(
+        uint256 tokenId,
+        uint256 roundId
+    ) external whenNotPaused onlyRole(BORDERLINE_OPERATOR_ROLE) {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        if (!round.exists) revert NoActiveFundingRound();
+        if (
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Funding
+        ) revert FundingRoundNotOpen();
+
+        round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Failed;
+        round.ledger.campaignClosedAt = uint64(block.timestamp);
+
+        if (activeRoundIdOf[tokenId] == roundId) {
+            activeRoundIdOf[tokenId] = 0;
+        }
+
+        if (round.isUpgrade && record.active) {
+            _syncNftState(tokenId, CollectiveBuildingTypes.CollectiveBuildingState.Active);
+        }
+
+        emit BorderlineFundingRoundFailed(
+            tokenId,
+            roundId,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function claimFundingRefund(
+        uint256 tokenId,
+        uint256 roundId
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+        record;
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        if (!round.exists) revert NoActiveFundingRound();
+
+        if (
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Failed &&
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Cancelled
+        ) revert FundingRoundNotRefundable();
+
+        if (_refundClaimed[tokenId][roundId][msg.sender]) {
+            revert FundingRoundAlreadyRefunded();
+        }
+
+        uint256[10] storage contribution = _contributionOf[tokenId][roundId][msg.sender];
+        bool hasContribution;
+
+        for (uint256 i = 0; i < 10; i++) {
+            uint256 amount = contribution[i];
+            if (amount == 0) continue;
+
+            hasContribution = true;
+            resourceToken.safeTransferFrom(
+                address(this),
+                msg.sender,
+                i,
+                amount,
+                ""
+            );
+        }
+
+        if (!hasContribution) revert NoContributionToRefund();
+
+        _refundClaimed[tokenId][roundId][msg.sender] = true;
+
+        emit BorderlineFundingRefundClaimed(tokenId, roundId, msg.sender);
+    }
+
+    function activateFundedBorderlineBuilding(
+        uint256 tokenId
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord storage record = _requireBorderlineBuildingStorage(tokenId);
+        _requireAnyFactionStewardOrBuilder(
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender
+        );
+
+        uint256 roundId = activeRoundIdOf[tokenId];
+        if (roundId == 0) revert NoActiveFundingRound();
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        if (round.isUpgrade) revert FundingRoundNotFunded();
+        if (
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Funded
+        ) revert FundingRoundNotFunded();
+        if (!(round.primaryFactionParticipated && round.secondaryFactionParticipated)) {
+            revert BothFactionsMustContribute();
+        }
+
+        round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Closed;
+        round.ledger.campaignClosedAt = uint64(block.timestamp);
+        round.ledger.activatedAt = uint64(block.timestamp);
+
+        activeRoundIdOf[tokenId] = 0;
+        record.active = true;
+
+        _syncNftState(tokenId, CollectiveBuildingTypes.CollectiveBuildingState.Active);
+        collectiveNFT.addPrestigeScore(tokenId, 30);
+        collectiveNFT.addHistoryScore(tokenId, 35);
+
+        _touchStatus(record.plotId);
+
+        emit BorderlineBuildingActivated(
+            tokenId,
+            roundId,
+            record.plotId,
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function openUpgradeFundingRound(
+        uint256 tokenId,
+        uint8 targetLevel,
+        uint256[10] calldata targetAmounts
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+        _requireAnyFactionStewardOrBuilder(
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender
+        );
+
+        if (!record.active) revert BuildingInactive();
+        if (activeRoundIdOf[tokenId] != 0) revert FundingRoundAlreadyActive();
+
+        CollectiveBuildingTypes.CollectiveIdentity memory id_ =
+            collectiveNFT.getCollectiveIdentity(tokenId);
+
+        if (!CollectiveBuildingTypes.isValidCollectiveLevel(targetLevel)) {
+            revert InvalidTargetLevel();
+        }
+        if (targetLevel <= id_.level) revert InvalidTargetLevel();
+
+        _requireNonEmptyFundingTarget(targetAmounts);
+
+        uint256 roundId = nextRoundIdOf[tokenId];
+        if (roundId == 0) roundId = 1;
+        nextRoundIdOf[tokenId] = roundId + 1;
+        activeRoundIdOf[tokenId] = roundId;
+        lastRoundIdOf[tokenId] = roundId;
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        round.roundId = roundId;
+        round.exists = true;
+        round.isUpgrade = true;
+        round.targetLevel = targetLevel;
+        _setTargetAmounts(round.ledger, targetAmounts);
+        round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Funding;
+        round.ledger.campaignOpenedAt = uint64(block.timestamp);
+
+        _syncNftState(tokenId, CollectiveBuildingTypes.CollectiveBuildingState.Upgrading);
+
+        emit BorderlineFundingRoundOpened(
+            tokenId,
+            roundId,
+            true,
+            targetLevel,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function finalizeFundedUpgrade(
+        uint256 tokenId
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+        _requireAnyFactionStewardOrBuilder(
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender
+        );
+
+        uint256 roundId = activeRoundIdOf[tokenId];
+        if (roundId == 0) revert NoActiveFundingRound();
+
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+        if (!round.isUpgrade) revert FundingRoundNotFunded();
+        if (
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Funded
+        ) revert FundingRoundNotFunded();
+        if (!(round.primaryFactionParticipated && round.secondaryFactionParticipated)) {
+            revert BothFactionsMustContribute();
+        }
+
+        CollectiveBuildingTypes.CollectiveIdentity memory id_ =
+            collectiveNFT.getCollectiveIdentity(tokenId);
+
+        uint8 oldLevel = id_.level;
+        uint8 newLevel = round.targetLevel;
+
+        collectiveNFT.upgradeCollectiveBuilding(tokenId, newLevel);
+        collectiveNFT.addPrestigeScore(tokenId, uint32(newLevel) * 12);
+        collectiveNFT.addHistoryScore(tokenId, uint32(newLevel) * 10);
+        _syncNftState(tokenId, CollectiveBuildingTypes.CollectiveBuildingState.Active);
+
+        round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Closed;
+        round.ledger.campaignClosedAt = uint64(block.timestamp);
+        round.ledger.activatedAt = uint64(block.timestamp);
+        activeRoundIdOf[tokenId] = 0;
+
+        _touchStatus(record.plotId);
+
+        emit BorderlineUpgradeFinalized(
+            tokenId,
+            roundId,
+            oldLevel,
+            newLevel,
+            msg.sender,
+            uint64(block.timestamp)
+        );
+    }
+
+    function setBorderlineBranch(
+        uint256 tokenId,
+        CollectiveBuildingTypes.BorderlineBuildingBranch branch
+    ) external whenNotPaused nonReentrant {
+        BorderlineBuildingRecord memory record = _requireBorderlineBuilding(tokenId);
+        _requireAnyFactionStewardOrBuilder(
+            record.primaryFaction,
+            record.secondaryFaction,
+            msg.sender
+        );
+
+        CollectiveBuildingTypes.CollectiveIdentity memory id_ =
+            collectiveNFT.getCollectiveIdentity(tokenId);
+
+        if (
+            !CollectiveBuildingTypes.canChooseBorderlineBranch(
+                id_.borderlineKind,
+                id_.level,
+                branch
+            )
+        ) revert InvalidBorderlineBranch();
+
+        collectiveNFT.setBorderlineBranch(tokenId, branch);
+        collectiveNFT.addHistoryScore(tokenId, 6);
+
+        emit BorderlineBranchSelected(tokenId, branch, msg.sender);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                  READS
+    //////////////////////////////////////////////////////////////*/
+
+    function getBorderlineBuildingRecord(
+        uint256 tokenId
+    ) external view returns (BorderlineBuildingRecord memory) {
+        return _requireBorderlineBuilding(tokenId);
+    }
+
+    function getFundingRound(
+        uint256 tokenId,
+        uint256 roundId
+    ) external view returns (BorderlineFundingRoundView memory v) {
+        BorderlineFundingRound storage round = _roundOfToken[tokenId][roundId];
+
+        v.roundId = round.roundId;
+        v.exists = round.exists;
+        v.isUpgrade = round.isUpgrade;
+        v.targetLevel = round.targetLevel;
+        v.primaryFactionParticipated = round.primaryFactionParticipated;
+        v.secondaryFactionParticipated = round.secondaryFactionParticipated;
+        v.campaignState = round.ledger.campaignState;
+        v.contributorCount = round.ledger.contributorCount;
+        v.campaignOpenedAt = round.ledger.campaignOpenedAt;
+        v.campaignClosedAt = round.ledger.campaignClosedAt;
+        v.fundedAt = round.ledger.fundedAt;
+        v.activatedAt = round.ledger.activatedAt;
+        v.targetAmounts = round.ledger.targetAmounts;
+        v.raisedAmounts = round.ledger.raisedAmounts;
+    }
+
+    function getCurrentFundingRoundId(
+        uint256 tokenId
+    ) external view returns (uint256) {
+        return activeRoundIdOf[tokenId];
+    }
+
+    function getContributionOf(
+        uint256 tokenId,
+        uint256 roundId,
+        address contributor
+    )
+        external
+        view
+        returns (
+            uint256[10] memory amounts,
+            bool refunded,
+            bool countedAsContributor
+        )
+    {
+        amounts = _contributionOf[tokenId][roundId][contributor];
+        refunded = _refundClaimed[tokenId][roundId][contributor];
+        countedAsContributor = _isContributorInRound[tokenId][roundId][contributor];
+    }
+
+    function getFactionGovernanceRole(
+        uint8 faction,
+        address account
+    ) external view returns (CollectiveBuildingTypes.CollectiveGovernanceRole) {
+        return governanceRoleOfFactionMember[faction][account];
+    }
+
+    function isFactionMemberEligible(
+        uint8 faction,
+        address account
+    ) external view returns (bool) {
+        return _isFactionMember(faction, account);
+    }
+
+    function resolvedCustodyHolder() external view returns (address) {
+        return _resolvedCustodyHolder();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               INTERNALS
+    //////////////////////////////////////////////////////////////*/
+
+    function _requireBorderlineBuilding(
+        uint256 tokenId
+    ) internal view returns (BorderlineBuildingRecord memory record) {
+        record = buildingByTokenId[tokenId];
+        if (!record.exists) revert BorderlineBuildingNotFound();
+    }
+
+    function _requireBorderlineBuildingStorage(
+        uint256 tokenId
+    ) internal view returns (BorderlineBuildingRecord storage record) {
+        record = buildingByTokenId[tokenId];
+        if (!record.exists) revert BorderlineBuildingNotFound();
+    }
+
+    function _requireBorderlinePlotReady(uint256 plotId) internal view {
+        if (plotId == 0) revert InvalidPlot();
+
+        CityTypes.PlotCore memory plot = cityRegistry.getPlotCore(plotId);
+        if (plot.plotType != CityTypes.PlotType.Borderline) revert InvalidPlotType();
+        if (!cityLand.isPlotFullyCompleted(plotId)) revert PlotNotCompleted();
+    }
+
+    function _requireDistinctOperationalFactions(
+        uint8 primaryFaction,
+        uint8 secondaryFaction
+    ) internal pure {
+        if (!_isOperationalFaction(primaryFaction)) revert InvalidFaction();
+        if (!_isOperationalFaction(secondaryFaction)) revert InvalidFaction();
+        if (primaryFaction == secondaryFaction) revert InvalidFactionPair();
+    }
+
+    function _requireAnyFactionStewardOrBuilder(
+        uint8 primaryFaction,
+        uint8 secondaryFaction,
+        address account
+    ) internal view {
+        if (_isAdminOrOperator(account)) return;
+
+        bool isPrimaryMember = _isFactionMember(primaryFaction, account);
+        bool isSecondaryMember = _isFactionMember(secondaryFaction, account);
+
+        if (!(isPrimaryMember || isSecondaryMember)) revert NotFactionMember();
+
+        bool authorized;
+        if (isPrimaryMember) {
+            CollectiveBuildingTypes.CollectiveGovernanceRole primaryRole =
+                governanceRoleOfFactionMember[primaryFaction][account];
+
+            authorized =
+                primaryRole == CollectiveBuildingTypes.CollectiveGovernanceRole.Steward ||
+                primaryRole == CollectiveBuildingTypes.CollectiveGovernanceRole.Builder;
+        }
+
+        if (!authorized && isSecondaryMember) {
+            CollectiveBuildingTypes.CollectiveGovernanceRole secondaryRole =
+                governanceRoleOfFactionMember[secondaryFaction][account];
+
+            authorized =
+                secondaryRole == CollectiveBuildingTypes.CollectiveGovernanceRole.Steward ||
+                secondaryRole == CollectiveBuildingTypes.CollectiveGovernanceRole.Builder;
+        }
+
+        if (!authorized) revert NotFactionAuthorized();
+    }
+
+    function _requireBorderlineFactionMemberWithKey(
+        uint8 primaryFaction,
+        uint8 secondaryFaction,
+        address account
+    ) internal view returns (uint8 contributorFaction) {
+        if (!cityRegistry.hasCityKeyOf(account)) revert NoCityKey();
+
+        CityTypes.Faction chosenFaction = cityRegistry.chosenFactionOf(account);
+        contributorFaction = uint8(chosenFaction);
+
+        if (contributorFaction != primaryFaction && contributorFaction != secondaryFaction) {
+            revert NotFactionMember();
+        }
+    }
+
+    function _isAdminOrOperator(address account) internal view returns (bool) {
+        return
+            hasRole(BORDERLINE_ADMIN_ROLE, account) ||
+            hasRole(BORDERLINE_OPERATOR_ROLE, account) ||
+            hasRole(DEFAULT_ADMIN_ROLE, account);
+    }
+
+    function _isOperationalFaction(uint8 faction) internal pure returns (bool) {
+        return
+            faction == uint8(CityTypes.Faction.Inpinity) ||
+            faction == uint8(CityTypes.Faction.Inphinity);
+    }
+
+    function _isFactionMember(uint8 faction, address account) internal view returns (bool) {
+        if (!_isOperationalFaction(faction)) return false;
+        if (!cityRegistry.hasCityKeyOf(account)) return false;
+
+        return uint8(cityRegistry.chosenFactionOf(account)) == faction;
+    }
+
+    function _requireNonEmptyFundingTarget(
+        uint256[10] calldata targetAmounts
+    ) internal pure {
+        for (uint256 i = 0; i < 10; i++) {
+            if (targetAmounts[i] != 0) {
+                return;
+            }
+        }
+        revert EmptyFundingTarget();
+    }
+
+    function _setTargetAmounts(
+        CollectiveBuildingTypes.CollectiveFundingLedger storage ledger,
+        uint256[10] calldata targetAmounts
+    ) internal {
+        for (uint256 i = 0; i < 10; i++) {
+            ledger.targetAmounts[i] = targetAmounts[i];
+        }
+    }
+
+    function _isRoundFunded(
+        CollectiveBuildingTypes.CollectiveFundingLedger storage ledger
+    ) internal view returns (bool) {
+        for (uint256 i = 0; i < 10; i++) {
+            if (ledger.raisedAmounts[i] < ledger.targetAmounts[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function _resolvedCustodyHolder() internal view returns (address) {
+        return custodyHolder == address(0) ? address(this) : custodyHolder;
+    }
+
+    function _touchStatus(uint256 plotId) internal {
+        if (address(statusHook) == address(0)) return;
+        if (plotId == 0) return;
+
+        statusHook.touchActivity(plotId);
+    }
+
+    function _syncNftState(
+        uint256 tokenId,
+        CollectiveBuildingTypes.CollectiveBuildingState desiredState
+    ) internal {
+        if (collectiveNFT.getCollectiveState(tokenId) != desiredState) {
+            collectiveNFT.setCollectiveState(tokenId, desiredState);
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                           INTERFACE SUPPORT
+    //////////////////////////////////////////////////////////////*/
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view override(AccessControl, ERC1155Holder) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 }
