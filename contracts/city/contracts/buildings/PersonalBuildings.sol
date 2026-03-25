@@ -111,6 +111,49 @@ interface IPersonalBuildingMintPlotAdapter {
         );
 }
 
+interface IPersonalBuildingsVaultRead is ICityBuildingVault {
+    function getBuildingDurabilityState(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint8 decayState,
+            uint8 repairState,
+            uint32 damageBps,
+            bool repairRequired,
+            uint64 lastDecayCheckAt,
+            uint64 lastRepairAt
+        );
+
+    function getRecommendedWarehouseVaultProfile(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint8 vaultTier,
+            uint8 defenseTier,
+            uint32 vaultCapBps,
+            uint32 defenseBps,
+            uint32 raidMitigationBps,
+            bool decayPrepared,
+            bool repairPrepared,
+            bool raidEligibleByLevel
+        );
+
+    function getRecommendedWarehouseBuckets(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint32 reserveBuckets,
+            uint32 protectedBuckets,
+            uint32 raidableBuckets
+        );
+}
+
 /*//////////////////////////////////////////////////////////////
                          PERSONAL BUILDINGS
 //////////////////////////////////////////////////////////////*/
@@ -176,6 +219,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     error PlotNotEligibleForMint();
     error PlotOwnerMismatch();
     error PlotMintAlreadyUsed();
+    error InvalidPlotId();
 
     error NoIdsProvided();
     error BatchLengthMismatch();
@@ -282,7 +326,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     IPersonalBuildingMintPlotAdapter public mintPlotAdapter;
 
     ICityBuildingFunctionRegistry public functionRegistry;
-    ICityBuildingVault public vault;
+    IPersonalBuildingsVaultRead public vault;
 
     struct MintCostConfig {
         uint256[10] resourceAmounts;
@@ -329,6 +373,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         address techAdapter_,
         address statusHookAdapter_,
         address mintPlotAdapter_,
+        address functionRegistry_,
+        address vault_,
         address admin_
     ) {
         if (admin_ == address(0)) revert ZeroAddress();
@@ -342,6 +388,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         if (techAdapter_ != address(0) && techAdapter_.code.length == 0) revert InvalidTechAdapter();
         if (statusHookAdapter_ != address(0) && statusHookAdapter_.code.length == 0) revert InvalidStatusHookAdapter();
         if (mintPlotAdapter_ != address(0) && mintPlotAdapter_.code.length == 0) revert InvalidMintPlotAdapter();
+        if (functionRegistry_ != address(0) && functionRegistry_.code.length == 0) revert InvalidFunctionRegistry();
+        if (vault_ != address(0) && vault_.code.length == 0) revert InvalidVault();
 
         buildingNFT = ICityBuildingNFTV1PersonalLogic(buildingNFT_);
         placement = ICityBuildingPlacementPersonalRead(placement_);
@@ -350,6 +398,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         techAdapter = IPersonalBuildingTechAdapter(techAdapter_);
         statusHookAdapter = IPersonalBuildingStatusHookAdapter(statusHookAdapter_);
         mintPlotAdapter = IPersonalBuildingMintPlotAdapter(mintPlotAdapter_);
+        functionRegistry = ICityBuildingFunctionRegistry(functionRegistry_);
+        vault = IPersonalBuildingsVaultRead(vault_);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin_);
         _grantRole(LOGIC_ADMIN_ROLE, admin_);
@@ -453,10 +503,10 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
 
     function setVault(address vault_) external onlyRole(LOGIC_ADMIN_ROLE) {
         if (vault_ == address(0)) {
-            vault = ICityBuildingVault(address(0));
+            vault = IPersonalBuildingsVaultRead(address(0));
         } else {
             if (vault_.code.length == 0) revert InvalidVault();
-            vault = ICityBuildingVault(vault_);
+            vault = IPersonalBuildingsVaultRead(vault_);
         }
 
         emit VaultSet(vault_, msg.sender);
@@ -506,7 +556,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         bool configured
     ) external onlyRole(CONFIG_ROLE) {
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
-        if (!CityBuildingTypes.isValidLevel(targetLevel) || targetLevel == 1) revert InvalidLevel();
+        if (!CityBuildingTypes.isValidLevel(targetLevel) || targetLevel <= 1) revert InvalidLevel();
 
         _upgradeConfigs[uint8(buildingType)][targetLevel] = UpgradeCostConfig({
             resourceAmounts: resourceAmounts,
@@ -570,6 +620,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         bool used,
         uint256 buildingId
     ) external onlyRole(OPERATOR_ROLE) {
+        if (plotId == 0) revert InvalidPlotId();
+
         plotMintUsed[plotId] = used;
         mintedBuildingIdByPlot[plotId] = used ? buildingId : 0;
 
@@ -586,6 +638,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         if (len > MAX_BATCH_SET) revert BatchTooLarge(len, MAX_BATCH_SET);
 
         for (uint256 i = 0; i < len; i++) {
+            if (plotIds[i] == 0) revert InvalidPlotId();
+
             plotMintUsed[plotIds[i]] = usedFlags[i];
             mintedBuildingIdByPlot[plotIds[i]] = usedFlags[i] ? buildingIds[i] : 0;
 
@@ -617,8 +671,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     ) external whenNotPaused nonReentrant returns (uint256 buildingId) {
         if (!CityBuildingTypes.isValidBaseType(buildingType)) revert InvalidBuildingType();
         if (address(mintPlotAdapter) == address(0)) revert MintAdapterNotSet();
-        if (plotMintUsed[plotId]) revert PlotMintAlreadyUsed();
         if (plotId == 0) revert PlotNotFound();
+        if (plotMintUsed[plotId]) revert PlotMintAlreadyUsed();
 
         (
             address plotOwner,
@@ -1036,6 +1090,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         bool residenceResearch;
         bool forgeWarehouse;
         bool forgeMarket;
+        bool warehouseGuardCore;
+        bool tradeFortressCore;
         bool fullSet;
     }
 
@@ -1083,6 +1139,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         s.residenceResearch = hasResidence && hasResearchLab;
         s.forgeWarehouse = hasForge && hasWarehouse;
         s.forgeMarket = hasForge && hasMarketStall;
+        s.warehouseGuardCore = hasWarehouse && hasGuardTower;
+        s.tradeFortressCore = hasWarehouse && hasMarketStall && hasGuardTower;
         s.fullSet =
             hasResidence &&
             hasFarmingHub &&
@@ -1171,13 +1229,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     function getWarehouseVaultProfile(
         uint256 buildingId
     ) external view returns (ICityBuildingVault.WarehouseVaultProfile memory) {
-        if (address(vault) == address(0)) revert VaultNotSet();
-
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            revert NotWarehouseBuilding();
-        }
-
+        _requireWarehouseVault(buildingId);
         return vault.getWarehouseVaultProfile(buildingId);
     }
 
@@ -1185,13 +1237,8 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         uint256 buildingId,
         uint8 resourceId
     ) external view returns (ICityBuildingVault.VaultResourceState memory) {
-        if (address(vault) == address(0)) revert VaultNotSet();
+        _requireWarehouseVault(buildingId);
         if (resourceId >= RESOURCE_SLOT_COUNT) revert InvalidResourceId();
-
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            revert NotWarehouseBuilding();
-        }
 
         return vault.getWarehouseVaultResourceState(buildingId, resourceId);
     }
@@ -1199,13 +1246,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     function isWarehouseVaultEnabled(
         uint256 buildingId
     ) external view returns (bool) {
-        if (address(vault) == address(0)) revert VaultNotSet();
-
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            revert NotWarehouseBuilding();
-        }
-
+        _requireWarehouseVault(buildingId);
         return vault.isWarehouseVaultEnabled(buildingId);
     }
 
@@ -1221,13 +1262,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
             uint32 damageBps
         )
     {
-        if (address(vault) == address(0)) revert VaultNotSet();
-
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            revert NotWarehouseBuilding();
-        }
-
+        _requireWarehouseVault(buildingId);
         return vault.getWarehouseVaultDefenseProfile(buildingId);
     }
 
@@ -1243,13 +1278,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
             uint256 totalRaidable
         )
     {
-        if (address(vault) == address(0)) revert VaultNotSet();
-
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            revert NotWarehouseBuilding();
-        }
-
+        _requireWarehouseVault(buildingId);
         return vault.getWarehouseVaultTotals(buildingId);
     }
 
@@ -1267,14 +1296,43 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
             uint64 lastRepairAt
         )
     {
-        if (address(vault) == address(0)) revert VaultNotSet();
-
-        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
-            revert NotWarehouseBuilding();
-        }
-
+        _requireWarehouseVault(buildingId);
         return vault.getBuildingDurabilityState(buildingId);
+    }
+
+    function getRecommendedWarehouseVaultProfile(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint8 vaultTier,
+            uint8 defenseTier,
+            uint32 vaultCapBps,
+            uint32 defenseBps,
+            uint32 raidMitigationBps,
+            bool decayPrepared,
+            bool repairPrepared,
+            bool raidEligibleByLevel
+        )
+    {
+        _requireWarehouseVault(buildingId);
+        return vault.getRecommendedWarehouseVaultProfile(buildingId);
+    }
+
+    function getRecommendedWarehouseBuckets(
+        uint256 buildingId
+    )
+        external
+        view
+        returns (
+            uint32 reserveBuckets,
+            uint32 protectedBuckets,
+            uint32 raidableBuckets
+        )
+    {
+        _requireWarehouseVault(buildingId);
+        return vault.getRecommendedWarehouseBuckets(buildingId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1288,6 +1346,15 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     function _requireBuildingMutable(uint256 buildingId) internal view {
         if (buildingNFT.isArchived(buildingId)) revert BuildingArchived();
         if (buildingNFT.isMigrationPrepared(buildingId)) revert BuildingPreparedForMigration();
+    }
+
+    function _requireWarehouseVault(uint256 buildingId) internal view {
+        if (address(vault) == address(0)) revert VaultNotSet();
+
+        CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+        if (core.buildingType != CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            revert NotWarehouseBuilding();
+        }
     }
 
     function _consumeResources(
