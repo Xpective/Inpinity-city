@@ -362,6 +362,75 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     mapping(uint256 => uint256) public mintedBuildingIdByPlot;
 
     /*//////////////////////////////////////////////////////////////
+                               SYNERGY TYPES
+    //////////////////////////////////////////////////////////////*/
+
+    struct PersonalSetProgress {
+        bool hasResidence;
+        bool hasFarmingHub;
+        bool hasForge;
+        bool hasWarehouse;
+        bool hasMarketStall;
+        bool hasGuardTower;
+        bool hasResearchLab;
+        uint8 uniqueCount;
+        bool fullSetBonus;
+    }
+
+    struct SynergyFlags {
+        bool residenceMarket;
+        bool farmingWarehouse;
+        bool forgeResearch;
+        bool warehouseMarket;
+        bool guardResearch;
+        bool guardMarket;
+        bool residenceResearch;
+        bool forgeWarehouse;
+        bool forgeMarket;
+        bool warehouseGuardCore;
+        bool tradeFortressCore;
+        bool fullSet;
+    }
+
+    struct SynergyBonuses {
+        uint32 residencePrestigePresentationBpsBonus;
+
+        uint32 farmingClaimWindowBonusBpsBonus;
+        uint32 farmingChainBonusBpsBonus;
+
+        uint32 forgeCraftCostReductionBpsBonus;
+        uint32 forgeCraftProvenanceBonusBpsBonus;
+        uint32 forgeOutputQualityBpsBonus;
+
+        uint32 warehouseReserveBucketsBonus;
+        uint32 warehouseProtectedBucketsBonus;
+        uint32 warehouseRaidableBucketsReduction;
+        uint32 warehouseProtectionBpsBonus;
+        uint32 warehouseRaidMitigationBpsBonus;
+
+        uint16 marketListingCapBonus;
+        uint32 marketFeeReductionBpsBonus;
+        uint32 marketPremiumVisibilityBpsBonus;
+        bool marketProvenancePremiumBonus;
+
+        uint32 guardDefenseBpsBonus;
+        uint32 guardWarehouseProtectionBpsBonus;
+        uint32 guardRaidMitigationBpsBonus;
+        uint8 guardRadarTierBonus;
+        uint8 guardShieldTierBonus;
+
+        uint32 researchForgeSynergyBpsBonus;
+        uint8 researchBlueprintUnlockTierBonus;
+
+        bool fullSet;
+        uint32 fullSetPrestigePresentationBpsBonus;
+        uint32 fullSetForgeSynergyBpsBonus;
+        uint32 fullSetMarketFeeReductionBpsBonus;
+        uint32 fullSetWarehouseProtectionBpsBonus;
+        uint32 fullSetClaimWindowBonusBpsBonus;
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -1060,39 +1129,12 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         return placement.getPlacementSummary(buildingId);
     }
 
-    struct PersonalSetProgress {
-        bool hasResidence;
-        bool hasFarmingHub;
-        bool hasForge;
-        bool hasWarehouse;
-        bool hasMarketStall;
-        bool hasGuardTower;
-        bool hasResearchLab;
-        uint8 uniqueCount;
-        bool fullSetBonus;
-    }
-
     function getPersonalSetProgress(
         address owner,
         uint256[] calldata buildingIds
     ) external view returns (PersonalSetProgress memory progress) {
         if (buildingIds.length == 0) revert NoIdsProvided();
         return _buildPersonalSetProgress(owner, buildingIds);
-    }
-
-    struct SynergyFlags {
-        bool residenceMarket;
-        bool farmingWarehouse;
-        bool forgeResearch;
-        bool warehouseMarket;
-        bool guardResearch;
-        bool guardMarket;
-        bool residenceResearch;
-        bool forgeWarehouse;
-        bool forgeMarket;
-        bool warehouseGuardCore;
-        bool tradeFortressCore;
-        bool fullSet;
     }
 
     function evaluateSynergies(
@@ -1102,46 +1144,29 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
     ) external view returns (SynergyFlags memory s) {
         if (buildingIds.length == 0) revert NoIdsProvided();
 
-        bool hasResidence;
-        bool hasFarmingHub;
-        bool hasForge;
-        bool hasWarehouse;
-        bool hasMarketStall;
-        bool hasGuardTower;
-        bool hasResearchLab;
+        (
+            bool hasResidence,
+            bool hasFarmingHub,
+            bool hasForge,
+            bool hasWarehouse,
+            bool hasMarketStall,
+            bool hasGuardTower,
+            bool hasResearchLab
+        ) = _scanSynergyPresence(owner, buildingIds, minimumLevel);
 
-        uint256 len = buildingIds.length;
-        for (uint256 i = 0; i < len; i++) {
-            uint256 buildingId = buildingIds[i];
-
-            if (buildingNFT.ownerOf(buildingId) != owner) continue;
-            if (buildingNFT.isArchived(buildingId)) continue;
-
-            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
-            if (core.category != CityBuildingTypes.BuildingCategory.Personal) continue;
-            if (core.level < minimumLevel) continue;
-
-            if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Residence) hasResidence = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.FarmingHub) hasFarmingHub = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Forge) hasForge = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Warehouse) hasWarehouse = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.MarketStall) hasMarketStall = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.GuardTower) hasGuardTower = true;
-            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.ResearchLab) hasResearchLab = true;
-        }
-
-        s.residenceMarket = hasResidence && hasMarketStall;
-        s.farmingWarehouse = hasFarmingHub && hasWarehouse;
-        s.forgeResearch = hasForge && hasResearchLab;
-        s.warehouseMarket = hasWarehouse && hasMarketStall;
-        s.guardResearch = hasGuardTower && hasResearchLab;
-        s.guardMarket = hasGuardTower && hasMarketStall;
-        s.residenceResearch = hasResidence && hasResearchLab;
-        s.forgeWarehouse = hasForge && hasWarehouse;
-        s.forgeMarket = hasForge && hasMarketStall;
-        s.warehouseGuardCore = hasWarehouse && hasGuardTower;
-        s.tradeFortressCore = hasWarehouse && hasMarketStall && hasGuardTower;
+        s.residenceMarket = minimumLevel >= 2 && hasResidence && hasMarketStall;
+        s.farmingWarehouse = minimumLevel >= 2 && hasFarmingHub && hasWarehouse;
+        s.forgeResearch = minimumLevel >= 2 && hasForge && hasResearchLab;
+        s.warehouseMarket = minimumLevel >= 2 && hasWarehouse && hasMarketStall;
+        s.guardResearch = minimumLevel >= 2 && hasGuardTower && hasResearchLab;
+        s.guardMarket = minimumLevel >= 2 && hasGuardTower && hasMarketStall;
+        s.residenceResearch = minimumLevel >= 2 && hasResidence && hasResearchLab;
+        s.forgeWarehouse = minimumLevel >= 2 && hasForge && hasWarehouse;
+        s.forgeMarket = minimumLevel >= 2 && hasForge && hasMarketStall;
+        s.warehouseGuardCore = minimumLevel >= 3 && hasWarehouse && hasGuardTower;
+        s.tradeFortressCore = minimumLevel >= 3 && hasWarehouse && hasMarketStall && hasGuardTower;
         s.fullSet =
+            minimumLevel >= 4 &&
             hasResidence &&
             hasFarmingHub &&
             hasForge &&
@@ -1149,6 +1174,14 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
             hasMarketStall &&
             hasGuardTower &&
             hasResearchLab;
+    }
+
+    function getSynergyBonuses(
+        address owner,
+        uint256[] calldata buildingIds,
+        uint8 minimumLevel
+    ) external view returns (SynergyBonuses memory bonuses) {
+        return _calculateSynergyBonuses(owner, buildingIds, minimumLevel);
     }
 
     function getMintCostConfig(
@@ -1177,11 +1210,94 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         return functionRegistry.getFunctionProfile(buildingId);
     }
 
+    function getFunctionProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.FunctionProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getFunctionProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        if (profile.buildingType == CityBuildingTypes.PersonalBuildingType.Residence) {
+            profile.prestigePresentationBps +=
+                bonuses.residencePrestigePresentationBpsBonus +
+                bonuses.fullSetPrestigePresentationBpsBonus;
+        } else if (profile.buildingType == CityBuildingTypes.PersonalBuildingType.FarmingHub) {
+            profile.claimWindowBonusBps +=
+                bonuses.farmingClaimWindowBonusBpsBonus +
+                bonuses.fullSetClaimWindowBonusBpsBonus;
+        } else if (profile.buildingType == CityBuildingTypes.PersonalBuildingType.Forge) {
+            profile.craftCostReductionBps += bonuses.forgeCraftCostReductionBpsBonus;
+            profile.craftProvenanceBonusBps += bonuses.forgeCraftProvenanceBonusBpsBonus;
+            profile.outputQualityBps += bonuses.forgeOutputQualityBpsBonus;
+        } else if (profile.buildingType == CityBuildingTypes.PersonalBuildingType.Warehouse) {
+            profile.warehouseProtectionBps +=
+                bonuses.warehouseProtectionBpsBonus +
+                bonuses.fullSetWarehouseProtectionBpsBonus;
+            profile.raidMitigationBps += bonuses.warehouseRaidMitigationBpsBonus;
+        } else if (profile.buildingType == CityBuildingTypes.PersonalBuildingType.MarketStall) {
+            profile.listingCap += bonuses.marketListingCapBonus;
+            profile.marketFeeReductionBps +=
+                bonuses.marketFeeReductionBpsBonus +
+                bonuses.fullSetMarketFeeReductionBpsBonus;
+            profile.premiumVisibilityBps += bonuses.marketPremiumVisibilityBpsBonus;
+            if (bonuses.marketProvenancePremiumBonus) {
+                profile.provenancePremium = true;
+            }
+        } else if (profile.buildingType == CityBuildingTypes.PersonalBuildingType.GuardTower) {
+            profile.defenseBps += bonuses.guardDefenseBpsBonus;
+            profile.warehouseProtectionBps +=
+                bonuses.guardWarehouseProtectionBpsBonus +
+                bonuses.fullSetWarehouseProtectionBpsBonus;
+            profile.raidMitigationBps += bonuses.guardRaidMitigationBpsBonus;
+            profile.radarTier += bonuses.guardRadarTierBonus;
+            profile.shieldTier += bonuses.guardShieldTierBonus;
+        } else if (profile.buildingType == CityBuildingTypes.PersonalBuildingType.ResearchLab) {
+            profile.forgeSynergyBps +=
+                bonuses.researchForgeSynergyBpsBonus +
+                bonuses.fullSetForgeSynergyBpsBonus;
+            profile.blueprintUnlockTier += bonuses.researchBlueprintUnlockTierBonus;
+        }
+
+        if (bonuses.fullSet) {
+            profile.fullSetEligible = true;
+        }
+    }
+
     function getResidenceProfile(
         uint256 buildingId
     ) external view returns (ICityBuildingFunctionRegistry.ResidenceProfile memory) {
         if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
         return functionRegistry.getResidenceProfile(buildingId);
+    }
+
+    function getResidenceProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.ResidenceProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getResidenceProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        profile.prestigePresentationBps +=
+            bonuses.residencePrestigePresentationBpsBonus +
+            bonuses.fullSetPrestigePresentationBpsBonus;
     }
 
     function getFarmingHubProfile(
@@ -1191,11 +1307,54 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         return functionRegistry.getFarmingHubProfile(buildingId);
     }
 
+    function getFarmingHubProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.FarmingHubProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getFarmingHubProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        profile.claimWindowBonusBps +=
+            bonuses.farmingClaimWindowBonusBpsBonus +
+            bonuses.fullSetClaimWindowBonusBpsBonus;
+        profile.chainBonusBps += bonuses.farmingChainBonusBpsBonus;
+    }
+
     function getForgeProfile(
         uint256 buildingId
     ) external view returns (ICityBuildingFunctionRegistry.ForgeProfile memory) {
         if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
         return functionRegistry.getForgeProfile(buildingId);
+    }
+
+    function getForgeProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.ForgeProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getForgeProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        profile.craftCostReductionBps += bonuses.forgeCraftCostReductionBpsBonus;
+        profile.craftProvenanceBonusBps += bonuses.forgeCraftProvenanceBonusBpsBonus;
+        profile.outputQualityBps += bonuses.forgeOutputQualityBpsBonus;
     }
 
     function getWarehouseProfile(
@@ -1205,11 +1364,66 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         return functionRegistry.getWarehouseProfile(buildingId);
     }
 
+    function getWarehouseProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.WarehouseProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getWarehouseProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        profile.reserveBuckets += bonuses.warehouseReserveBucketsBonus;
+        profile.protectedBuckets += bonuses.warehouseProtectedBucketsBonus;
+
+        if (bonuses.warehouseRaidableBucketsReduction != 0) {
+            if (profile.raidableBuckets > bonuses.warehouseRaidableBucketsReduction) {
+                profile.raidableBuckets -= bonuses.warehouseRaidableBucketsReduction;
+            } else {
+                profile.raidableBuckets = 0;
+            }
+        }
+    }
+
     function getMarketStallProfile(
         uint256 buildingId
     ) external view returns (ICityBuildingFunctionRegistry.MarketStallProfile memory) {
         if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
         return functionRegistry.getMarketStallProfile(buildingId);
+    }
+
+    function getMarketStallProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.MarketStallProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getMarketStallProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        profile.listingCap += bonuses.marketListingCapBonus;
+        profile.marketFeeReductionBps +=
+            bonuses.marketFeeReductionBpsBonus +
+            bonuses.fullSetMarketFeeReductionBpsBonus;
+        profile.premiumVisibilityBps += bonuses.marketPremiumVisibilityBpsBonus;
+
+        if (bonuses.marketProvenancePremiumBonus) {
+            profile.provenancePremium = true;
+        }
     }
 
     function getGuardTowerProfile(
@@ -1219,11 +1433,58 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
         return functionRegistry.getGuardTowerProfile(buildingId);
     }
 
+    function getGuardTowerProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.GuardTowerProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getGuardTowerProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        profile.defenseBps += bonuses.guardDefenseBpsBonus;
+        profile.warehouseProtectionBps +=
+            bonuses.guardWarehouseProtectionBpsBonus +
+            bonuses.fullSetWarehouseProtectionBpsBonus;
+        profile.raidMitigationBps += bonuses.guardRaidMitigationBpsBonus;
+        profile.radarTier += bonuses.guardRadarTierBonus;
+        profile.shieldTier += bonuses.guardShieldTierBonus;
+    }
+
     function getResearchLabProfile(
         uint256 buildingId
     ) external view returns (ICityBuildingFunctionRegistry.ResearchLabProfile memory) {
         if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
         return functionRegistry.getResearchLabProfile(buildingId);
+    }
+
+    function getResearchLabProfileWithSynergies(
+        uint256 buildingId,
+        uint256[] calldata allBuildingIdsOfOwner,
+        uint8 minSynergyLevel
+    ) external view returns (ICityBuildingFunctionRegistry.ResearchLabProfile memory profile) {
+        if (address(functionRegistry) == address(0)) revert FunctionRegistryNotSet();
+
+        profile = functionRegistry.getResearchLabProfile(buildingId);
+
+        address owner = buildingNFT.ownerOf(buildingId);
+        SynergyBonuses memory bonuses = _calculateSynergyBonuses(
+            owner,
+            allBuildingIdsOfOwner,
+            minSynergyLevel
+        );
+
+        profile.forgeSynergyBps +=
+            bonuses.researchForgeSynergyBpsBonus +
+            bonuses.fullSetForgeSynergyBpsBonus;
+        profile.blueprintUnlockTier += bonuses.researchBlueprintUnlockTierBonus;
     }
 
     function getWarehouseVaultProfile(
@@ -1506,6 +1767,7 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
 
             if (buildingNFT.ownerOf(buildingId) != owner) continue;
             if (buildingNFT.isArchived(buildingId)) continue;
+            if (buildingNFT.isMigrationPrepared(buildingId)) continue;
 
             CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
             if (core.category != CityBuildingTypes.BuildingCategory.Personal) continue;
@@ -1542,6 +1804,161 @@ contract PersonalBuildings is AccessControl, Pausable, ReentrancyGuard {
             progress.hasMarketStall &&
             progress.hasGuardTower &&
             progress.hasResearchLab;
+    }
+
+    function _scanSynergyPresence(
+        address owner,
+        uint256[] calldata buildingIds,
+        uint8 minimumLevel
+    )
+        internal
+        view
+        returns (
+            bool hasResidence,
+            bool hasFarmingHub,
+            bool hasForge,
+            bool hasWarehouse,
+            bool hasMarketStall,
+            bool hasGuardTower,
+            bool hasResearchLab
+        )
+    {
+        uint256 len = buildingIds.length;
+
+        for (uint256 i = 0; i < len; i++) {
+            uint256 buildingId = buildingIds[i];
+
+            if (buildingNFT.ownerOf(buildingId) != owner) continue;
+            if (buildingNFT.isArchived(buildingId)) continue;
+            if (buildingNFT.isMigrationPrepared(buildingId)) continue;
+
+            CityBuildingTypes.BuildingCore memory core = buildingNFT.getBuildingCore(buildingId);
+            if (core.category != CityBuildingTypes.BuildingCategory.Personal) continue;
+            if (core.level < minimumLevel) continue;
+
+            if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Residence) hasResidence = true;
+            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.FarmingHub) hasFarmingHub = true;
+            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Forge) hasForge = true;
+            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.Warehouse) hasWarehouse = true;
+            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.MarketStall) hasMarketStall = true;
+            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.GuardTower) hasGuardTower = true;
+            else if (core.buildingType == CityBuildingTypes.PersonalBuildingType.ResearchLab) hasResearchLab = true;
+        }
+    }
+
+    function _calculateSynergyBonuses(
+        address owner,
+        uint256[] calldata buildingIds,
+        uint8 minimumLevel
+    ) internal view returns (SynergyBonuses memory bonuses) {
+        if (buildingIds.length == 0) return bonuses;
+
+        (
+            bool hasResidence,
+            bool hasFarmingHub,
+            bool hasForge,
+            bool hasWarehouse,
+            bool hasMarketStall,
+            bool hasGuardTower,
+            bool hasResearchLab
+        ) = _scanSynergyPresence(owner, buildingIds, minimumLevel);
+
+        bool miniCombos = minimumLevel >= 2;
+        bool coreCombos = minimumLevel >= 3;
+        bool fullSetActive =
+            minimumLevel >= 4 &&
+            hasResidence &&
+            hasFarmingHub &&
+            hasForge &&
+            hasWarehouse &&
+            hasMarketStall &&
+            hasGuardTower &&
+            hasResearchLab;
+
+        if (miniCombos && hasResidence && hasMarketStall) {
+            bonuses.residencePrestigePresentationBpsBonus += 100;
+            bonuses.marketPremiumVisibilityBpsBonus += 100;
+
+            if (minimumLevel >= 3) {
+                bonuses.marketProvenancePremiumBonus = true;
+            }
+        }
+
+        if (miniCombos && hasFarmingHub && hasWarehouse) {
+            bonuses.farmingChainBonusBpsBonus += 150;
+            bonuses.warehouseReserveBucketsBonus += 1;
+        }
+
+        if (miniCombos && hasForge && hasResearchLab) {
+            bonuses.forgeCraftProvenanceBonusBpsBonus += 100;
+            bonuses.forgeOutputQualityBpsBonus += 75;
+            bonuses.researchForgeSynergyBpsBonus += 200;
+        }
+
+        if (miniCombos && hasWarehouse && hasMarketStall) {
+            bonuses.marketListingCapBonus += 2;
+            bonuses.marketFeeReductionBpsBonus += 75;
+            bonuses.warehouseReserveBucketsBonus += 1;
+        }
+
+        if (miniCombos && hasGuardTower && hasResearchLab) {
+            bonuses.guardRadarTierBonus += 1;
+            bonuses.guardDefenseBpsBonus += 100;
+            bonuses.guardRaidMitigationBpsBonus += 100;
+            bonuses.researchBlueprintUnlockTierBonus += 1;
+        }
+
+        if (miniCombos && hasGuardTower && hasMarketStall) {
+            bonuses.marketFeeReductionBpsBonus += 50;
+            bonuses.marketPremiumVisibilityBpsBonus += 50;
+        }
+
+        if (miniCombos && hasResidence && hasResearchLab) {
+            bonuses.residencePrestigePresentationBpsBonus += 100;
+        }
+
+        if (miniCombos && hasForge && hasWarehouse) {
+            bonuses.forgeCraftCostReductionBpsBonus += 75;
+            bonuses.warehouseReserveBucketsBonus += 1;
+        }
+
+        if (miniCombos && hasForge && hasMarketStall) {
+            bonuses.marketPremiumVisibilityBpsBonus += 100;
+            bonuses.marketProvenancePremiumBonus = true;
+        }
+
+        if (coreCombos && hasWarehouse && hasGuardTower) {
+            bonuses.warehouseProtectedBucketsBonus += 1;
+            bonuses.warehouseRaidableBucketsReduction += 1;
+            bonuses.warehouseProtectionBpsBonus += 300;
+            bonuses.warehouseRaidMitigationBpsBonus += 200;
+
+            bonuses.guardWarehouseProtectionBpsBonus += 300;
+            bonuses.guardRaidMitigationBpsBonus += 200;
+        }
+
+        if (coreCombos && hasWarehouse && hasMarketStall && hasGuardTower) {
+            bonuses.marketListingCapBonus += 3;
+            bonuses.marketFeeReductionBpsBonus += 150;
+            bonuses.marketPremiumVisibilityBpsBonus += 100;
+            bonuses.marketProvenancePremiumBonus = true;
+
+            bonuses.warehouseReserveBucketsBonus += 1;
+            bonuses.warehouseProtectedBucketsBonus += 1;
+            bonuses.warehouseRaidMitigationBpsBonus += 100;
+
+            bonuses.guardRaidMitigationBpsBonus += 100;
+        }
+
+        if (fullSetActive) {
+            bonuses.fullSet = true;
+            bonuses.fullSetPrestigePresentationBpsBonus = 200;
+            bonuses.fullSetForgeSynergyBpsBonus = 200;
+            bonuses.fullSetMarketFeeReductionBpsBonus = 100;
+            bonuses.fullSetWarehouseProtectionBpsBonus = 150;
+            bonuses.fullSetClaimWindowBonusBpsBonus = 100;
+            bonuses.marketProvenancePremiumBonus = true;
+        }
     }
 
     function _mintReason(
