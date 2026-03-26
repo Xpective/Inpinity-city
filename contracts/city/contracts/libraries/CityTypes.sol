@@ -1,3 +1,5 @@
+/* FILE: contracts/city/contracts/libraries/CityTypes.sol */
+/* TYPE: city plot enums / structs / helpers */
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
@@ -6,7 +8,8 @@ library CityTypes {
         None,
         Personal,
         Community,
-        Borderline
+        Borderline,
+        Nexus
     }
 
     enum Faction {
@@ -63,5 +66,20 @@ library CityTypes {
         uint64 lastActivityAt;
         uint32 ownershipTransfers;
         uint32 aetherUses;
+    }
+
+    function isCollectivePlotType(PlotType plotType) internal pure returns (bool) {
+        return
+            plotType == PlotType.Community ||
+            plotType == PlotType.Borderline ||
+            plotType == PlotType.Nexus;
+    }
+
+    function isNexusPlotType(PlotType plotType) internal pure returns (bool) {
+        return plotType == PlotType.Nexus;
+    }
+
+    function isOperationalFaction(Faction faction) internal pure returns (bool) {
+        return faction == Faction.Inpinity || faction == Faction.Inphinity;
     }
 }

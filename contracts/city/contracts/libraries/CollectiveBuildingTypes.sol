@@ -238,43 +238,49 @@ library CollectiveBuildingTypes {
     function isValidCommunityKind(
         CommunityBuildingKind kind
     ) internal pure returns (bool) {
-        return kind >= CommunityBuildingKind.FactionTreasury
-            && kind <= CommunityBuildingKind.ForgeworksFoundry;
+        return
+            kind >= CommunityBuildingKind.FactionTreasury &&
+            kind <= CommunityBuildingKind.ForgeworksFoundry;
     }
 
     function isValidBorderlineKind(
         BorderlineBuildingKind kind
     ) internal pure returns (bool) {
-        return kind >= BorderlineBuildingKind.BorderGatehouse
-            && kind <= BorderlineBuildingKind.ReconstructionYard;
+        return
+            kind >= BorderlineBuildingKind.BorderGatehouse &&
+            kind <= BorderlineBuildingKind.ReconstructionYard;
     }
 
     function isValidNexusKind(
         NexusBuildingKind kind
     ) internal pure returns (bool) {
-        return kind >= NexusBuildingKind.NexusCore
-            && kind <= NexusBuildingKind.NexusExchangeHub;
+        return
+            kind >= NexusBuildingKind.NexusCore &&
+            kind <= NexusBuildingKind.NexusExchangeHub;
     }
 
     function isValidCommunityBranch(
         CommunityBuildingBranch branch
     ) internal pure returns (bool) {
-        return branch >= CommunityBuildingBranch.WarChestBranch
-            && branch <= CommunityBuildingBranch.MasterWorksBranch;
+        return
+            branch >= CommunityBuildingBranch.WarChestBranch &&
+            branch <= CommunityBuildingBranch.MasterWorksBranch;
     }
 
     function isValidBorderlineBranch(
         BorderlineBuildingBranch branch
     ) internal pure returns (bool) {
-        return branch >= BorderlineBuildingBranch.AccessControlBranch
-            && branch <= BorderlineBuildingBranch.ReconstructionBranch;
+        return
+            branch >= BorderlineBuildingBranch.AccessControlBranch &&
+            branch <= BorderlineBuildingBranch.ReconstructionBranch;
     }
 
     function isValidNexusBranch(
         NexusBuildingBranch branch
     ) internal pure returns (bool) {
-        return branch >= NexusBuildingBranch.CoreBranch
-            && branch <= NexusBuildingBranch.ExchangeBranch;
+        return
+            branch >= NexusBuildingBranch.CoreBranch &&
+            branch <= NexusBuildingBranch.ExchangeBranch;
     }
 
     function isCollectiveCategory(
@@ -309,7 +315,8 @@ library CollectiveBuildingTypes {
     ) internal pure returns (bool) {
         return
             category == CityBuildingTypes.BuildingCategory.Community ||
-            category == CityBuildingTypes.BuildingCategory.Borderline;
+            category == CityBuildingTypes.BuildingCategory.Borderline ||
+            category == CityBuildingTypes.BuildingCategory.Nexus;
     }
 
     function requiresCustody(
@@ -329,7 +336,7 @@ library CollectiveBuildingTypes {
     }
 
     /*//////////////////////////////////////////////////////////////
-                         GOVERNANCE DEFAULTS
+                        GOVERNANCE DEFAULTS
     //////////////////////////////////////////////////////////////*/
 
     function defaultGovernancePolicy(
@@ -411,7 +418,7 @@ library CollectiveBuildingTypes {
     }
 
     /*//////////////////////////////////////////////////////////////
-                          BRANCH MATCHING RULES
+                         BRANCH MATCHING RULES
     //////////////////////////////////////////////////////////////*/
 
     function communityBranchMatchesKind(
@@ -474,18 +481,23 @@ library CollectiveBuildingTypes {
         if (kind == BorderlineBuildingKind.BorderGatehouse) {
             return branch == BorderlineBuildingBranch.AccessControlBranch;
         }
+
         if (kind == BorderlineBuildingKind.TreatyHall) {
             return branch == BorderlineBuildingBranch.TreatyBranch;
         }
+
         if (kind == BorderlineBuildingKind.NeutralExchangePost) {
             return branch == BorderlineBuildingBranch.NeutralTradeBranch;
         }
+
         if (kind == BorderlineBuildingKind.JointWatchRelay) {
             return branch == BorderlineBuildingBranch.JointWatchBranch;
         }
+
         if (kind == BorderlineBuildingKind.ConflictBufferTower) {
             return branch == BorderlineBuildingBranch.BufferBranch;
         }
+
         if (kind == BorderlineBuildingKind.ReconstructionYard) {
             return branch == BorderlineBuildingBranch.ReconstructionBranch;
         }
@@ -502,12 +514,15 @@ library CollectiveBuildingTypes {
         if (kind == NexusBuildingKind.NexusCore) {
             return branch == NexusBuildingBranch.CoreBranch;
         }
+
         if (kind == NexusBuildingKind.NexusSignalSpire) {
             return branch == NexusBuildingBranch.SignalBranch;
         }
+
         if (kind == NexusBuildingKind.NexusArchive) {
             return branch == NexusBuildingBranch.ArchiveBranch;
         }
+
         if (kind == NexusBuildingKind.NexusExchangeHub) {
             return branch == NexusBuildingBranch.ExchangeBranch;
         }
@@ -516,7 +531,7 @@ library CollectiveBuildingTypes {
     }
 
     /*//////////////////////////////////////////////////////////////
-                         BRANCH LEVEL GATING
+                          BRANCH LEVEL GATING
     //////////////////////////////////////////////////////////////*/
 
     function minLevelForCommunityBranch(
