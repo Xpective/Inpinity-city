@@ -138,6 +138,8 @@ contract NexusBuildings is
     error FundingRoundNotRefundable();
     error FundingRoundAlreadyRefunded();
     error NoContributionToRefund();
+    error ContributionExceedsTarget(uint8 resourceId, uint256 remaining, uint256 attempted);
+    error FundingRoundAlreadySwept();
 
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
@@ -149,6 +151,8 @@ contract NexusBuildings is
     event ResourceTokenSet(address indexed token, address indexed executor);
     event StatusHookSet(address indexed hook, address indexed executor);
     event CustodyHolderSet(address indexed custodyHolder, address indexed executor);
+    event ConstructionTreasurySet(address indexed treasury, address indexed executor);
+    event StrictFundingCapsSet(bool enabled, address indexed executor);
 
     event PortalContractSet(address indexed portalContract, address indexed executor);
     event DungeonContractSet(address indexed dungeonContract, address indexed executor);
@@ -212,6 +216,13 @@ contract NexusBuildings is
         uint256 indexed tokenId,
         uint256 indexed roundId,
         address indexed contributor
+    );
+
+    event NexusFundingRoundSwept(
+        uint256 indexed tokenId,
+        uint256 indexed roundId,
+        address indexed treasury,
+        uint64 sweptAt
     );
 
     event NexusBuildingActivated(
@@ -282,6 +293,13 @@ contract NexusBuildings is
     /// @dev If zero, the NexusBuildings contract custodies the NFTs itself.
     address public custodyHolder;
 
+    /// @notice Optional treasury / sink for successful crowdfunding resources.
+    /// @dev If zero, resources remain on this contract until manually swept later.
+    address public constructionTreasury;
+
+    /// @notice If true, no overfunding above target is allowed.
+    bool public strictFundingCaps = true;
+
     address public portalContract;
     address public dungeonContract;
     address public rewardRouter;
@@ -306,6 +324,8 @@ contract NexusBuildings is
         bool exists;
         bool isUpgrade;
         uint8 targetLevel;
+        bool fundsSwept;
+        address fundsSink;
         CollectiveBuildingTypes.CollectiveFundingLedger ledger;
     }
 
@@ -314,6 +334,8 @@ contract NexusBuildings is
         bool exists;
         bool isUpgrade;
         uint8 targetLevel;
+        bool fundsSwept;
+        address fundsSink;
         CollectiveBuildingTypes.CollectiveCampaignState campaignState;
         uint32 contributorCount;
         uint64 campaignOpenedAt;
@@ -446,6 +468,17 @@ contract NexusBuildings is
 
         custodyHolder = custodyHolder_;
         emit CustodyHolderSet(custodyHolder_, msg.sender);
+    }
+
+    function setConstructionTreasury(address treasury_) external onlyRole(NEXUS_ADMIN_ROLE) {
+        constructionTreasury = treasury_;
+        emit ConstructionTreasurySet(treasury_, msg.sender);
+    }
+
+    function setStrictFundingCaps(bool enabled) external onlyRole(NEXUS_ADMIN_ROLE) {
+        if (strictFundingCaps == enabled) revert NoStateChange();
+        strictFundingCaps = enabled;
+        emit StrictFundingCapsSet(enabled, msg.sender);
     }
 
     function setPortalContract(address portalContract_) external onlyRole(NEXUS_ADMIN_ROLE) {
@@ -647,6 +680,8 @@ contract NexusBuildings is
         round.exists = true;
         round.isUpgrade = false;
         round.targetLevel = 1;
+        round.fundsSwept = false;
+        round.fundsSink = address(0);
         round.ledger.targetAmounts = targetAmounts;
         round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Funding;
         round.ledger.campaignOpenedAt = uint64(block.timestamp);
@@ -693,6 +728,8 @@ contract NexusBuildings is
         round.exists = true;
         round.isUpgrade = false;
         round.targetLevel = 1;
+        round.fundsSwept = false;
+        round.fundsSink = address(0);
         round.ledger.targetAmounts = targetAmounts;
         round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Funding;
         round.ledger.campaignOpenedAt = uint64(block.timestamp);
@@ -711,9 +748,7 @@ contract NexusBuildings is
         uint256 tokenId,
         uint256[10] calldata amounts
     ) external whenNotPaused nonReentrant {
-        NexusBuildingRecord memory record = _requireNexusBuilding(tokenId);
-        record;
-
+        _requireNexusBuilding(tokenId);
         _requireCityMemberWithKey(msg.sender);
 
         uint256 roundId = activeRoundIdOf[tokenId];
@@ -745,6 +780,20 @@ contract NexusBuildings is
         for (uint256 i = 0; i < 10; i++) {
             uint256 amount = amounts[i];
             if (amount == 0) continue;
+
+            uint256 target = round.ledger.targetAmounts[i];
+            uint256 raised = round.ledger.raisedAmounts[i];
+
+            if (strictFundingCaps) {
+                if (raised >= target) {
+                    revert ContributionExceedsTarget(uint8(i), 0, amount);
+                }
+
+                uint256 remaining = target - raised;
+                if (amount > remaining) {
+                    revert ContributionExceedsTarget(uint8(i), remaining, amount);
+                }
+            }
 
             resourceToken.safeTransferFrom(
                 msg.sender,
@@ -844,8 +893,7 @@ contract NexusBuildings is
         uint256 tokenId,
         uint256 roundId
     ) external whenNotPaused nonReentrant {
-        NexusBuildingRecord memory record = _requireNexusBuilding(tokenId);
-        record;
+        _requireNexusBuilding(tokenId);
 
         NexusFundingRound storage round = _roundOfToken[tokenId][roundId];
         if (!round.exists) revert NoActiveFundingRound();
@@ -897,6 +945,8 @@ contract NexusBuildings is
         if (round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Funded) {
             revert FundingRoundNotFunded();
         }
+
+        _sweepFundedRoundToTreasury(tokenId, roundId);
 
         round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Closed;
         round.ledger.campaignClosedAt = uint64(block.timestamp);
@@ -953,6 +1003,8 @@ contract NexusBuildings is
         round.exists = true;
         round.isUpgrade = true;
         round.targetLevel = targetLevel;
+        round.fundsSwept = false;
+        round.fundsSink = address(0);
         round.ledger.targetAmounts = targetAmounts;
         round.ledger.campaignState = CollectiveBuildingTypes.CollectiveCampaignState.Funding;
         round.ledger.campaignOpenedAt = uint64(block.timestamp);
@@ -984,6 +1036,8 @@ contract NexusBuildings is
             revert FundingRoundNotFunded();
         }
 
+        _sweepFundedRoundToTreasury(tokenId, roundId);
+
         CollectiveBuildingTypes.CollectiveIdentity memory id_ =
             collectiveNFT.getCollectiveIdentity(tokenId);
 
@@ -1010,6 +1064,14 @@ contract NexusBuildings is
             msg.sender,
             uint64(block.timestamp)
         );
+    }
+
+    function sweepFundedRoundToTreasury(
+        uint256 tokenId,
+        uint256 roundId
+    ) external onlyRole(NEXUS_OPERATOR_ROLE) whenNotPaused nonReentrant {
+        _requireNexusBuilding(tokenId);
+        _sweepFundedRoundToTreasury(tokenId, roundId);
     }
 
     function setNexusBranch(
@@ -1057,6 +1119,8 @@ contract NexusBuildings is
         v.exists = round.exists;
         v.isUpgrade = round.isUpgrade;
         v.targetLevel = round.targetLevel;
+        v.fundsSwept = round.fundsSwept;
+        v.fundsSink = round.fundsSink;
         v.campaignState = round.ledger.campaignState;
         v.contributorCount = round.ledger.contributorCount;
         v.campaignOpenedAt = round.ledger.campaignOpenedAt;
@@ -1266,6 +1330,48 @@ contract NexusBuildings is
         if (collectiveNFT.getCollectiveState(tokenId) != desiredState) {
             collectiveNFT.setCollectiveState(tokenId, desiredState);
         }
+    }
+
+    function _sweepFundedRoundToTreasury(
+        uint256 tokenId,
+        uint256 roundId
+    ) internal {
+        address treasury = constructionTreasury;
+        if (treasury == address(0)) {
+            return;
+        }
+
+        NexusFundingRound storage round = _roundOfToken[tokenId][roundId];
+        if (!round.exists) revert NoActiveFundingRound();
+        if (round.fundsSwept) revert FundingRoundAlreadySwept();
+
+        if (
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Funded &&
+            round.ledger.campaignState != CollectiveBuildingTypes.CollectiveCampaignState.Closed
+        ) revert FundingRoundNotFunded();
+
+        round.fundsSwept = true;
+        round.fundsSink = treasury;
+
+        for (uint256 i = 0; i < 10; i++) {
+            uint256 amount = round.ledger.raisedAmounts[i];
+            if (amount == 0) continue;
+
+            resourceToken.safeTransferFrom(
+                address(this),
+                treasury,
+                i,
+                amount,
+                ""
+            );
+        }
+
+        emit NexusFundingRoundSwept(
+            tokenId,
+            roundId,
+            treasury,
+            uint64(block.timestamp)
+        );
     }
 
     function _isPortalRelevant(
