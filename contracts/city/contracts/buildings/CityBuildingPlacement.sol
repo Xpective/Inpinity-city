@@ -16,8 +16,14 @@ import "../interfaces/ICityPersonalPlacementPolicy.sol";
 //////////////////////////////////////////////////////////////*/
 
 interface ICityDistrictsPlacementRead {
-    function districtKindOfPlot(uint256 plotId) external view returns (uint8);
-    function factionOfPlot(uint256 plotId) external view returns (uint8);
+    struct DistrictData {
+        uint8 kind;
+        uint8 faction;
+        uint32 bonusBps;
+        bool exists;
+    }
+
+    function getDistrict(uint256 plotId) external view returns (DistrictData memory);
 }
 
 /*//////////////////////////////////////////////////////////////
@@ -769,8 +775,10 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
     function _readPlotFaction(uint256 plotId) internal view returns (uint8 faction) {
         if (cityDistricts == address(0)) return 0;
 
-        try ICityDistrictsPlacementRead(cityDistricts).factionOfPlot(plotId) returns (uint8 v) {
-            return v;
+        try ICityDistrictsPlacementRead(cityDistricts).getDistrict(plotId) returns (
+            ICityDistrictsPlacementRead.DistrictData memory district
+        ) {
+            return district.faction;
         } catch {
             return 0;
         }
@@ -779,8 +787,10 @@ contract CityBuildingPlacement is AccessControl, Pausable, ReentrancyGuard {
     function _readPlotDistrictKind(uint256 plotId) internal view returns (uint8 districtKind) {
         if (cityDistricts == address(0)) return 0;
 
-        try ICityDistrictsPlacementRead(cityDistricts).districtKindOfPlot(plotId) returns (uint8 v) {
-            return v;
+        try ICityDistrictsPlacementRead(cityDistricts).getDistrict(plotId) returns (
+            ICityDistrictsPlacementRead.DistrictData memory district
+        ) {
+            return district.kind;
         } catch {
             return 0;
         }
